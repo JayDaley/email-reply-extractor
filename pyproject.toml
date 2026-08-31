@@ -38,6 +38,9 @@ version = {attr = "email_reply_extractor.__version__"}
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+email_reply_extractor = ["py.typed"]
+
 [tool.ruff]
 line-length = 100
 
