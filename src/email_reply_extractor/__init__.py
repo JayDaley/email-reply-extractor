@@ -16,6 +16,7 @@ increases. See ``CONTRIBUTING.md`` for the contract.
 """
 
 from .cleaning import CleanResult, clean_for_scoring
+from .equivalence import texts_equivalent, tolerant_lines
 from .extraction import (
     EXTRACTION_VERSION,
     STATUS_EMPTY,
@@ -27,7 +28,7 @@ from .extraction import (
 )
 from .html_text import HtmlParts, html_to_text, split_html_parts
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 __all__ = [
     "EXTRACTION_VERSION",
@@ -43,4 +44,6 @@ __all__ = [
     "html_to_text",
     "split_html_parts",
     "strip_parent_content",
+    "texts_equivalent",
+    "tolerant_lines",
 ]

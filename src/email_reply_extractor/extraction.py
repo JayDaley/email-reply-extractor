@@ -124,7 +124,10 @@ custom signature-block rules (v1.2.0); **3** quote-header truncation before ERP,
 with folded and double-spaced header tolerance and the transport-header
 pasted-evidence guard (v1.11.0); **4** the parent-diff continuation rule for
 re-wrapped remainder lines, and Gmail quote wrappers holding blockquotes no
-longer classifying the author's inline replies as quoted (v1.15.0).
+longer classifying the author's inline replies as quoted (v1.15.0); **5** the
+vendored scanner keeps fragment edges and applies the Outlook-boundary fix to
+every occurrence (this package's v1.1.0; generations 1-4 shipped inside
+mailing-list-ai-check).
 """
 
 from __future__ import annotations
@@ -142,7 +145,7 @@ from .html_text import split_html_parts
 #: :mod:`html_text` and :mod:`._fragments` together). Hand-incremented; see the
 #: module docstring for when and why. Consumers stamp stored derived text with
 #: it and compare with ``<``, so it must only ever increase.
-EXTRACTION_VERSION: int = 4
+EXTRACTION_VERSION: int = 5
 
 # --- result -------------------------------------------------------------------
 
@@ -848,11 +851,14 @@ def _core_extract(body: str, parent_body: str | None) -> tuple[str, str]:
     """
     normalized = normalize_body(body)
 
-    # Truncate at a forwarded/quote-header block *before* ERP. ERP strips each
-    # fragment's edges, so re-joining its fragments below can glue a signature
-    # line ("Tel: …") directly above the block's ``From:``, disguising a real
-    # quote header as pasted header evidence. On the intact body the blank line
-    # above the ``From:`` is still present, so the finder sees the true shape.
+    # Truncate at a forwarded/quote-header block *before* ERP. The scanner's
+    # wrapped-attribution collapse deletes newlines inside the block ("On\n
+    # Behalf Of X\nSent:" becomes one line), which hides the block from the
+    # finder; on the intact body the finder sees the true shape. Measured on a
+    # 95k-message corpus when fragment edge-stripping was removed (generation
+    # 5): dropping this pre-truncation leaked quote headers in 10 messages and
+    # reverted none, so it stays until the collapse itself is unified away (see
+    # docs/generation-5.md).
     lines = normalized.split("\n")
     pretruncated = find_quote_header_block(lines) is not None
     if pretruncated:

@@ -39,7 +39,7 @@ measurements and rationale plainly.
 
 ## Extraction version
 
-`EXTRACTION_VERSION` (an `int` in `extraction.py`, currently 4) identifies the
+`EXTRACTION_VERSION` (an `int` in `extraction.py`, currently 5) identifies the
 generation of the routine that derives an extraction's text: `extraction.py`,
 `cleaning.py`, `html_text.py` and `_fragments.py` taken together. It is
 independent of the package version and is incremented separately.
@@ -61,31 +61,28 @@ independent of the package version and is incremented separately.
   current digest.
 - Adding a fixture moves the digest without changing the routine: re-record
   `EXPECTED_DIGEST` alone and leave both version numbers where they are.
-- Four generations exist: **1** (initial release of the origin application),
-  **2** (from its v1.2.0), **3** (from v1.11.0) and **4** (from v1.15.0, the
-  generation this package ships).
+- Five generations exist: **1** (initial release of the origin application),
+  **2** (from its v1.2.0), **3** (from v1.11.0), **4** (from v1.15.0, the
+  generation this package's v1.0.0 shipped) and **5** (this package's v1.1.0:
+  fragment edges kept, Outlook-boundary fix uncapped).
 
-## The vendored scanner — deliberate quirks
+## The vendored scanner
 
 `_fragments.py` is trimmed from `email-reply-parser` 0.5.12. Two upstream
-defects are preserved byte for byte, and its docstring says so:
-
-1. The Outlook-boundary newline fix is capped at 8 replacements per message
-   (upstream passed `re.MULTILINE`, whose value is 8, as `re.sub`'s positional
-   `count` argument).
-2. Each fragment's content has its leading and trailing whitespace stripped
-   before the extractor re-joins fragments, which can glue unrelated lines
-   together; `extraction.py`'s quote-header pre-truncation exists to
-   compensate.
-
-Neither is a bug to fix in passing. Both are output-changing, so a fix belongs
-to a planned generation bump with a digest re-record — see
-`docs/generation-5.md`, which sequences them together.
+defects (a `count=8` cap on the Outlook-boundary fix; per-fragment edge
+stripping) were preserved through generation 4 and fixed in generation 5 —
+see `docs/generation-5.md`. One upstream behavior remains and is deliberate:
+the wrapped-attribution collapse, including its template-substitution failure
+mode. `extraction.py`'s quote-header pre-truncation compensates for the
+collapse's line-gluing and must stay until the collapse itself is removed;
+that removal is deferred, with the measured evidence, in
+`docs/generation-5.md`. Any change to the scanner that can move output bytes
+is a generation bump with a digest re-record.
 
 ## Versioning
 
 The package uses [semantic versioning](https://semver.org/); the current
-version is **1.0.0**. The single source of truth is
+version is **1.1.0**. The single source of truth is
 `email_reply_extractor.__version__` (in `__init__.py`); `pyproject.toml` reads
 it dynamically, so the two never drift.
 

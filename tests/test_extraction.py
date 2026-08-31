@@ -21,6 +21,7 @@ from __future__ import annotations
 import pytest
 from corpus import ALL_STEMS, expected_text, fixture_body, fixture_html
 
+from email_reply_extractor.equivalence import tolerant_lines
 from email_reply_extractor.cleaning import clean_for_scoring
 from email_reply_extractor.extraction import (
     ExtractionResult,
@@ -41,19 +42,6 @@ from email_reply_extractor.extraction import (
 INTERLEAVED_STEMS = [s for s in ALL_STEMS if s.startswith("interleaved-")]
 
 # --- tolerant comparison (README §"How the expected files were derived") ------
-
-
-def tolerant_lines(text: str) -> list[str]:
-    """Normalize for comparison: unify non-breaking spaces, strip each line's
-    leading/trailing whitespace, and drop blank lines. Non-space content
-    (including author's curly quotes / em dashes / § / emoji) is preserved.
-    """
-    out: list[str] = []
-    for line in text.split("\n"):
-        line = line.replace("\xa0", " ").replace(" ", " ").strip()
-        if line:
-            out.append(line)
-    return out
 
 
 def composite_text(stem: str) -> str:
@@ -116,13 +104,18 @@ def test_pinned_pointbypoint():
     assert result.method == "erp"
     assert clean_for_scoring(result.text).text == (
         "Some quick replies.\n"
+        "\n"
         "Thanks.\n"
+        "\n"
         "These would be different domains that don't connect to each other. You can "
         "run separate instances, especially when there are multicast group boundaries "
         "so the well-known groups stay disjoint.\n"
+        "\n"
         "If there are no group boundaries, then the packets go to all members of the "
         "well-known group but are dropped by the ones without common encryption keys.\n"
+        "\n"
         "Right, a tradeoff between plug-and-play and secure communication.\n"
+        "\n"
         "I thought we had something like that. I'll leave this for Mike and Stig to "
         "comment about.\n"
         "\n"

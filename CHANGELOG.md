@@ -39,6 +39,17 @@ Any other line (headings above level 2, blank lines, prose in this Format
 section) is not part of a release record and can be ignored. Outside fenced
 code blocks, no release section appears before the first `## [` header.
 
+## [1.1.0] - 2026-09-01
+
+Summary: Generation 5 of the extraction routine — fragment edges kept and the Outlook-boundary fix uncapped — plus whitespace-tolerant equivalence helpers for consumers.
+
+- Bump `EXTRACTION_VERSION` to 5 and re-record the corpus digest.
+- Keep fragment edges in the vendored scanner instead of stripping each fragment's leading and trailing whitespace; blank lines between fragments are preserved and quote-header blocks are no longer disguised by glued signature lines.
+- Apply the Outlook-boundary newline fix to every occurrence instead of the first eight, removing upstream's `re.MULTILINE`-as-count defect.
+- Keep the pre-scan quote-header truncation: measurement over 95,319 stored extractions showed removing it leaks quote headers glued by the scanner's wrapped-attribution collapse (see docs/generation-5.md).
+- Add `tolerant_lines` and `texts_equivalent` (module `equivalence`) so consumers re-deriving stored text can distinguish whitespace-only movement from substantive change.
+- Update docs/generation-5.md with the shipped fixes, the measured effects, and the deferred attribution-collapse unification.
+
 ## [1.0.0] - 2026-09-01
 
 Summary: First release of the two-stage new-text extraction pipeline as a standalone library, extracted from mailing-list-ai-check with byte-identical output and no runtime dependencies.

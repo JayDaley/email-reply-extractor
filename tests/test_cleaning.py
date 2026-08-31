@@ -13,6 +13,7 @@ from __future__ import annotations
 import pytest
 from corpus import expected_text, fixture_body
 
+from email_reply_extractor.equivalence import tolerant_lines
 from email_reply_extractor.cleaning import (
     CleanResult,
     clean_for_scoring,
@@ -20,15 +21,6 @@ from email_reply_extractor.cleaning import (
     is_signature_delimiter,
 )
 from email_reply_extractor.extraction import extract_new_text
-
-
-def tolerant_lines(text: str) -> list[str]:
-    out: list[str] = []
-    for line in text.split("\n"):
-        line = line.replace("\xa0", " ").replace(" ", " ").strip()
-        if line:
-            out.append(line)
-    return out
 
 
 def scored(text: str) -> str:

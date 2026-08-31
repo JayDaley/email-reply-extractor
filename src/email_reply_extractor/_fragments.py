@@ -17,16 +17,17 @@ signature-looking line closes the fragment, which is a boundary effect the
 extractor's output depends on even though the signature label itself is not
 reported.
 
-Two upstream behaviors are deliberately preserved byte-for-byte even though
-they are defects, because :mod:`.extraction`'s output is pinned by generation
-(``EXTRACTION_VERSION``) and fixing them is an output-changing generation bump:
+Two upstream defects were preserved byte-for-byte through generation 4 and
+fixed in generation 5 (see ``docs/generation-5.md``):
 
-1. The Outlook-boundary newline fix is capped at 8 replacements per message —
-   upstream passed ``re.MULTILINE`` (value 8) as ``re.sub``'s positional
-   ``count`` argument.
-2. Each fragment's content has its leading/trailing whitespace stripped before
-   the extractor re-joins fragments, which can glue unrelated lines together
-   (the extractor's quote-header pre-truncation exists to compensate).
+1. Upstream capped the Outlook-boundary newline fix at 8 replacements per
+   message by passing ``re.MULTILINE`` (value 8) as ``re.sub``'s positional
+   ``count`` argument; the substitution now applies to every occurrence.
+2. Upstream stripped each fragment's leading/trailing whitespace, so re-joining
+   fragments could glue unrelated lines together — a signature line directly
+   above a quote-header block's ``From:`` disguised the block from the
+   extractor's detector. Fragment content now keeps its edges, preserving the
+   blank lines that separate fragments.
 
 Input is expected to be LF-normalized (:func:`.extraction.normalize_body` runs
 first); the upstream CRLF replacement was dropped as unreachable.
@@ -51,7 +52,7 @@ _MULTI_QUOTE_HDR_SEARCH_RE = re.compile(_MULTI_QUOTE_HDR, re.DOTALL)
 
 @dataclass(frozen=True)
 class Fragment:
-    """One scanned fragment: its stripped content and whether it is quoted."""
+    """One scanned fragment: its content (edges kept) and whether it is quoted."""
 
     content: str
     quoted: bool
@@ -69,8 +70,8 @@ class _OpenFragment:
 
     def close(self) -> Fragment:
         # Lines were appended in bottom-up scan order; restore document order.
-        # The .strip() is preserved quirk (2) in the module docstring.
-        return Fragment(content="\n".join(reversed(self.lines)).strip(), quoted=self.quoted)
+        # Edges are kept — see fix (2) in the module docstring.
+        return Fragment(content="\n".join(reversed(self.lines)), quoted=self.quoted)
 
 
 def read_fragments(text: str) -> list[Fragment]:
@@ -84,8 +85,8 @@ def read_fragments(text: str) -> list[Fragment]:
         text = _MULTI_QUOTE_HDR_SUB_RE.sub(match.groups()[0].replace("\n", ""), text)
 
     # Break the reply off an Outlook-style boundary line it sits directly on
-    # top of. count=8 is preserved quirk (1) in the module docstring.
-    text = re.sub("([^\n])(?=\n ?[_-]{7,})", "\\1\n", text, count=8)
+    # top of — every occurrence; see fix (1) in the module docstring.
+    text = re.sub("([^\n])(?=\n ?[_-]{7,})", "\\1\n", text)
 
     fragments: list[Fragment] = []
     open_fragment: _OpenFragment | None = None

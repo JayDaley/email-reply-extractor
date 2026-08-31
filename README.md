@@ -148,14 +148,18 @@ Three modifiers combine with the base value:
 derives the text. It is independent of the package version, only ever
 increases, and is incremented whenever a change to the extraction, cleaning,
 HTML or vendored-scanner modules can alter the derived text. It is currently
-**4**.
+**5**.
 
 An application that stores derived text should store `EXTRACTION_VERSION`
 alongside it and compare the stored stamp with the running constant using `<`
 to decide whether the text needs re-deriving. The full contract, including the
 digest that pins the behavior, is in [docs/versioning.md](docs/versioning.md).
-Work planned for generation 5 is listed in
-[docs/generation-5.md](docs/generation-5.md).
+Generation 5 (shipped in v1.1.0) and the work deferred from it are described in
+[docs/generation-5.md](docs/generation-5.md). Because a generation bump can
+move bytes without changing substance, the package exports `tolerant_lines`
+and `texts_equivalent` so a consumer can re-derive stored text and keep
+expensive downstream results (for example a paid classifier score) when only
+whitespace moved.
 
 ## Supported Python versions
 
