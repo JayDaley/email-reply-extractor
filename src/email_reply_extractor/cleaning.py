@@ -1,4 +1,4 @@
-"""Cleaning: prepare extracted new text for the Pangram AI detector.
+"""Cleaning: prepare extracted new text for scoring by an AI-content detector.
 
 This is **stage 2** of the two-stage pipeline. :mod:`extraction` (stage 1)
 recovers the author's *novel content* — everything they wrote that is not quoted
@@ -6,14 +6,14 @@ or reproduced from elsewhere — but it deliberately keeps the author-typed but
 formulaic *furniture*: greetings, sign-offs, signature blocks, mailing-list
 footers, mobile-client taglines. This module removes that furniture so only
 substantive prose reaches the detector, and — crucially — **reports which input
-lines it removed** (:class:`CleanResult.ignored_lines`) so the dashboard can grey
-them out in the extracted-text view.
+lines it removed** (:class:`CleanResult.ignored_lines`) so a consumer can grey
+them out when displaying the extracted text.
 
 Why furniture is removed before scoring
 ---------------------------------------
-A scored ablation (2026-07-22, messages 42/44) showed that greetings,
-sign-offs and signature blocks materially **mask AI-generated content** in the
-Pangram check: removing a one-line greeting flipped one Mixed verdict to AI 0.84,
+A scored ablation in the origin application (2026-07-22) showed that greetings,
+sign-offs and signature blocks materially **mask AI-generated content** in its
+Pangram AI-detection check: removing a one-line greeting flipped one Mixed verdict to AI 0.84,
 and removing a "Regards, / Name" sign-off nearly doubled another message's AI
 fraction, zeroing its "AI-assisted" share in both cases. These fragments are
 short, formulaic and human-written by construction, so leaving them in dilutes
@@ -94,7 +94,7 @@ class CleanResult:
 
     - ``text``: the furniture-free text that is sent to the detector.
     - ``ignored_lines``: 0-based indices into the *input* text's ``split("\\n")``
-      of every **non-blank** line the clean pass removed. The dashboard uses
+      of every **non-blank** line the clean pass removed. A consumer can use
       these to grey out the corresponding lines of the extracted text; the
       contract is fixed (indices into ``extracted_text.split("\\n")``).
     """

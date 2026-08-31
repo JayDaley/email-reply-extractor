@@ -14,8 +14,8 @@ it removes quoted lines, attribution lines, forwarded/quote-header blocks, the
 quoted thread after a sign-off boundary, and (optionally) parent-diff content —
 but it **keeps** the author's own framing furniture (greetings, sign-offs,
 signature blocks, mailing-list footers, mobile taglines). Removing that furniture
-is **stage 2**'s job (:mod:`cleaning`, run just before scoring), which also
-reports what it removed so the dashboard can show it. Keeping furniture in stage
+is **stage 2**'s job (:mod:`cleaning`, run before the text is consumed), which
+also reports what it removed so a consumer can show it. Keeping furniture in stage
 1 means the stored "extracted text" is the author's full novel content, and the
 scored text is a strict, documented subset of it.
 
@@ -75,7 +75,7 @@ HTML as a structural oracle (optional ``html_body``)
 ----------------------------------------------------
 When the caller passes the decoded ``text/html`` part, its structure (see
 :mod:`html_text`) is used three ways. The resolved method makes the HTML source
-visible so it is auditable in the dashboard:
+visible so it is auditable downstream:
 
 a. **HTML-only** — the plain body is missing or blank but an HTML part exists:
    the HTML's novel text (:func:`~html_text.split_html_parts`) becomes the body
@@ -98,27 +98,26 @@ c. **Oracle assist** — the plain body is fine: the normal plain pipeline runs,
    quote, and an author quoting a proposed sentence inline matches its verbatim
    copy in a real ``<blockquote>`` — both would otherwise cost genuine content).
 
-The word-count "too short" gate is deliberately **not** applied here — that is
-the scoring stage's job, and it applies to the stage-2 *cleaned* text.
+A word-count "too short" gate is deliberately **not** applied here — that is a
+consumer's decision, and it belongs on the stage-2 *cleaned* text.
 
 Generation stamp (:data:`EXTRACTION_VERSION`)
 ---------------------------------------------
 :data:`EXTRACTION_VERSION` identifies the routine that derives an extraction's
-text. It is stamped on every ``extractions`` row
-(``extractions.extraction_version``) and is the only input to the start-up
-staleness check (:mod:`staleness`), which reports a row stale when its stamp is
-*lower* than the running value. It is independent of the app's semantic version:
+text. A consumer that stores derived text should stamp each stored row with it
+and treat a row as stale when its stamp is *lower* than the running value (see
+``docs/versioning.md``). It is independent of the package's semantic version:
 releases that do not touch the pipeline leave it alone.
 
 Bump it by one — by hand, in the same commit — whenever a change to this module,
-:mod:`cleaning` or :mod:`html_text` can alter the derived text or what is sent to
-Pangram, including a whitespace-only difference. Do not bump it for comments,
+:mod:`cleaning`, :mod:`html_text` or :mod:`._fragments` can alter the stage-1 or
+stage-2 output, including a whitespace-only difference. Do not bump it for comments,
 docstrings, type annotations or refactors that provably keep every output byte
 identical; ``tests/test_extraction_version.py`` pins the composite output of the
 whole fixture corpus to a digest and fails when it moves, so a change that needs
 a bump cannot land silently. The value only ever increases: ordering is what
-lets an older app read a store written by a newer one as "not stale" rather than
-offering to downgrade good text.
+lets an older consumer read text derived by a newer one as "not stale" rather
+than offering to downgrade good text.
 
 Known generations: **1** initial release; **2** the localized quote-header and
 custom signature-block rules (v1.2.0); **3** quote-header truncation before ERP,
@@ -139,10 +138,10 @@ from .html_text import split_html_parts
 
 # --- generation stamp -----------------------------------------------------------
 
-#: The generation of the text-deriving routine (this module, :mod:`cleaning` and
-#: :mod:`html_text` together). Hand-incremented; see the module docstring for
-#: when and why. Stamped on every ``extractions`` row and compared with ``<`` by
-#: :mod:`staleness`, so it must only ever increase.
+#: The generation of the text-deriving routine (this module, :mod:`cleaning`,
+#: :mod:`html_text` and :mod:`._fragments` together). Hand-incremented; see the
+#: module docstring for when and why. Consumers stamp stored derived text with
+#: it and compare with ``<``, so it must only ever increase.
 EXTRACTION_VERSION: int = 4
 
 # --- result -------------------------------------------------------------------
@@ -177,7 +176,7 @@ class ExtractionResult:
       when the HTML quoted-text oracle removed content from a plain extraction,
       ``"+html-quote"`` is appended.
     - ``status``: one of :data:`STATUS_OK`, :data:`STATUS_EMPTY`,
-      :data:`STATUS_FAILED` (a subset of ``store.EXTRACTION_STATUSES``).
+      :data:`STATUS_FAILED`.
     """
 
     text: str
