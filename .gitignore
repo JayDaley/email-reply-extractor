@@ -1,0 +1,30 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*$py.class
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# ---- Virtual environments ----
+.venv/
+venv/
+
+# ---- Test / lint caches ----
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+
+# ---- Editor / OS ----
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# ---- Claude Code local settings ----
+.claude/settings.local.json
+
+# ---- CodeGraph index (local, rebuilt from the source) ----
+.codegraph/

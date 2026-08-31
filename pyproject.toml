@@ -1,0 +1,47 @@
+[project]
+name = "email-reply-extractor"
+dynamic = ["version"]
+description = "Extract the author's newly written text from an email: quoted-text removal plus scoring-ready cleaning"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Jay Daley" }]
+requires-python = ">=3.10"
+dependencies = []
+keywords = ["email", "reply", "quoting", "signature", "mailing-list", "text-extraction"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Topic :: Communications :: Email",
+    "Topic :: Text Processing",
+]
+
+[project.urls]
+Homepage = "https://github.com/JayDaley/email-reply-extractor"
+Changelog = "https://github.com/JayDaley/email-reply-extractor/blob/main/CHANGELOG.md"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6",
+]
+
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.dynamic]
+version = {attr = "email_reply_extractor.__version__"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+# The classic default rule set, pinned so a ruff upgrade cannot silently widen
+# it; the vendored modules predate the newer defaults.
+select = ["E4", "E7", "E9", "F"]
