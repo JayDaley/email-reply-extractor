@@ -39,6 +39,13 @@ Any other line (headings above level 2, blank lines, prose in this Format
 section) is not part of a release record and can be ignored. Outside fenced
 code blocks, no release section appears before the first `## [` header.
 
+## [1.1.1] - 2026-09-01
+
+Summary: The copyright owner in LICENSE is the IETF Intellectual Property Management Corporation.
+
+- Change the LICENSE copyright owner from Jay Daley to IETF Intellectual Property Management Corporation; the license remains MIT.
+- Update the install instructions to the published PyPI package.
+
 ## [1.1.0] - 2026-09-01
 
 Summary: Generation 5 of the extraction routine — fragment edges kept and the Outlook-boundary fix uncapped — plus whitespace-tolerant equivalence helpers for consumers.

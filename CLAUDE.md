@@ -82,7 +82,7 @@ is a generation bump with a digest re-record.
 ## Versioning
 
 The package uses [semantic versioning](https://semver.org/); the current
-version is **1.1.0**. The single source of truth is
+version is **1.1.1**. The single source of truth is
 `email_reply_extractor.__version__` (in `__init__.py`); `pyproject.toml` reads
 it dynamically, so the two never drift.
 
