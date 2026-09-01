@@ -35,10 +35,8 @@ The rules of both stages are documented in [docs/extraction.md](docs/extraction.
 
 ## Install
 
-Not yet published on PyPI. Install from the repository:
-
 ```
-pip install git+https://github.com/JayDaley/email-reply-extractor
+pip install email-reply-extractor
 ```
 
 ## Quickstart
