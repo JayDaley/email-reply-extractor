@@ -165,6 +165,32 @@ whitespace moved.
 
 Python 3.10 through 3.14; each is exercised in CI.
 
+## Comparison with alternatives
+
+The two most widely used Python libraries for this task are
+[email-reply-parser](https://github.com/zapier/email-reply-parser) (Zapier's
+port of GitHub's Email Reply Parser) and
+[talon](https://github.com/mailgun/talon) (Mailgun). The table states each
+project's documented behavior; release data is from PyPI as of September 2026.
+
+|  | email-reply-extractor | email-reply-parser | talon |
+|---|---|---|---|
+| Extracts | The author's full novel content (stage 1), then the substantive prose alone (stage 2) | The latest reply, quoted text and signatures hidden | The reply with quotations removed; signatures separately |
+| Signature handling | Kept in stage 1, removed and reported line-by-line in stage 2 | Hidden along with the reply's quoted fragments; not reported | Regex ("brute force") extractor, plus an SVM machine-learning extractor |
+| HTML part | Used as a structural oracle: as the body when no usable plain part exists, replacing a flattened plain part, or removing a quoted message leaked unmarked into the plain part | Not handled | Quotation extraction has an HTML mode (lxml-based) |
+| Thread parent | Optional parent-diff assist removes a quoted previous message that carries no `>` markers | Not used | Not used |
+| Quote headers | Outlook-style blocks, including German and Chinese label sets, folded and double-spaced renderings | `From:`/`Sent:`/`To:`/`Subject:` fragment detection, English only | Delimiter patterns (e.g. `-----Original Message-----`), several languages |
+| Output stability | Behavior pinned by an integer generation (`EXTRACTION_VERSION`) and a corpus digest test; whitespace-tolerant equivalence helpers for consumers | Not versioned separately | Not versioned separately |
+| Test corpus | Hand-labeled real mailing-list messages (`tests/fixtures`) | Unit-test fixture emails | Unit-test fixture emails; ML training data |
+| Runtime dependencies | None (standard library) | None (standard library) | lxml, regex, numpy, scipy, scikit-learn, chardet, and others |
+| Latest release | 1.1.0 (2026) | 0.5.12 (2020) | 1.4.4 (2017) |
+| License | MIT | MIT | Apache 2.0 |
+
+The fragment scanner at this library's core derives from email-reply-parser —
+see Provenance below — so on a plain-text body with English quoting the two
+produce related results; the differences above are what this library adds on
+top of that scan.
+
 ## Provenance
 
 The code was extracted from
