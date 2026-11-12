@@ -1,0 +1,87 @@
+From: mohamed.boucadair@orange.com
+To: "yuhaisheng@cnnic.cn" <yuhaisheng@cnnic.cn>
+CC: "regext@ietf.org" <regext@ietf.org>
+Subject: [regext] TR: I-D Action: draft-yu-agent-identifier-rdap-00.txt
+Thread-Topic: I-D Action: draft-yu-agent-identifier-rdap-00.txt
+Date: Fri, 22 May 2026 08:05:39 +0000
+Message-ID: <PAUP264MB67566D6CBE95775FA7B740AC880F2@PAUP264MB6756.FRAP264.PROD.OUTLOOK.COM>
+References:
+ <177943455260.76873.1644065442912348738@dt-datatracker-5b4c8598b5-4ztf9>
+In-Reply-To:
+ <177943455260.76873.1644065442912348738@dt-datatracker-5b4c8598b5-4ztf9>
+List-Id: Registration Protocols Extensions Working Group <regext.ietf.org>
+Archived-At:
+ <https://mailarchive.ietf.org/arch/msg/regext/c4-zK5sWlu6rGf7KScK7JRYc85o>
+Content-Type: text/plain; charset="iso-8859-1"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+
+Hi Haisheng,
+
+Forwarding to regext, fwiw.
+
+Feel free to share more context and your plans with this document :-)
+
+Cheers,
+Med
+
+-----Message d'origine-----
+De=A0: internet-drafts@ietf.org <internet-drafts@ietf.org>=20
+Envoy=E9=A0: vendredi 22 mai 2026 09:23
+=C0=A0: i-d-announce@ietf.org
+Objet=A0: I-D Action: draft-yu-agent-identifier-rdap-00.txt
+
+
+Internet-Draft draft-yu-agent-identifier-rdap-00.txt is now available.
+
+   Title:   An RDAP Profile for Agent Identifier Registration Data
+   Author:  Haisheng Yu
+   Name:    draft-yu-agent-identifier-rdap-00.txt
+   Pages:   12
+   Dates:   2026-05-22
+
+Abstract:
+
+   AI agents may need stable identifiers that are independent from their
+   current network locations.  In agent deployments, an Agent identifier
+   may be associated with IPv6 locators, IPv6 prefixes, Agent Gateways,
+   public key references, policy references, lifecycle state, and
+   revocation status.  Applications, gateways, controllers, and
+   operators need a trusted way to query this registration data.
+
+   This document defines an RDAP profile for querying Agent identifier
+   registration data.  The profile reuses the Registration Data Access
+   Protocol (RDAP) query model and JSON response format, and defines an
+   RDAP object class and extension members for Agent identifiers, IPv6
+   locator bindings, Agent Gateway bindings, and related operational
+   metadata.
+
+   This document does not define a new agent discovery protocol, a new
+   agent interaction protocol, or a new authentication mechanism.  It
+   defines a registration data access profile that can be used by agent
+   deployments and by other agent-related systems that need trusted
+   Agent identifier metadata.
+
+The IETF datatracker status page for this Internet-Draft is:
+https://datatracker.ietf.org/doc/draft-yu-agent-identifier-rdap/
+
+_____________________________________________________________________________=
+_______________________________
+Ce message et ses pieces jointes peuvent contenir des informations confidenti=
+elles ou privilegiees et ne doivent donc
+pas etre diffuses, exploites ou copies sans autorisation. Si vous avez recu c=
+e message par erreur, veuillez le signaler
+a l'expediteur et le detruire ainsi que les pieces jointes. Les messages elec=
+troniques etant susceptibles d'alteration,
+Orange decline toute responsabilite si ce message a ete altere, deforme ou fa=
+lsifie. Merci.
+
+This message and its attachments may contain confidential or privileged infor=
+mation that may be protected by law;
+they should not be distributed, used or copied without authorisation.
+If you have received this email in error, please notify the sender and delete=
+ this message and its attachments.
+As emails may be altered, Orange is not liable for messages that have been mo=
+dified, changed or falsified.
+Thank you.
+

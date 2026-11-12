@@ -47,7 +47,12 @@ diverges from hand-labeled ground truth:
   and everything after it, is dropped. Localized label sets are recognized too
   (German; Chinese 发件人/发送时间/收件人/主题 with full-width colons, as
   produced by Alibaba Mail and Chinese Outlook), along with the dashed divider
-  Alibaba Mail draws above the block. The truncation runs on the intact body
+  Alibaba Mail draws above the block. Latin-script localized blocks open with
+  ``De``/``Da``/``Van``/``Von`` (French, Spanish, Portuguese, Italian, Dutch,
+  German), accept U+00A0 / U+202F around the colon (``De\xa0: …``), and must
+  carry their language's subject label. A message whose author answers inline,
+  with tagged lines, below such a block keeps the generation-5 treatment (see
+  :func:`_localized_inline_reply`). The truncation runs on the intact body
   *before* ERP: re-joining ERP's edge-stripped fragments can glue a signature
   line (``Tel:``/``Email:``) directly above the block's ``From:``, which would
   otherwise disguise the block as pasted header evidence. When the ``From:``
@@ -55,8 +60,9 @@ diverges from hand-labeled ground truth:
   renderings archives produce — folded header lines that lost their leading
   whitespace, and a blank line between every field.
 - **"Original message" dividers**: the dashed ``-------- Original message
-  --------`` (or ``-----Original Message-----`` / "Forwarded message") divider
-  and everything after it is dropped — including when HTML-to-text conversion
+  --------`` (or ``-----Original Message-----`` / "Forwarded message", and the
+  Chinese and Latin-script localized forms such as ``-----Message d'origine-----``)
+  divider and everything after it is dropped — including when HTML-to-text conversion
   glues the divider mid-line onto the author's last sentence, where only the
   author's prefix before the divider is kept.
 - **Over-strip guard**: dashed-separator digest bodies make ERP treat the ``---``
@@ -127,7 +133,8 @@ re-wrapped remainder lines, and Gmail quote wrappers holding blockquotes no
 longer classifying the author's inline replies as quoted (v1.15.0); **5** the
 vendored scanner keeps fragment edges and applies the Outlook-boundary fix to
 every occurrence (this package's v1.1.0; generations 1-4 shipped inside
-mailing-list-ai-check).
+mailing-list-ai-check); **6** Latin-script localized quote-header blocks and
+"Original message" dividers, with the inline-reply exception (v1.2.0).
 """
 
 from __future__ import annotations
@@ -145,7 +152,7 @@ from .html_text import split_html_parts
 #: :mod:`html_text` and :mod:`._fragments` together). Hand-incremented; see the
 #: module docstring for when and why. Consumers stamp stored derived text with
 #: it and compare with ``<``, so it must only ever increase.
-EXTRACTION_VERSION: int = 5
+EXTRACTION_VERSION: int = 6
 
 # --- result -------------------------------------------------------------------
 
@@ -450,8 +457,66 @@ def strip_after_signoff_boundary(lines: list[str]) -> list[str]:
 # after it, and 主题 sometimes padded with an ideographic space (主　题). Alibaba
 # Mail additionally draws a long dashed divider line directly above the block.
 
-# The block always opens with a ``From:`` (or localized 发件人) line.
+# Latin-script Outlook localizations translate the labels, and French
+# typography puts a space before the colon — in stored text often U+00A0
+# (no-break space) or U+202F (narrow no-break space), as in ``De\xa0: …``:
+#
+#     De : Mario Loffredo <mario@example.org>
+#     Envoyé : mercredi 9 septembre 2026 10:38
+#     À : regext-chairs@example.org
+#     Objet : Re: [regext] …
+#
+# The opener labels (French/Spanish/Portuguese ``De``, Italian ``Da``, Dutch
+# ``Van``, German ``Von``) are ordinary words, so a localized opener qualifies
+# only when the field run below it also carries its language's subject label
+# (see :data:`_LOCALIZED_SUBJECT_RE`), in addition to the rules every block
+# meets.
+
+#: Whitespace accepted around a localized label's colon: space, tab, U+00A0,
+#: U+202F.
+_LABEL_SPACE = "[ \t\u00a0\u202f]"
+
+#: The localized opener labels ("From" translated).
+_LOCALIZED_FROM_LABELS = r"De|Da|Van|Von"
+
+# The block always opens with a ``From:`` (or localized 发件人) line, or with a
+# Latin-script localized opener (:data:`_LOCALIZED_FROM_LINE_RE`).
 _FROM_LINE_RE = re.compile(r"^[ \t]*(?:From:|发件人[ \t]*[:：])[ \t]*\S")
+
+#: A Latin-script localized opener line ("De : …", "Da: …", "Van: …", "Von: …"),
+#: which qualifies only with the subject-label guard.
+_LOCALIZED_FROM_LINE_RE = re.compile(
+    rf"^[ \t]*(?:{_LOCALIZED_FROM_LABELS}){_LABEL_SPACE}*:{_LABEL_SPACE}*\S"
+)
+
+#: Localized field labels other than the opener: French (Envoyé/Envoye, Date,
+#: À/A, Cc, Cci, Objet), Spanish (Enviado / Enviado el, Fecha, Para, CC, CCO,
+#: Asunto), Portuguese (Enviada em / Enviado em, Data, Para, Cc, Assunto),
+#: Italian (Inviato, Data, A, Cc, Oggetto), Dutch (Verzonden, Datum, Aan, CC,
+#: Onderwerp), German (Gesendet, Datum, An, Cc, Betreff).
+_LOCALIZED_FIELD_LABELS = (
+    r"Envoy[ée]|Date|[ÀA]|Cci?|Objet"
+    r"|Enviad[oa](?:[ \t]+(?:el|em))?|Fecha|Para|CCO|Asunto|Assunto"
+    r"|Data|Inviato|Oggetto"
+    r"|Verzonden|Datum|Aan|Onderwerp"
+    r"|Gesendet|An|Betreff"
+)
+
+#: A localized field line, colon spacing included (``Envoyé\xa0: …``).
+_LOCALIZED_FIELD_RE = re.compile(
+    rf"^[ \t]*(?i:{_LOCALIZED_FIELD_LABELS}|{_LOCALIZED_FROM_LABELS})"
+    rf"{_LABEL_SPACE}*:(?:{_LABEL_SPACE}|$)"
+)
+
+#: The subject label a localized block must carry: Objet (French), Asunto
+#: (Spanish), Assunto (Portuguese), Oggetto (Italian), Onderwerp (Dutch),
+#: Betreff (German). Every Outlook quote header carries a subject line; prose
+#: that happens to open with "De :" or "Van:" followed by "A:" / "Data:" lines
+#: does not carry one.
+_LOCALIZED_SUBJECT_RE = re.compile(
+    rf"^[ \t]*(?i:Objet|Asunto|Assunto|Oggetto|Onderwerp|Betreff)"
+    rf"{_LABEL_SPACE}*:(?:{_LABEL_SPACE}|$)"
+)
 
 # A CJK header label: a CJK char, then up to 10 more CJK chars / ideographic
 # spaces (U+3000, as in 主　题), then an ASCII or full-width colon. No whitespace
@@ -508,14 +573,23 @@ def _in_pasted_header_run(lines: list[str], i: int) -> bool:
     return False
 
 
-def find_quote_header_block(lines: list[str]) -> int | None:
+def find_quote_header_block(lines: list[str], *, localized: bool = True) -> int | None:
     """Return the index of the ``From:`` line that opens a forwarded/quote-header
     block, or ``None`` if the body has no such block.
 
     A qualifying block: a ``From:`` line that does not sit inside pasted header
     evidence (see :func:`_in_pasted_header_run`), followed by at least one more
     header line, at least one of which is a quote-header signal field
-    (``Sent:``/``Date:``/``To:``/``Cc:``/``Subject:``/localized).
+    (``Sent:``/``Date:``/``To:``/``Cc:``/``Subject:``/German/Chinese).
+
+    A Latin-script localized block (French ``De :``, Spanish/Portuguese ``De:``,
+    Italian ``Da:``, Dutch ``Van:``, German ``Von:``) qualifies when its opener
+    is followed by at least two more field lines — localized labels with any
+    colon spacing accepted (see :data:`_LOCALIZED_FIELD_RE`) — one of which is
+    its language's subject label (:data:`_LOCALIZED_SUBJECT_RE`). The opener
+    labels are ordinary words, so the subject label is required where the
+    English rule accepts any signal field. ``localized=False`` recognizes only
+    the English, German-label and Chinese blocks (the rule before generation 6).
 
     When the ``From:`` line carries an address (``@``), the walk tolerates the
     two mangled renderings mailing-list archives produce: folded header lines
@@ -529,32 +603,44 @@ def find_quote_header_block(lines: list[str]) -> int | None:
     """
     n = len(lines)
     for i, line in enumerate(lines):
-        if not _FROM_LINE_RE.match(line):
+        if _FROM_LINE_RE.match(line):
+            is_localized = False
+        elif localized and _LOCALIZED_FROM_LINE_RE.match(line):
+            is_localized = True
+        else:
             continue
         if i > 0 and _in_pasted_header_run(lines, i):
             continue
+
+        def is_field(text: str, is_localized: bool = is_localized) -> bool:
+            if _HEADER_FIELD_RE.match(text):
+                return True
+            return is_localized and _LOCALIZED_FIELD_RE.match(text) is not None
+
         tolerant = "@" in line
         header_lines = 1
         has_signal = False
         j = i + 1
         while j < n:
             nxt = lines[j]
-            if _HEADER_FIELD_RE.match(nxt):
+            if is_field(nxt):
                 header_lines += 1
-                if _QUOTE_HEADER_SIGNAL_RE.match(nxt):
+                if (
+                    _LOCALIZED_SUBJECT_RE.match(nxt)
+                    if is_localized
+                    else _QUOTE_HEADER_SIGNAL_RE.match(nxt)
+                ):
                     has_signal = True
                 j += 1
             elif nxt.strip() and (tolerant or nxt[:1] in (" ", "\t")):
                 # Folded continuation of the preceding header field.
                 j += 1
-            elif (
-                not nxt.strip() and tolerant and j + 1 < n and _HEADER_FIELD_RE.match(lines[j + 1])
-            ):
+            elif not nxt.strip() and tolerant and j + 1 < n and is_field(lines[j + 1]):
                 # Double-spaced rendering: a single blank between fields.
                 j += 1
             else:
                 break
-        if header_lines >= 2 and has_signal:
+        if has_signal and header_lines >= (3 if is_localized else 2):
             return i
     return None
 
@@ -565,14 +651,14 @@ def find_quote_header_block(lines: list[str]) -> int | None:
 _QUOTE_HEADER_DIVIDER_RE = re.compile(r"^[ \t]*-{6,}[ \t]*$")
 
 
-def strip_after_quote_header_block(lines: list[str]) -> list[str]:
+def strip_after_quote_header_block(lines: list[str], *, localized: bool = True) -> list[str]:
     """Truncate everything from a forwarded/quote-header block to the end.
 
     A dashed divider line left dangling directly above the removed block (the
     Alibaba Mail style) is client furniture, not author content, and is dropped
-    with the block.
+    with the block. ``localized`` is passed to :func:`find_quote_header_block`.
     """
-    idx = find_quote_header_block(lines)
+    idx = find_quote_header_block(lines, localized=localized)
     if idx is None:
         return lines
     out = lines[:idx]
@@ -603,15 +689,44 @@ _ORIGINAL_MESSAGE_DIVIDER_RE = re.compile(
     re.IGNORECASE,
 )
 
+# Latin-script localizations of the same divider: French "Message d'origine"
+# (straight or curly apostrophe) and "Message transféré", Spanish "Mensaje
+# original" / "Mensaje reenviado", Portuguese "Mensagem original" / "Mensagem
+# encaminhada", Italian "Messaggio originale" / "Messaggio inoltrato", Dutch
+# "Oorspronkelijk bericht" / "Doorgestuurd bericht", German "Ursprüngliche
+# Nachricht" / "Weitergeleitete Nachricht". Dashes are required on both sides,
+# as above; the spacing may include U+00A0 / U+202F.
+_LOCALIZED_DIVIDER_RE = re.compile(
+    rf"-{{2,}}{_LABEL_SPACE}*(?:"
+    rf"Message{_LABEL_SPACE}+d['’]origine|Message{_LABEL_SPACE}+transf[ée]r[ée]"
+    rf"|Mensaje{_LABEL_SPACE}+(?:original|reenviado)"
+    rf"|Mensagem{_LABEL_SPACE}+(?:original|encaminhada)"
+    rf"|Messaggio{_LABEL_SPACE}+(?:originale|inoltrato)"
+    rf"|(?:Oorspronkelijk|Doorgestuurd){_LABEL_SPACE}+bericht"
+    rf"|(?:Urspr(?:ü|ue)ngliche|Weitergeleitete){_LABEL_SPACE}+Nachricht"
+    rf"){_LABEL_SPACE}*-{{2,}}",
+    re.IGNORECASE,
+)
 
-def strip_after_original_message_divider(lines: list[str]) -> list[str]:
+
+def _find_divider(line: str, *, localized: bool = True) -> re.Match[str] | None:
+    """The first "Original message" divider in ``line``, or ``None``."""
+    found = [m for m in (_ORIGINAL_MESSAGE_DIVIDER_RE.search(line),) if m]
+    if localized:
+        found += [m for m in (_LOCALIZED_DIVIDER_RE.search(line),) if m]
+    return min(found, key=lambda m: m.start()) if found else None
+
+
+def strip_after_original_message_divider(lines: list[str], *, localized: bool = True) -> list[str]:
     """Truncate everything from a dashed "Original/Forwarded message" divider.
 
     The line holding the divider is dropped too, except that a non-empty author
-    prefix glued before a mid-line divider survives.
+    prefix glued before a mid-line divider survives. ``localized=False``
+    recognizes only the English and Chinese wordings (the rule before
+    generation 6).
     """
     for i, line in enumerate(lines):
-        m = _ORIGINAL_MESSAGE_DIVIDER_RE.search(line)
+        m = _find_divider(line, localized=localized)
         if m is None:
             continue
         out = lines[:i]
@@ -622,7 +737,7 @@ def strip_after_original_message_divider(lines: list[str]) -> list[str]:
     return lines
 
 
-def custom_clean(text: str) -> str:
+def custom_clean(text: str, *, localized: bool = True) -> str:
     """Apply the stage-1 quote/attribution cleanup to ``text``.
 
     Composable steps, in order: truncate at a forwarded/quote-header block, an
@@ -632,10 +747,15 @@ def custom_clean(text: str) -> str:
     and sign-offs are **kept** — they are the author's own furniture and are
     removed later by :mod:`cleaning`. Blank-line structure is left as-is; the
     tolerant test comparison ignores it.
+
+    ``localized=False`` recognizes only the quote-header blocks and dividers
+    of generation 5 (English, German labels, Chinese), not the Latin-script
+    localizations; :func:`_core_extract` passes it for an inline reply written
+    below a localized block (see :func:`_localized_inline_reply`).
     """
     lines = text.split("\n")
-    lines = strip_after_quote_header_block(lines)
-    lines = strip_after_original_message_divider(lines)
+    lines = strip_after_quote_header_block(lines, localized=localized)
+    lines = strip_after_original_message_divider(lines, localized=localized)
     lines = strip_after_signoff_boundary(lines)
     lines = strip_attribution_lines(lines)
     lines = [line for line in lines if not is_quote_line(line)]
@@ -658,7 +778,7 @@ def custom_clean(text: str) -> str:
 _GUARD_MIN_RETAINED = 0.6
 
 
-def count_unquoted_content_lines(body: str) -> int:
+def count_unquoted_content_lines(body: str, *, localized: bool = True) -> int:
     """Count non-blank body lines that are plainly authored content.
 
     This is the denominator of the over-strip guard, so it must mirror what
@@ -670,8 +790,8 @@ def count_unquoted_content_lines(body: str) -> int:
     keeps the guard from misfiring on ordinary signed mail while still catching
     the dashed-separator digests, where ERP truncates most of the body.
     """
-    lines = strip_after_quote_header_block(body.split("\n"))
-    lines = strip_after_original_message_divider(lines)
+    lines = strip_after_quote_header_block(body.split("\n"), localized=localized)
+    lines = strip_after_original_message_divider(lines, localized=localized)
     lines = strip_after_signoff_boundary(lines)
     count = 0
     for line in lines:
@@ -838,6 +958,97 @@ def strip_parent_content(text: str, parent_body: str, *, continuation: bool = Fa
     return "\n".join(collapsed)
 
 
+# --- inline replies below a localized quote-header block --------------------------
+
+# Some authors answer point by point *inside* the quoted message, below the
+# client's quote-header block, tagging each answer ("[Med] ACK"). Generation 5
+# did not recognize the Latin-script localized blocks (see
+# :data:`_LOCALIZED_FROM_LINE_RE` and :data:`_LOCALIZED_DIVIDER_RE`), so such
+# answers below a French block survived and the parent-diff assist removed the
+# quoted parent around them. Truncating at the localized block would drop them.
+# When the thread parent is on hand the answers are provable — tagged lines
+# below the block that the parent does not account for — and the localized
+# rules are then not applied to the message, which keeps its generation-5
+# behavior. The generation-5 rules (English, German labels, Chinese) are
+# unaffected: their truncation applies whether or not tagged answers follow.
+
+#: An inline-reply tag at the start of a line: a bracketed label of 1-20
+#: characters containing at least one letter ("[Med]", "[SAH]", "[Linda3]").
+#: Citation forms ("[RFC8174]", "[BCP14]", "[I-D.x]") and numeric footnotes
+#: ("[1]") are excluded.
+_INLINE_REPLY_TAG_RE = re.compile(
+    r"^[ \t]*\[(?!(?:RFC|BCP|STD|FYI|I-D|IANA|draft)\b|(?:RFC|BCP|STD)\d)"
+    r"(?=[^\]\n]*[A-Za-z])[^\[\]\n]{1,20}\]"
+)
+
+#: With the thread parent on hand, the parent-diff assist must remove at least
+#: this many non-blank lines below the block — evidence that the text there
+#: quotes the parent — before a tagged survivor is read as an inline reply.
+_INLINE_REPLY_MIN_PARENT_LINES = 1
+
+
+def _first_quote_boundary(lines: list[str], *, localized: bool) -> int:
+    """Index of the first quote-header block or divider, or ``len(lines)``."""
+    end = find_quote_header_block(lines, localized=localized)
+    end = len(lines) if end is None else end
+    for i in range(end):
+        if _find_divider(lines[i], localized=localized):
+            return i
+    return end
+
+
+def _localized_inline_reply(lines: list[str], parent_body: str | None) -> bool:
+    """True when a localized quote-header block or divider sits above the
+    author's tagged inline replies.
+
+    Only the span the localized rules would newly remove is examined: from the
+    first localized boundary to the first generation-5 boundary (or the end).
+
+    With the thread parent, the parent-diff assist (:func:`strip_parent_content`)
+    runs on that span alone; it must remove at least
+    :data:`_INLINE_REPLY_MIN_PARENT_LINES` non-blank lines and leave a line
+    opening with an inline-reply tag (:data:`_INLINE_REPLY_TAG_RE`) that belongs
+    to the author (:func:`_is_author_tag`). Without the parent, a tag line in
+    the span qualifies only when its label names the author in the text above
+    the block (the sign-off "Med" for ``[Med]``).
+    """
+    start = _first_quote_boundary(lines, localized=True)
+    end = _first_quote_boundary(lines, localized=False)
+    if start >= end:
+        return False
+    span = "\n".join(lines[start:end])
+    if parent_body is None:
+        survivors = span
+    else:
+        survivors = strip_parent_content(span, parent_body, continuation=True)
+        removed = _nonblank_line_count(span) - _nonblank_line_count(survivors)
+        if removed < _INLINE_REPLY_MIN_PARENT_LINES:
+            return False
+    head = "\n".join(lines[:start])
+    for line in survivors.split("\n"):
+        m = _INLINE_REPLY_TAG_RE.match(line)
+        if m and _is_author_tag(m.group(0).strip()[1:-1], head, parent_body):
+            return True
+    return False
+
+
+def _is_author_tag(label: str, head: str, parent_body: str | None) -> bool:
+    """True when the inline-reply tag ``label`` belongs to this message's author.
+
+    A tag the parent never uses is new in this message. A tag the parent uses
+    — or any tag, when the parent is not available — belongs to an earlier
+    round of the thread (as in ``[ML] …`` answers the parent's author wrote,
+    which a re-wrapped or re-formatted quote can leave unmatched by the
+    parent-diff assist) unless its label, without a trailing round number
+    ("Linda3" → "Linda"), occurs as a word in the text above the block —
+    typically the author's sign-off ("Cheers,\\nMed" for ``[Med]``).
+    """
+    if parent_body is not None and f"[{label}" not in parent_body:
+        return True
+    name = label.rstrip("0123456789").strip()
+    return bool(name) and re.search(rf"(?<!\w){re.escape(name)}(?!\w)", head) is not None
+
+
 # --- public entry point -------------------------------------------------------
 
 
@@ -859,10 +1070,16 @@ def _core_extract(body: str, parent_body: str | None) -> tuple[str, str]:
     # 5): dropping this pre-truncation leaked quote headers in 10 messages and
     # reverted none, so it stays until the collapse itself is unified away (see
     # docs/generation-5.md).
+    #
+    # The Latin-script localized blocks and dividers are not applied to an
+    # inline reply written below one (see _localized_inline_reply): the
+    # message keeps its generation-5 treatment, where the parent-diff assist
+    # below removes the quoted parent around the author's tagged answers.
     lines = normalized.split("\n")
-    pretruncated = find_quote_header_block(lines) is not None
+    localized = not _localized_inline_reply(lines, parent_body)
+    pretruncated = find_quote_header_block(lines, localized=localized) is not None
     if pretruncated:
-        normalized = "\n".join(strip_after_quote_header_block(lines))
+        normalized = "\n".join(strip_after_quote_header_block(lines, localized=localized))
 
     # Primary: join every ERP fragment that is not quoted — *including*
     # signature fragments, which stage 1 must keep (stage 2 removes them). This
@@ -872,15 +1089,15 @@ def _core_extract(body: str, parent_body: str | None) -> tuple[str, str]:
     # above) arrive as non-quoted "header" fragments here; the custom pass
     # (``strip_after_quote_header_block`` / sign-off boundary) truncates them.
     erp_out = "\n".join(frag.content for frag in read_fragments(normalized) if not frag.quoted)
-    cleaned = custom_clean(erp_out)
+    cleaned = custom_clean(erp_out, localized=localized)
     custom_changed = pretruncated or cleaned != erp_out.strip()
 
     # Over-strip guard: dashed-separator digests make ERP truncate at the
     # first "---" rule. If the primary path dropped most of the body's
     # plainly-unquoted lines, redo the cleanup on the whole body.
-    unquoted = count_unquoted_content_lines(normalized)
+    unquoted = count_unquoted_content_lines(normalized, localized=localized)
     if unquoted > 0 and _nonblank_line_count(cleaned) < _GUARD_MIN_RETAINED * unquoted:
-        fallback = custom_clean(normalized)
+        fallback = custom_clean(normalized, localized=localized)
         if fallback.strip():
             text = fallback
             method = "custom-fallback"

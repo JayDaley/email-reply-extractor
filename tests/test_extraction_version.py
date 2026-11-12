@@ -31,18 +31,21 @@ from email_reply_extractor.cleaning import clean_for_scoring
 from email_reply_extractor.extraction import EXTRACTION_VERSION, extract_new_text
 
 #: SHA-256 of :func:`corpus_digest` over the fixture corpus, recorded against
-#: ``EXTRACTION_VERSION = 5`` (fragment edges kept, Outlook-boundary fix
-#: uncapped — see ``docs/generation-5.md``). Re-record it (and bump the
-#: constant) only when the change in behaviour is intended. Under generation 4
-#: the digest was ``faf5f388795897201e92a58600b345c19656df939228bd87bd47ab1578f1db5f``,
-#: carried unchanged from mailing-list-ai-check, the application this package
-#: was extracted from.
-EXPECTED_DIGEST = "2f36f0168c2769b122a0f74c0cfa63a714da3c89f2cd1f90d0f5e072f32d6fb3"
+#: ``EXTRACTION_VERSION = 6`` (Latin-script localized quote-header blocks and
+#: "Original message" dividers — see ``docs/extraction.md``) with the two
+#: French fixtures added. Re-record it (and bump the constant) only when the
+#: change in behaviour is intended. Under generation 5 the digest was
+#: ``2f36f0168c2769b122a0f74c0cfa63a714da3c89f2cd1f90d0f5e072f32d6fb3``; under
+#: generation 4 it was
+#: ``faf5f388795897201e92a58600b345c19656df939228bd87bd47ab1578f1db5f``, carried
+#: unchanged from mailing-list-ai-check, the application this package was
+#: extracted from.
+EXPECTED_DIGEST = "6ccdd626b598da3948b4119ae383ae02f587855c7ea1cb946ff21984dbb1a0d8"
 
 #: The generation the digest above was recorded against. It exists so that a
 #: bump without a re-record, or a re-record without a bump, is visible in the
 #: diff of this file.
-DIGEST_EXTRACTION_VERSION = 5
+DIGEST_EXTRACTION_VERSION = 6
 
 
 def corpus_digest() -> str:

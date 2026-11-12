@@ -653,6 +653,244 @@ def test_toppost_outlook_quoteheader_fixture_extracts_author_only():
     assert count_unquoted_content_lines(body) == 4
 
 
+# --- unit tests: Latin-script localized quote-header blocks (generation 6) -----
+
+
+@pytest.mark.parametrize("space", [" ", "\t", " ", " "])
+def test_find_quote_header_block_french_any_space_before_colon(space):
+    # French typography puts a space before the colon; stored text carries an
+    # ordinary space, a tab, U+00A0 or U+202F there.
+    lines = [
+        "Merci pour la revue.",
+        "",
+        f"De{space}: Mario Rossi <mario@example.org>",
+        f"Envoyé{space}: mercredi 9 septembre 2026 10:38",
+        f"À{space}: Anna Schmidt <anna@example.org>; wg-chairs@example.org",
+        f"Cc{space}:{space}wg@example.org",
+        f"Objet{space}: Re: [wg] charter scope",
+        "",
+        "Quoted message.",
+    ]
+    assert find_quote_header_block(lines) == 2
+
+
+def test_find_quote_header_block_french_unaccented_and_date_labels():
+    # "Envoye" without the accent, "A" for "À", and the Mac Outlook "Date :".
+    lines = [
+        "De : Mario Rossi <mario@example.org>",
+        "Date : mercredi 9 septembre 2026 10:38",
+        "A : Anna Schmidt <anna@example.org>",
+        "Objet : Re: [wg] charter scope",
+    ]
+    assert find_quote_header_block(lines) == 0
+    lines[1] = "Envoye : mercredi 9 septembre 2026 10:38"
+    assert find_quote_header_block(lines) == 0
+
+
+def test_find_quote_header_block_french_requires_subject_label():
+    # "De", "A" and "Date" are ordinary words: without the "Objet" subject line
+    # the run is not a quote header, however many label-like lines follow.
+    lines = [
+        "De : nos jours, la question reste ouverte.",
+        "A : premier point.",
+        "Date : à confirmer.",
+        "Suite du texte.",
+    ]
+    assert find_quote_header_block(lines) is None
+
+
+def test_find_quote_header_block_french_opener_alone_is_prose():
+    # A prose line opening "De : …" with no field lines below never triggers.
+    lines = ["De : manière générale, je suis d'accord.", "", "Objet : la suite."]
+    assert find_quote_header_block(lines) is None
+
+
+def test_find_quote_header_block_french_needs_two_fields_after_opener():
+    lines = ["De : Mario Rossi <mario@example.org>", "Objet : Re: [wg] scope", "Texte."]
+    assert find_quote_header_block(lines) is None
+
+
+@pytest.mark.parametrize(
+    "block",
+    [
+        # Spanish
+        [
+            "De: Ana Pérez <ana@example.org>",
+            "Enviado el: miércoles, 8 de julio de 2026 19:56",
+            "Para: wg@example.org",
+            "Asunto: Re: [wg] scope",
+        ],
+        # Portuguese
+        [
+            "De: João Silva <joao@example.org>",
+            "Enviada em: segunda-feira, 6 de julho de 2026 16:52",
+            "Para: wg@example.org",
+            "Assunto: Re: [wg] scope",
+        ],
+        # Italian
+        [
+            "Da: Mario Rossi <mario@example.org>",
+            "Inviato: venerdì 7 agosto 2026 14:13",
+            "A: wg <wg@example.org>",
+            "Oggetto: Re: [wg] scope",
+        ],
+        # Dutch
+        [
+            "Van: Jan de Vries <jan@example.org>",
+            "Verzonden: maandag 27 juli 2026 14:00",
+            "Aan: wg@example.org",
+            "Onderwerp: Re: [wg] scope",
+        ],
+        # German
+        [
+            "Von: Anna Schmidt <anna@example.org>",
+            "Gesendet: Montag, 13. Juli 2026 17:15",
+            "An: wg@example.org",
+            "Betreff: Re: [wg] scope",
+        ],
+    ],
+)
+def test_find_quote_header_block_latin_localizations(block):
+    lines = ["My reply.", "", *block, "", "Quoted message."]
+    assert find_quote_header_block(lines) == 2
+    assert find_quote_header_block(lines, localized=False) is None
+    assert extract_new_text("\n".join(lines)).text == "My reply."
+
+
+def test_find_quote_header_block_german_an_without_subject_is_prose():
+    # German "An" (and Italian "A") are ordinary words: a "Von:" line followed
+    # by "An:" alone is not a block.
+    lines = ["Von: der Arbeitsgruppe vorgeschlagen.", "An: alle Teilnehmer.", "Danke."]
+    assert find_quote_header_block(lines) is None
+
+
+@pytest.mark.parametrize(
+    "divider",
+    [
+        "-----Message d'origine-----",
+        "-----Message d’origine-----",
+        "-------- Message transféré --------",
+        "-----Mensaje original-----",
+        "-----Mensagem original-----",
+        "-----Messaggio originale-----",
+        "-----Oorspronkelijk bericht-----",
+        "-----Ursprüngliche Nachricht-----",
+        "---------- Weitergeleitete Nachricht ----------",
+    ],
+)
+def test_strip_after_localized_original_message_divider(divider):
+    lines = ["My reply.", divider, "Quoted."]
+    assert strip_after_original_message_divider(lines) == ["My reply."]
+    assert strip_after_original_message_divider(lines, localized=False) == lines
+
+
+def test_localized_divider_prose_is_safe():
+    lines = ["Le message d'origine est en pièce jointe.", "Texte."]
+    assert strip_after_original_message_divider(lines) == lines
+
+
+_FRENCH_INLINE_PARENT = (
+    "Hi Med,\n\n"
+    "Many thanks for the review. Please see our responses below.\n\n"
+    "# Consider adding a pointer to the registry cited here in the introduction\n\n"
+    "Updated as suggested, with a pointer to the IANA registry group.\n\n"
+    "# Early allocation is mentioned but the policy text is outdated now\n\n"
+    "Updated. We have added a reference to the policy document as well.\n\n"
+    "Regards,\nNat\n"
+)
+
+_FRENCH_INLINE_BODY = (
+    "Hi Nat,\n\n"
+    "Thank you for the follow-up. Please see inline.\n\n"
+    "Cheers,\nMed\n\n"
+    "De : Nat Kao <nat@example.org>\n"
+    "Envoyé : vendredi 3 juillet 2026 04:16\n"
+    "À : BOUCADAIR Mohamed <med@example.org>\n"
+    "Objet : Re: review of draft-ietf-wg-example\n\n"
+    "Hi Med,\n\n"
+    "Many thanks for the review. Please see our responses below.\n\n"
+    "# Consider adding a pointer to the registry cited here in the introduction\n\n"
+    "Updated as suggested, with a pointer to the IANA registry group.\n"
+    "[Med] ACK\n\n"
+    "# Early allocation is mentioned but the policy text is outdated now\n\n"
+    "Updated. We have added a reference to the policy document as well.\n"
+    "[Med] I think this can be simplified further by citing the policy document alone.\n\n"
+    "Regards,\nNat\n"
+)
+
+
+def test_inline_replies_below_french_block_survive_with_parent():
+    # The author answers inside the quoted message below a French block. With
+    # the parent available, the tagged answers are provable, the localized
+    # truncation is not applied, and parent-diff removes the quoted parent.
+    result = extract_new_text(_FRENCH_INLINE_BODY, parent_body=_FRENCH_INLINE_PARENT)
+    assert "[Med] ACK" in result.text
+    assert "[Med] I think this can be simplified further" in result.text
+    assert "Many thanks for the review" not in result.text
+    assert result.method.endswith("+parent-diff")
+
+
+def test_inline_reply_guard_keeps_generation_5_behavior():
+    # With the guard engaged, the output equals the generation-5 rule set
+    # (localized blocks not recognized) followed by the parent-diff assist.
+    lines = normalize_body(_FRENCH_INLINE_BODY).split("\n")
+    assert find_quote_header_block(lines) is not None
+    assert find_quote_header_block(lines, localized=False) is None
+    result = extract_new_text(_FRENCH_INLINE_BODY, parent_body=_FRENCH_INLINE_PARENT)
+    assert "De : Nat Kao" in result.text
+
+
+def test_inline_reply_tag_from_parent_does_not_block_truncation():
+    # A tag the parent's author used ("[ML]") that survives the parent-diff
+    # (re-formatted in the parent) belongs to an earlier round, not to this
+    # message's author: the French block still truncates.
+    parent = (
+        "Hi,\n\nplease find my comments below.\n\n"
+        "> The new language should not be applied retroactively to adopted documents.\n\n"
+        "[ML] I believe the phrase *New application transport mappings* applies\n"
+        "more naturally to the adoption of additional transport mappings.\n\n"
+        "Best,\nMario\n"
+    )
+    body = (
+        "Hi Mario,\n\nThank you for sharing your thoughts on this.\n\n"
+        "Cheers,\nMed\n\n"
+        "De : Mario Rossi <mario@example.org>\n"
+        "Envoyé : mercredi 9 septembre 2026 10:38\n"
+        "À : wg-chairs@example.org\n"
+        "Objet : Re: [wg] charter\n\n"
+        "Hi,\n\nplease find my comments below.\n\n"
+        "[ML] I believe the phrase New application transport mappings applies more "
+        "naturally to the adoption of additional transport mappings.\n\n"
+        "Best,\nMario\n"
+    )
+    result = extract_new_text(body, parent_body=parent)
+    assert "[ML]" not in result.text
+    assert "De : Mario Rossi" not in result.text
+    assert "Thank you for sharing your thoughts on this." in result.text
+
+
+def test_inline_reply_without_parent_needs_author_named_tag():
+    # Without the parent, a tag counts as the author's only when its label names
+    # the author above the block (the sign-off "Med" for "[Med]").
+    with_author_tag = extract_new_text(_FRENCH_INLINE_BODY)
+    assert "[Med] ACK" in with_author_tag.text
+    other_tag = _FRENCH_INLINE_BODY.replace("[Med]", "[NK]")
+    truncated = extract_new_text(other_tag)
+    assert "[NK]" not in truncated.text
+    assert "De : Nat Kao" not in truncated.text
+
+
+def test_french_fixtures_extract_author_only():
+    for stem in (
+        "toppost-french-quoteheader-regext-01",
+        "toppost-french-originalmsg-divider-regext-01",
+    ):
+        composite = composite_text(stem)
+        assert "Objet" not in composite
+        assert "origine" not in composite
+        assert tolerant_lines(composite) == tolerant_lines(expected_text(stem))
+
+
 # --- unit tests: statuses / edge cases ----------------------------------------
 
 

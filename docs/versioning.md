@@ -20,7 +20,7 @@ The generation of the text-deriving routine, meaning `extraction.py`,
 Two runs of the library that report the same `EXTRACTION_VERSION` derive the
 same text from the same input.
 
-It is currently **5**. Five generations exist; the first four shipped in the
+It is currently **6**. Six generations exist; the first four shipped in the
 origin application, `mailing-list-ai-check`:
 
 | Generation | First shipped | What changed |
@@ -30,6 +30,7 @@ origin application, `mailing-list-ai-check`:
 | 3 | v1.11.0 | Quote-header truncation before the fragment scan, with folded and double-spaced header tolerance and the transport-header pasted-evidence guard. |
 | 4 | v1.15.0 | The parent-diff continuation rule for re-wrapped remainder lines; Gmail quote wrappers holding blockquotes no longer classify the author's inline replies as quoted. |
 | 5 | email-reply-extractor v1.1.0 | Fragment edges kept (blank lines between fragments preserved); the Outlook-boundary fix applies to every occurrence instead of the first eight. |
+| 6 | email-reply-extractor v1.2.0 | Latin-script localized quote-header blocks (French, Spanish, Portuguese, Italian, Dutch, German openers, with U+00A0 / U+202F colon spacing) and "Original message" dividers; a message with the author's tagged inline replies below such a block keeps its generation-5 treatment. |
 
 `email-reply-extractor` 1.0.0 ships generation 4 unchanged: vendoring the
 fragment scanner left every corpus output byte-identical, and a differential

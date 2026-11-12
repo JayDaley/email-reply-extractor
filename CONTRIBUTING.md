@@ -53,9 +53,9 @@ those four modules, and never decrement it: the value only ever increases, so
 that an older consumer opening a store written by a newer routine reads that
 store as current instead of offering to re-derive text it cannot reproduce.
 
-Four generations exist: 1 (initial release of the origin application), 2 (from
-its v1.2.0), 3 (from v1.11.0) and 4 (from v1.15.0, and the generation this
-package ships).
+Six generations exist: 1 (initial release of the origin application), 2 (from
+its v1.2.0), 3 (from v1.11.0), 4 (from v1.15.0, shipped by this package's
+v1.0.0), 5 (this package's v1.1.0) and 6 (this package's v1.2.0).
 
 ### The digest, and re-recording it
 
@@ -89,7 +89,7 @@ state where the stamp no longer describes the routine.
 
 ## The fixture corpus
 
-`tests/fixtures` holds 24 hand-labeled messages: `<stem>.eml` is the raw
+`tests/fixtures` holds 26 hand-labeled messages: `<stem>.eml` is the raw
 RFC 5322 message and `expected/<stem>.txt` is the ground truth — the composite
 of both stages, `clean_for_scoring(extract_new_text(body).text).text`.
 `tests/fixtures/README.md` documents the provenance requirements, how the

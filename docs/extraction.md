@@ -118,6 +118,27 @@ Chinese (发件人 / 发送时间 / 收件人 / 抄送 / 主题, with full-width
 the ideographic-space padding 主　题, as produced by Alibaba Mail and Chinese
 Outlook).
 
+From generation 6, Latin-script localizations are recognized with a localized
+opener as well:
+
+| Language | Opener | Other fields | Subject label |
+|---|---|---|---|
+| French | `De` | `Envoyé` / `Envoye`, `Date`, `À` / `A`, `Cc`, `Cci` | `Objet` |
+| Spanish | `De` | `Enviado` / `Enviado el`, `Fecha`, `Para`, `CC`, `CCO` | `Asunto` |
+| Portuguese | `De` | `Enviada em` / `Enviado em`, `Data`, `Para`, `Cc` | `Assunto` |
+| Italian | `Da` | `Inviato`, `Data`, `A`, `Cc` | `Oggetto` |
+| Dutch | `Van` | `Verzonden`, `Datum`, `Aan`, `CC` | `Onderwerp` |
+| German | `Von` | `Gesendet`, `Datum`, `An`, `Cc` | `Betreff` |
+
+French typography puts a space before the colon (`De : …`); in stored text that
+space is often U+00A0 (no-break space) or U+202F (narrow no-break space). For
+the localized labels, a space, tab, U+00A0 or U+202F is accepted before and
+after the colon. The opener labels (`De`, `Da`, `Van`, `Von`) and several field
+labels (`A`, `An`, `Data`, `Date`) are ordinary words, so a localized block
+qualifies only when its opener is followed by at least two further field lines,
+one of which is its language's subject label. A prose line beginning "De : …",
+or a run such as "Von: …" / "An: …" without a subject line, is not a block.
+
 Two guards keep the rule from firing on the wrong thing:
 
 - **Pasted header evidence.** When the contiguous header run directly above the
@@ -148,6 +169,44 @@ The dashed `-------- Original message --------` divider (also
 `-----Original Message-----`, "Forwarded message", and the Chinese 邮件原件 and
 原始邮件 forms) and everything after it is dropped. Dashes are required on both
 sides, so prose mentioning an original message never matches.
+
+From generation 6 the Latin-script localizations are recognized too: French
+`Message d'origine` (straight or curly apostrophe) and `Message transféré`,
+Spanish `Mensaje original` / `Mensaje reenviado`, Portuguese `Mensagem original`
+/ `Mensagem encaminhada`, Italian `Messaggio originale` / `Messaggio inoltrato`,
+Dutch `Oorspronkelijk bericht` / `Doorgestuurd bericht`, and German
+`Ursprüngliche Nachricht` / `Weitergeleitete Nachricht`.
+
+### Inline replies below a localized block
+
+Some authors answer point by point inside the quoted message, below the
+client's quote-header block, and tag each answer (`[Med] ACK`). Generation 5 did
+not recognize the Latin-script localized blocks and dividers, so such answers
+below a French block survived, and the parent-diff assist removed the quoted
+parent around them. Truncating at the localized block would remove the
+answers.
+
+The localized blocks and dividers are therefore not applied to a message whose
+span between the first localized boundary and the first generation-5 boundary
+(or the end of the body) holds the author's tagged answers. A tag is a
+bracketed label of 1-20 characters at the start of a line containing a letter;
+citation forms (`[RFC8174]`, `[BCP14]`, `[I-D.x]`) and numeric footnotes are
+excluded.
+
+- With the thread parent, the parent-diff assist runs on that span alone. It
+  must remove at least one non-blank line, and a tagged line must survive whose
+  tag belongs to the author: the parent never uses the tag, or the tag's label
+  without a trailing round number (`Linda3` → `Linda`) occurs as a word above
+  the block, as the author's sign-off usually does (`Med` for `[Med]`). A tag
+  the parent does use belongs to an earlier round of the thread; such a line
+  can survive the parent-diff when the parent's copy is re-wrapped or
+  re-formatted.
+- Without the thread parent, a tagged line qualifies only when its label occurs
+  as a word above the block.
+
+Such a message keeps its generation-5 treatment exactly. The generation-5
+rules (English, German labels, Chinese) are not affected: they truncate whether
+or not tagged answers follow.
 
 The divider is matched anywhere in a line rather than only at its start,
 because HTML-to-text conversion sometimes flattens a whole quoted message onto

@@ -10,7 +10,10 @@ public-archive list mail.
 
 - `*.eml` — the raw message, exactly as downloaded from the archive's public
   per-message `/download/` endpoint. Descriptive kebab-case names, prefixed by
-  structural category.
+  structural category. Two fixtures (marked in the table) are instead
+  reconstructed from the copy the list delivered: the original non-transport
+  header fields, and the decoded body parts re-encoded as quoted-printable,
+  with decoded content byte-identical to the delivered copy.
 - `expected/<same-basename>.txt` — the hand-labeled ground truth: **exactly the
   text that is sent to Pangram**, i.e. the message body with quoted text,
   attribution lines ("On … wrote:"), and signatures/greetings/sign-offs removed,
@@ -77,6 +80,8 @@ guards.
 | `toppost-signoff-unquoted-wimse-01` | top-post | Songbo Bu (wimse) | https://mailarchive.ietf.org/arch/msg/wimse/XZe8sN-M03tqqN0J359RjX3gOcE | **Gmail-style fully top-posted reply** (typical AI-generated shape): new text ends at a "Best, / Songbo" sign-off, then a *wrapped* attribution ("On <date>, … \n wrote:") introduces ~1780 lines of quoted thread with **no `>` markers**. ERP keeps the attribution and much of the quote; before the sign-off-boundary rule the pipeline shipped the whole quoted thread. Pins the sign-off boundary in both the custom pass and the guard denominator. |
 | `toppost-originalmsg-divider-agent2agent-01` | top-post | Chris (agent2agent) | https://mailarchive.ietf.org/arch/msg/agent2agent/V_6sOOpe-2E_OLrQAAJNkcvI_ko | **Dashed "Original message" divider, flattened HTML**: the whole body is 2 giant lines — line 1 is the author's new text, line 2 is the entire quoted thread glued behind `-------- Original message --------` (HTML-to-text lost the line breaks, so the quote-header block detector cannot fire). Pins the divider rule, including the mid-line/glued form where the author's prefix before the divider is kept. |
 | `toppost-outlook-quoteheader-lastcall-01` | top-post | Nate Karstens (last-call) — **synthetic** | — (Phase 7.2 live-E2E defect; Message-ID `<BY5PR04MB69141…@…outlook.com>`, faithful reproduction — the 2026-dated message is not in the live archive) | **Outlook top-post**: 4 author lines, then an Outlook quote-header block (`From:`/`Sent:`/`To:`/`Cc:`/`Subject:`) introducing the quoted Tsvart review with **no `>` markers**. ERP is correct (author lines only), but the over-strip guard previously counted the un-prefixed quoted review as authored content, misfired, and shipped the whole 1.7 KB review via `custom-fallback`. Pins quote-header-block detection in both the custom pass and the guard denominator. `multipart/alternative`. |
+| `toppost-french-quoteheader-regext-01` | top-post | Mohamed Boucadair (regext) — **reconstructed from the delivered list copy** | https://mailarchive.ietf.org/arch/msg/regext/3_r9On9jgpOxj1lmuuzqy85S1pk | **French Outlook quote header** (`De :` / `Envoyé :` / `À :` / `Cc :` / `Objet :`, space before the colon) below a "Cheers, / Med" sign-off, introducing the whole quoted message with no `>` markers. Before generation 6 the block was not recognized and the quoted message (including the parent author's `[ML]` answers) shipped as new text. The stacked "Thank you." above the sign-off is removed by stage 2's second pass. `multipart/alternative`. Headers trimmed to the non-transport fields; the decoded `text/plain` and `text/html` parts are byte-identical to the stored copy. |
+| `toppost-french-originalmsg-divider-regext-01` | top-post | Mohamed Boucadair (regext) — **reconstructed from the delivered list copy** | https://mailarchive.ietf.org/arch/msg/regext/c4-zK5sWlu6rGf7KScK7JRYc85o | **French forward**: `-----Message d'origine-----` divider, then `De : / Envoyé : / À : / Objet :` with U+00A0 before each colon, then the forwarded I-D announcement. Pins the localized divider and the no-break-space colon spacing. `text/plain` (`iso-8859-1`, quoted-printable). Headers trimmed to the non-transport fields; the decoded body is byte-identical to the stored copy. |
 | `bottompost-clean-quic-01` | bottom-post | Olivier Bonaventure (quic) | https://mailarchive.ietf.org/arch/msg/quic/DRgTBE4FMhivJpOQ5B61TmpQuQw | Clean bottom-post: greeting + digest quote + reply + "Olivier" sign-off. ERP correct. |
 | `bottompost-confidentiality-sig-lastcall-01` | bottom-post | Brian Campbell (last-call) | https://mailarchive.ietf.org/arch/msg/last-call/RLYSMc1S5Ct6cMnUR1nP3FypTro | One-line reply below quote, followed by a `-- ` confidentiality-notice signature that must be stripped. `multipart/alternative`. ERP correct (strips the notice). |
 | `bottompost-multipart-alt-ietf-01` | bottom-post | Nicolas Giard (ietf) | https://mailarchive.ietf.org/arch/msg/ietf/7TjZy8W_EFYr8QbmQsoHefsSbNw | `multipart/alternative` bottom-post; "Nick" sign-off. ERP correct. |
@@ -94,14 +99,15 @@ guards.
 | Category | Count | Fixtures |
 |---|---:|---|
 | interleaved | 6 | pointbypoint, greeting, elision, bom, indented-quotes, deep-thread |
-| top-post | 7 | ps-after-signature, flowed, plain-part-only, multipart-alt, outlook-quoteheader, signoff-unquoted, originalmsg-divider |
+| top-post | 9 | ps-after-signature, flowed, plain-part-only, multipart-alt, outlook-quoteheader, signoff-unquoted, originalmsg-divider, french-quoteheader, french-originalmsg-divider |
 | bottom-post | 3 | clean, confidentiality-sig, multipart-alt |
 | signature-heavy | 3 | pgp-german-attribution, corporate-contact, identifier-links |
 | no-quote / thread-starter | 3 | noquote-prose-signature, threadstarter-announcement, threadstarter-rfc2047-header |
 | digest (dashed-separator) | 2 | dashsep-nomcom, github-multipart |
-| **Total** | **24** | (11 promoted from the spike + 8 added for category coverage + 1 Phase 7.2 defect + 4 extraction/cleaning defects reported from live runs) |
+| **Total** | **26** | (11 promoted from the spike + 8 added for category coverage + 1 Phase 7.2 defect + 4 extraction/cleaning defects reported from live runs + 2 generation-6 French quote-header defects) |
 
-Cross-cutting coverage: `multipart/alternative` (8 fixtures), `multipart/signed`
+Cross-cutting coverage: `multipart/alternative` (9 fixtures), `multipart/signed`
 (3), `format=flowed` (2), RFC 2047-encoded headers (1 dedicated + several with
 encoded `[List]` Subject prefixes), leading BOM (1), non-English attribution (1),
+localized (French) quote header or divider (2),
 non-ASCII body content (`§ ā ß “” — 💬`, several).

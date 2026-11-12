@@ -10,9 +10,10 @@ Stage 1, `extract_new_text`, removes everything the author did not write in
 this message: quoted lines (any indentation, including the `...>` form that
 survives `format=flowed` rewrapping), attribution lines ("On … wrote:", the
 German "Am … schrieb", the Chinese Outlook and Alibaba Mail forms),
-forwarded/quote-header blocks, "Original message" dividers, the quoted thread
-that follows a sign-off boundary, and — when the caller supplies them —
-content provably present in the thread parent or in the HTML part's
+forwarded/quote-header blocks and "Original message" dividers (English,
+French, Spanish, Portuguese, Italian, Dutch, German and Chinese forms), the
+quoted thread that follows a sign-off boundary, and — when the caller supplies
+them — content provably present in the thread parent or in the HTML part's
 blockquotes. It **keeps** the author's greetings, sign-offs and signature
 blocks.
 
@@ -146,14 +147,16 @@ Three modifiers combine with the base value:
 derives the text. It is independent of the package version, only ever
 increases, and is incremented whenever a change to the extraction, cleaning,
 HTML or vendored-scanner modules can alter the derived text. It is currently
-**5**.
+**6**.
 
 An application that stores derived text should store `EXTRACTION_VERSION`
 alongside it and compare the stored stamp with the running constant using `<`
 to decide whether the text needs re-deriving. The full contract, including the
 digest that pins the behavior, is in [docs/versioning.md](docs/versioning.md).
 Generation 5 (shipped in v1.1.0) and the work deferred from it are described in
-[docs/generation-5.md](docs/generation-5.md). Because a generation bump can
+[docs/generation-5.md](docs/generation-5.md). Generation 6 (v1.2.0) adds the
+Latin-script localized quote-header blocks and dividers described in
+[docs/extraction.md](docs/extraction.md). Because a generation bump can
 move bytes without changing substance, the package exports `tolerant_lines`
 and `texts_equivalent` so a consumer can re-derive stored text and keep
 expensive downstream results (for example a paid classifier score) when only
@@ -177,7 +180,7 @@ project's documented behavior; release data is from PyPI as of September 2026.
 | Signature handling | Kept in stage 1, removed and reported line-by-line in stage 2 | Hidden along with the reply's quoted fragments; not reported | Regex ("brute force") extractor, plus an SVM machine-learning extractor |
 | HTML part | Used as a structural oracle: as the body when no usable plain part exists, replacing a flattened plain part, or removing a quoted message leaked unmarked into the plain part | Not handled | Quotation extraction has an HTML mode (lxml-based) |
 | Thread parent | Optional parent-diff assist removes a quoted previous message that carries no `>` markers | Not used | Not used |
-| Quote headers | Outlook-style blocks, including German and Chinese label sets, folded and double-spaced renderings | `From:`/`Sent:`/`To:`/`Subject:` fragment detection, English only | Delimiter patterns (e.g. `-----Original Message-----`), several languages |
+| Quote headers | Outlook-style blocks, including French, Spanish, Portuguese, Italian, Dutch, German and Chinese label sets, folded and double-spaced renderings | `From:`/`Sent:`/`To:`/`Subject:` fragment detection, English only | Delimiter patterns (e.g. `-----Original Message-----`), several languages |
 | Output stability | Behavior pinned by an integer generation (`EXTRACTION_VERSION`) and a corpus digest test; whitespace-tolerant equivalence helpers for consumers | Not versioned separately | Not versioned separately |
 | Test corpus | Hand-labeled real mailing-list messages (`tests/fixtures`) | Unit-test fixture emails | Unit-test fixture emails; ML training data |
 | Runtime dependencies | None (standard library) | None (standard library) | lxml, regex, numpy, scipy, scikit-learn, chardet, and others |

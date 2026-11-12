@@ -16,7 +16,7 @@ dependencies, Python >= 3.10.
   - `cleaning.py` — stage 2 (`clean_for_scoring`)
   - `html_text.py` — `html_to_text` / `split_html_parts`, the HTML oracle
   - `_fragments.py` — the vendored email-reply-parser fragment scanner
-- `tests/` — pytest suite, including `fixtures/` (hand-labeled corpus of 24
+- `tests/` — pytest suite, including `fixtures/` (hand-labeled corpus of 26
   real messages) and `test_extraction_version.py` (the digest contract)
 - `docs/` — `extraction.md` (the rules of both stages), `versioning.md` (the
   `EXTRACTION_VERSION` contract), `generation-5.md` (planned output changes)
@@ -39,7 +39,7 @@ measurements and rationale plainly.
 
 ## Extraction version
 
-`EXTRACTION_VERSION` (an `int` in `extraction.py`, currently 5) identifies the
+`EXTRACTION_VERSION` (an `int` in `extraction.py`, currently 6) identifies the
 generation of the routine that derives an extraction's text: `extraction.py`,
 `cleaning.py`, `html_text.py` and `_fragments.py` taken together. It is
 independent of the package version and is incremented separately.
@@ -61,10 +61,11 @@ independent of the package version and is incremented separately.
   current digest.
 - Adding a fixture moves the digest without changing the routine: re-record
   `EXPECTED_DIGEST` alone and leave both version numbers where they are.
-- Five generations exist: **1** (initial release of the origin application),
+- Six generations exist: **1** (initial release of the origin application),
   **2** (from its v1.2.0), **3** (from v1.11.0), **4** (from v1.15.0, the
-  generation this package's v1.0.0 shipped) and **5** (this package's v1.1.0:
-  fragment edges kept, Outlook-boundary fix uncapped).
+  generation this package's v1.0.0 shipped), **5** (this package's v1.1.0:
+  fragment edges kept, Outlook-boundary fix uncapped) and **6** (v1.2.0:
+  Latin-script localized quote-header blocks and dividers).
 
 ## The vendored scanner
 
@@ -82,7 +83,7 @@ is a generation bump with a digest re-record.
 ## Versioning
 
 The package uses [semantic versioning](https://semver.org/); the current
-version is **1.1.1**. The single source of truth is
+version is **1.2.0**. The single source of truth is
 `email_reply_extractor.__version__` (in `__init__.py`); `pyproject.toml` reads
 it dynamically, so the two never drift.
 

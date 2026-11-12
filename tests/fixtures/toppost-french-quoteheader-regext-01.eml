@@ -1,0 +1,412 @@
+From: mohamed.boucadair@orange.com
+To: Mario Loffredo <mario.loffredo@iit.cnr.it>,
+ "Gould, James" <jgould=40verisign.com@dmarc.ietf.org>,
+ "regext-chairs@ietf.org" <regext-chairs@ietf.org>
+CC: "regext@ietf.org" <regext@ietf.org>
+Subject: [regext] Re: Request for clarification on the charter
+Thread-Topic: [regext] Re: Request for clarification on the charter
+Date: Wed, 09 Sep 2026 09:06:37 +0000
+Message-ID: <PAUP264MB6756EB4A0BB358192BEE288288B02@PAUP264MB6756.FRAP264.PROD.OUTLOOK.COM>
+References: <e7a4766c-f202-4ffd-bb96-2cadda1b2bdc@iit.cnr.it>
+ <7D423D13-0B83-4EE3-B5A8-965DFFDA6F34@verisign.com>
+ <4E319EDD-E7C9-42B2-831D-D56420C6D40B@verisign.com>
+ <2ebeeb4f-f6c5-4237-bfb6-37a67438431f@iit.cnr.it>
+In-Reply-To: <2ebeeb4f-f6c5-4237-bfb6-37a67438431f@iit.cnr.it>
+List-Id: Registration Protocols Extensions Working Group <regext.ietf.org>
+Archived-At:
+ <https://mailarchive.ietf.org/arch/msg/regext/3_r9On9jgpOxj1lmuuzqy85S1pk>
+MIME-Version: 1.0
+Content-Type: multipart/alternative;
+ boundary="===============5603777680609707294=="
+
+--===============5603777680609707294==
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+
+Hi Mario/Jim,
+
+Thank you for sharing your thoughts on this.
+
+Let me remind that the reasoning for having such policy in the charter is to =
+ensure that we are defining new mappings that are motivated by real operation=
+al needs.
+
+Process-wise, consensus to adopt a document does not mean that the document w=
+ill be necessary progressed to an RFC. Consensus to publish will typically be=
+ assessed during WGLC. Also, a WG may decide to adopt a doc, but decide later=
+ that it is better to park a spec , etc.
+
+Now back to this specific document, the information you shared below is a gre=
+at info to record in the document writeup to demonstrate how it adheres to th=
+e deployment policy in the charter.
+
+FYI, we received comments during the IESG review of the QUIC draft on that sa=
+me point. We managed to address it as I already had the required arguments ga=
+thered as part of my AD review (thanks to the authors).
+
+Thank you.
+
+Cheers,
+Med
+
+De : Mario Loffredo <mario.loffredo@iit.cnr.it>
+Envoy=C3=A9 : mercredi 9 septembre 2026 10:38
+=C3=80 : Gould, James <jgould=3D40verisign.com@dmarc.ietf.org>; BOUCADAIR Moh=
+amed INNOV/NET <mohamed.boucadair@orange.com>; regext-chairs@ietf.org
+Cc : regext@ietf.org
+Objet : Re: [regext] Re: Request for clarification on the charter
+
+
+
+Hi,
+
+please find my comments below.
+Il 08/09/2026 16:35, Gould, James ha scritto:
+
+I'm replying to my own message to answer the question "Should the new languag=
+e be retroactively applied to existing working group documents (draft-ietf-re=
+gext-epp-https)?".  The answer to this question for draft-ietf-regext-epp-htt=
+ps should be "no", based on the following:
+
+
+
+1. draft-ietf-regext-epp-https was adopted by REGEXT on 2/2025 based on an ea=
+rlier charter (Charter 02).  A question was raised on the mailing list whethe=
+r the charter's scope supported the transport drafts (EoH in draft-ietf-regex=
+t-epp-https) and EoQ in draft-ietf-regext-epp-quic), which was determined to =
+be in-scope and the transport drafts were adopted.
+
+2. The charter was updated to clarify that EoH and EoQ are in scope in Charte=
+r 03, that was approved on 7/2026.
+
+3. The new charter (Charter 04), approved on 9/2026, was described as "Minor =
+reframing of Charter to better align with general pattern of OPS area Charter=
+s", where the language "New application transport mappings for EPP following =
+relevant and appropriate IETF standards to address operational gaps for which=
+ at least one domain registry and at least one domain registrar have made a c=
+ommitment to deploy (Standards Track or Experimental)" is a material change t=
+hat adds a new obligation applicable to a multistakeholder governance model.
+
+4. The "commitment to deploy" language is unique to the REGEXT charter and ne=
+eds further review and discussion on the mailing list that is independent of =
+the draft-ietf-regext-epp-https work.
+
+
+
+Thanks,
+
+[ML] I believe the phrase "New application transport mappings for EPP ..." ap=
+plies more naturally when RegExt evaluates the adoption of additional EPP tra=
+nsport mappings. IMO, there is no indication that this specific revision of t=
+he charter was intended to reopen the previously reached consensus on EoH or =
+to impose a new adoption criterion for an existing WG document.
+
+Furthermore, EPP over HTTPS is not merely a hypothetical deployment model. Re=
+gistro .it has operated an HTTPS-based EPP server since 2009, and .it registr=
+ars have used this transport approach for many years. Some of the operational=
+ considerations outlined in the draft stem from the experience gained over th=
+is period. Although the existing .it implementation slightly differs from dra=
+ft-ietf-regext-epp-https - notably, when the HTTP session is established - it=
+ provides substantial operational evidence that both the registry and its reg=
+istrars have accepted EPP over HTTPS as a viable deployment model.
+
+Against that background, requiring a registrar to make a formal "commitment t=
+o deploy" merely because the charter language changed after adoption of the d=
+ocument would add little evidence of actual deployability. It would amount to=
+ imposing a recently introduced procedural formality on activities for which =
+long-standing operational procedures and registrar acceptance already exist.
+
+
+
+Best,
+
+Mario
+
+--
+
+Dott. Mario Loffredo
+
+Senior Technologist
+
+Technological Unit "Digital Innovation"
+
+Institute of Informatics and Telematics (IIT)
+
+National Research Council (CNR)
+
+Address: Via G. Moruzzi 1, I-56124 PISA, Italy
+
+Phone: +39.0503153497
+
+Web: http://www.iit.cnr.it/mario.loffredo
+_____________________________________________________________________________=
+_______________________________
+Ce message et ses pieces jointes peuvent contenir des informations confidenti=
+elles ou privilegiees et ne doivent donc
+pas etre diffuses, exploites ou copies sans autorisation. Si vous avez recu c=
+e message par erreur, veuillez le signaler
+a l'expediteur et le detruire ainsi que les pieces jointes. Les messages elec=
+troniques etant susceptibles d'alteration,
+Orange decline toute responsabilite si ce message a ete altere, deforme ou fa=
+lsifie. Merci.
+
+This message and its attachments may contain confidential or privileged infor=
+mation that may be protected by law;
+they should not be distributed, used or copied without authorisation.
+If you have received this email in error, please notify the sender and delete=
+ this message and its attachments.
+As emails may be altered, Orange is not liable for messages that have been mo=
+dified, changed or falsified.
+Thank you.
+
+--===============5603777680609707294==
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+
+<html xmlns:v=3D"urn:schemas-microsoft-com:vml" xmlns:o=3D"urn:schemas-micros=
+oft-com:office:office" xmlns:w=3D"urn:schemas-microsoft-com:office:word" xmln=
+s:m=3D"http://schemas.microsoft.com/office/2004/12/omml" xmlns=3D"http://www.=
+w3.org/TR/REC-html40">
+<head>
+<meta http-equiv=3D"Content-Type" content=3D"text/html; charset=3Diso-8859-1">
+<meta name=3D"Generator" content=3D"Microsoft Word 15 (filtered medium)">
+<style><!--
+/* Font Definitions */
+@font-face
+	{font-family:"Cambria Math";
+	panose-1:2 4 5 3 5 4 6 3 2 4;}
+@font-face
+	{font-family:Calibri;
+	panose-1:2 15 5 2 2 2 4 3 2 4;}
+@font-face
+	{font-family:Aptos;}
+@font-face
+	{font-family:Consolas;
+	panose-1:2 11 6 9 2 2 4 3 2 4;}
+/* Style Definitions */
+p.MsoNormal, li.MsoNormal, div.MsoNormal
+	{margin:0cm;
+	font-size:12.0pt;
+	font-family:"Aptos",sans-serif;}
+a:link, span.MsoHyperlink
+	{mso-style-priority:99;
+	color:blue;
+	text-decoration:underline;}
+pre
+	{mso-style-priority:99;
+	mso-style-link:"Pr=C3=A9format=C3=A9 HTML Car";
+	margin:0cm;
+	font-size:10.0pt;
+	font-family:"Courier New";}
+span.PrformatHTMLCar
+	{mso-style-name:"Pr=C3=A9format=C3=A9 HTML Car";
+	mso-style-priority:99;
+	mso-style-link:"Pr=C3=A9format=C3=A9 HTML";
+	font-family:Consolas;}
+p.pdq2pgselectionanchorcontainer, li.pdq2pgselectionanchorcontainer, div.pdq2=
+pgselectionanchorcontainer
+	{mso-style-name:pdq2pg_selectionanchorcontainer;
+	mso-margin-top-alt:auto;
+	margin-right:0cm;
+	mso-margin-bottom-alt:auto;
+	margin-left:0cm;
+	font-size:12.0pt;
+	font-family:"Aptos",sans-serif;}
+span.rynqvb
+	{mso-style-name:rynqvb;}
+span.EmailStyle27
+	{mso-style-type:personal-reply;
+	font-family:"Courier New";
+	color:windowtext;}
+.MsoChpDefault
+	{mso-style-type:export-only;
+	font-size:10.0pt;
+	mso-ligatures:none;}
+@page WordSection1
+	{size:612.0pt 792.0pt;
+	margin:70.85pt 70.85pt 70.85pt 70.85pt;}
+div.WordSection1
+	{page:WordSection1;}
+--></style>
+</head>
+<body lang=3D"FR" link=3D"blue" vlink=3D"purple" style=3D"word-wrap:break-wor=
+d">
+<div class=3D"WordSection1">
+<p class=3D"MsoNormal"><span style=3D"font-size:11.0pt;font-family:&quot;Cour=
+ier New&quot;;mso-fareast-language:EN-US">Hi Mario/Jim,
+<o:p></o:p></span></p>
+<p class=3D"MsoNormal"><span style=3D"font-size:11.0pt;font-family:&quot;Cour=
+ier New&quot;;mso-fareast-language:EN-US"><o:p>&nbsp;</o:p></span></p>
+<p class=3D"MsoNormal"><span lang=3D"EN-US" style=3D"font-size:11.0pt;font-fa=
+mily:&quot;Courier New&quot;;mso-fareast-language:EN-US">Thank you for sharin=
+g your thoughts on this.
+<o:p></o:p></span></p>
+<p class=3D"MsoNormal"><span lang=3D"EN-US" style=3D"font-size:11.0pt;font-fa=
+mily:&quot;Courier New&quot;;mso-fareast-language:EN-US"><o:p>&nbsp;</o:p></s=
+pan></p>
+<p class=3D"MsoNormal"><span lang=3D"EN-US" style=3D"font-size:11.0pt;font-fa=
+mily:&quot;Courier New&quot;;mso-fareast-language:EN-US">Let me remind that t=
+he reasoning for having such policy in the charter is to ensure that we are d=
+efining new mappings that are motivated by
+ real operational needs. <o:p></o:p></span></p>
+<p class=3D"MsoNormal"><span lang=3D"EN-US" style=3D"font-size:11.0pt;font-fa=
+mily:&quot;Courier New&quot;;mso-fareast-language:EN-US"><o:p>&nbsp;</o:p></s=
+pan></p>
+<p class=3D"MsoNormal"><span lang=3D"EN-US" style=3D"font-size:11.0pt;font-fa=
+mily:&quot;Courier New&quot;;mso-fareast-language:EN-US">Process-wise, consen=
+sus to adopt a document does not mean that the document will be necessary pro=
+gressed to an RFC. Consensus to publish will
+ typically be assessed during WGLC. Also, a WG may decide to adopt a doc, but=
+ decide later that it is better to park a spec , etc.<o:p></o:p></span></p>
+<p class=3D"MsoNormal"><span lang=3D"EN-US" style=3D"font-size:11.0pt;font-fa=
+mily:&quot;Courier New&quot;;mso-fareast-language:EN-US"><o:p>&nbsp;</o:p></s=
+pan></p>
+<p class=3D"MsoNormal"><span lang=3D"EN-US" style=3D"font-size:11.0pt;font-fa=
+mily:&quot;Courier New&quot;;mso-fareast-language:EN-US">Now back to this spe=
+cific document, the information you shared below is a great info to record in=
+ the document writeup to demonstrate how it
+ adheres to the deployment policy in the charter. <o:p></o:p></span></p>
+<p class=3D"MsoNormal"><span lang=3D"EN-US" style=3D"font-size:11.0pt;font-fa=
+mily:&quot;Courier New&quot;;mso-fareast-language:EN-US"><o:p>&nbsp;</o:p></s=
+pan></p>
+<p class=3D"MsoNormal"><span lang=3D"EN-US" style=3D"font-size:11.0pt;font-fa=
+mily:&quot;Courier New&quot;;mso-fareast-language:EN-US">FYI, we received com=
+ments during the IESG review of the QUIC draft on that same point. We managed=
+ to address it as I already had the required
+ arguments gathered as part of my AD review (thanks to the authors).<o:p></o:=
+p></span></p>
+<p class=3D"MsoNormal"><span lang=3D"EN-US" style=3D"font-size:11.0pt;font-fa=
+mily:&quot;Courier New&quot;;mso-fareast-language:EN-US"><o:p>&nbsp;</o:p></s=
+pan></p>
+<p class=3D"MsoNormal"><span lang=3D"EN-US" style=3D"font-size:11.0pt;font-fa=
+mily:&quot;Courier New&quot;;mso-fareast-language:EN-US">Thank you.<o:p></o:p=
+></span></p>
+<p class=3D"MsoNormal"><span lang=3D"EN-US" style=3D"font-size:11.0pt;font-fa=
+mily:&quot;Courier New&quot;;mso-fareast-language:EN-US"><o:p>&nbsp;</o:p></s=
+pan></p>
+<p class=3D"MsoNormal"><span lang=3D"EN-US" style=3D"font-size:11.0pt;font-fa=
+mily:&quot;Courier New&quot;;mso-fareast-language:EN-US">Cheers,<o:p></o:p></=
+span></p>
+<p class=3D"MsoNormal"><span lang=3D"EN-US" style=3D"font-size:11.0pt;font-fa=
+mily:&quot;Courier New&quot;;mso-fareast-language:EN-US">Med<o:p></o:p></span=
+></p>
+<p class=3D"MsoNormal"><span lang=3D"EN-US" style=3D"font-size:11.0pt;font-fa=
+mily:&quot;Courier New&quot;;mso-fareast-language:EN-US"><o:p>&nbsp;</o:p></s=
+pan></p>
+<div style=3D"border:none;border-left:solid blue 1.5pt;padding:0cm 0cm 0cm 4.=
+0pt">
+<div>
+<div style=3D"border:none;border-top:solid #E1E1E1 1.0pt;padding:3.0pt 0cm 0c=
+m 0cm">
+<p class=3D"MsoNormal"><b><span style=3D"font-size:11.0pt;font-family:&quot;C=
+alibri&quot;,sans-serif">De&nbsp;:</span></b><span style=3D"font-size:11.0pt;=
+font-family:&quot;Calibri&quot;,sans-serif"> Mario Loffredo &lt;mario.loffred=
+o@iit.cnr.it&gt;
+<br>
+<b>Envoy=C3=A9&nbsp;:</b> mercredi 9 septembre 2026 10:38<br>
+<b>=C3=80&nbsp;:</b> Gould, James &lt;jgould=3D40verisign.com@dmarc.ietf.org&=
+gt;; BOUCADAIR Mohamed INNOV/NET &lt;mohamed.boucadair@orange.com&gt;; regext=
+-chairs@ietf.org<br>
+<b>Cc&nbsp;:</b> regext@ietf.org<br>
+<b>Objet&nbsp;:</b> Re: [regext] Re: Request for clarification on the charter=
+<o:p></o:p></span></p>
+</div>
+</div>
+<p class=3D"MsoNormal"><o:p>&nbsp;</o:p></p>
+<p class=3D"MsoNormal" style=3D"margin-bottom:12.0pt"><o:p>&nbsp;</o:p></p>
+<p>Hi,<o:p></o:p></p>
+<p>please find my comments below.<o:p></o:p></p>
+<div>
+<p class=3D"MsoNormal">Il 08/09/2026 16:35, Gould, James ha scritto:<o:p></o:=
+p></p>
+</div>
+<blockquote style=3D"margin-top:5.0pt;margin-bottom:5.0pt">
+<pre>I'm replying to my own message to answer the question &quot;Should the n=
+ew language be retroactively applied to existing working group documents (dra=
+ft-ietf-regext-epp-https)?&quot;.&nbsp; The answer to this question for draft=
+-ietf-regext-epp-https should be &quot;no&quot;, based on the following:<o:p>=
+</o:p></pre>
+<pre><o:p>&nbsp;</o:p></pre>
+<pre>1. draft-ietf-regext-epp-https was adopted by REGEXT on 2/2025 based on =
+an earlier charter (Charter 02).&nbsp; A question was raised on the mailing l=
+ist whether the charter's scope supported the transport drafts (EoH in draft-=
+ietf-regext-epp-https) and EoQ in draft-ietf-regext-epp-quic), which was dete=
+rmined to be in-scope and the transport drafts were adopted.&nbsp; <o:p></o:p=
+></pre>
+<pre>2. The charter was updated to clarify that EoH and EoQ are in scope in C=
+harter 03, that was approved on 7/2026. <o:p></o:p></pre>
+<pre>3. The new charter (Charter 04), approved on 9/2026, was described as &q=
+uot;Minor reframing of Charter to better align with general pattern of OPS ar=
+ea Charters&quot;, where the language &quot;New application transport mapping=
+s for EPP following relevant and appropriate IETF standards to address operat=
+ional gaps for which at least one domain registry and at least one domain reg=
+istrar have made a commitment to deploy (Standards Track or Experimental)&quo=
+t; is a material change that adds a new obligation applicable to a multistake=
+holder governance model.&nbsp; <o:p></o:p></pre>
+<pre>4. The &quot;commitment to deploy&quot; language is unique to the REGEXT=
+ charter and needs further review and discussion on the mailing list that is =
+independent of the draft-ietf-regext-epp-https work. <o:p></o:p></pre>
+<pre><o:p>&nbsp;</o:p></pre>
+<pre>Thanks,<o:p></o:p></pre>
+</blockquote>
+<p>[ML]&nbsp;I believe&nbsp;the phrase &quot;<b>New application transport map=
+pings for EPP</b> ...&quot; applies more naturally when RegExt evaluates the =
+adoption of additional EPP transport mappings. IMO, there is no indication th=
+at this specific revision of the charter was intended
+ to reopen the previously reached consensus on EoH or to impose a new adoptio=
+n criterion for an existing WG document.<o:p></o:p></p>
+<p class=3D"pdq2pgselectionanchorcontainer">Furthermore, EPP over HTTPS is no=
+t merely a hypothetical deployment model. Registro .it has operated an HTTPS-=
+based EPP server since 2009, and .it registrars have used this transport appr=
+oach for many years. Some&nbsp;<span class=3D"rynqvb"><span lang=3D"EN">of
+ the operational considerations outlined in the draft stem from the experienc=
+e gained over this period.</span></span>&nbsp;Although the existing .it imple=
+mentation slightly differs from draft-ietf-regext-epp-https &#8212; notably, =
+when the HTTP session is established
+ &#8212; it provides substantial operational evidence that both the registry =
+and its registrars have accepted EPP over HTTPS as a viable deployment model.=
+<o:p></o:p></p>
+<p>Against that background, requiring a registrar to make a formal &#8220;com=
+mitment to deploy&#8221; merely because the charter language changed after ad=
+option of the document would add little evidence of actual deployability. It =
+would amount to imposing a recently introduced
+ procedural formality on activities for which long-standing operational proce=
+dures and registrar acceptance already exist.<o:p></o:p></p>
+<p><o:p>&nbsp;</o:p></p>
+<p>Best,<o:p></o:p></p>
+<p>Mario<o:p></o:p></p>
+<pre>-- <o:p></o:p></pre>
+<pre>Dott. Mario Loffredo<o:p></o:p></pre>
+<pre>Senior Technologist<o:p></o:p></pre>
+<pre>Technological Unit &#8220;Digital Innovation&#8221;<o:p></o:p></pre>
+<pre>Institute of Informatics and Telematics (IIT)<o:p></o:p></pre>
+<pre>National Research Council (CNR)<o:p></o:p></pre>
+<pre>Address: Via G. Moruzzi 1, I-56124 PISA, Italy<o:p></o:p></pre>
+<pre>Phone: +39.0503153497<o:p></o:p></pre>
+<pre>Web: <a href=3D"http://www.iit.cnr.it/mario.loffredo">http://www.iit.cnr=
+.it/mario.loffredo</a><o:p></o:p></pre>
+</div>
+</div>
+<pre>_________________<wbr>______________________________<wbr>_______________=
+_______________<wbr>______________________________<wbr>_
+Ce message et ses pieces jointes peuvent contenir des informations confidenti=
+elles ou privilegiees et ne doivent donc
+pas etre diffuses, exploites ou copies sans autorisation. Si vous avez recu c=
+e message par erreur, veuillez le signaler
+a l'expediteur et le detruire ainsi que les pieces jointes. Les messages elec=
+troniques etant susceptibles d'alteration,
+Orange decline toute responsabilite si ce message a ete altere, deforme ou fa=
+lsifie. Merci.
+
+This message and its attachments may contain confidential or privileged infor=
+mation that may be protected by law;
+they should not be distributed, used or copied without authorisation.
+If you have received this email in error, please notify the sender and delete=
+ this message and its attachments.
+As emails may be altered, Orange is not liable for messages that have been mo=
+dified, changed or falsified.
+Thank you.</pre></body>
+</html>
+
+--===============5603777680609707294==--

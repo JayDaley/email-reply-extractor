@@ -39,6 +39,19 @@ Any other line (headings above level 2, blank lines, prose in this Format
 section) is not part of a release record and can be ignored. Outside fenced
 code blocks, no release section appears before the first `## [` header.
 
+## [1.2.0] - 2026-11-13
+
+Summary: Generation 6 of the extraction routine — Latin-script localized quote-header blocks and "Original message" dividers are recognized.
+
+- Bump `EXTRACTION_VERSION` to 6 and re-record the corpus digest.
+- Recognize French Outlook quote-header blocks (`De :` / `Envoyé :` or `Envoye :` / `Date :` / `À :` or `A :` / `Cc :` / `Objet :`), accepting a space, tab, U+00A0 or U+202F before and after the colon.
+- Recognize Spanish (`De:` … `Asunto:`), Portuguese (`De:` … `Assunto:`), Italian (`Da:` … `Oggetto:`), Dutch (`Van:` … `Onderwerp:`) and German (`Von:` … `Betreff:`) quote-header blocks.
+- Require a localized block to carry at least two field lines after its opener, one of them its language's subject label, because the opener and several field labels are ordinary words.
+- Recognize the localized "Original message" dividers: French `Message d'origine` (straight or curly apostrophe) and `Message transféré`, Spanish `Mensaje original` / `Mensaje reenviado`, Portuguese `Mensagem original` / `Mensagem encaminhada`, Italian `Messaggio originale` / `Messaggio inoltrato`, Dutch `Oorspronkelijk bericht` / `Doorgestuurd bericht`, German `Ursprüngliche Nachricht` / `Weitergeleitete Nachricht`.
+- Keep the generation-5 treatment for a message whose author answers inline with tagged lines (`[Med] …`) below a localized block, so the parent-diff assist keeps removing the quoted parent around those answers.
+- Add an optional `localized` keyword to `find_quote_header_block`, `strip_after_quote_header_block`, `strip_after_original_message_divider`, `custom_clean` and `count_unquoted_content_lines`; the default recognizes the localized forms.
+- Add two French fixtures, `toppost-french-quoteheader-regext-01` and `toppost-french-originalmsg-divider-regext-01`, reconstructed from delivered list copies.
+
 ## [1.1.1] - 2026-09-01
 
 Summary: The copyright owner in LICENSE is the IETF Intellectual Property Management Corporation.

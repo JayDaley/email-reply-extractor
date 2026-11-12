@@ -1,0 +1,9 @@
+Thank you for sharing your thoughts on this.
+
+Let me remind that the reasoning for having such policy in the charter is to ensure that we are defining new mappings that are motivated by real operational needs.
+
+Process-wise, consensus to adopt a document does not mean that the document will be necessary progressed to an RFC. Consensus to publish will typically be assessed during WGLC. Also, a WG may decide to adopt a doc, but decide later that it is better to park a spec , etc.
+
+Now back to this specific document, the information you shared below is a great info to record in the document writeup to demonstrate how it adheres to the deployment policy in the charter.
+
+FYI, we received comments during the IESG review of the QUIC draft on that same point. We managed to address it as I already had the required arguments gathered as part of my AD review (thanks to the authors).
