@@ -204,8 +204,9 @@ No secret value is stored in the repository. The maintainer configures, once:
 - On npmjs.com: a trusted publisher for the `email-reply-extractor` package,
   pointing at this repository and workflow `publish-npm.yml`, environment
   `npm`. Trusted publishing requires the package to exist on npm; the first
-  release can be published by hand with `npm publish --provenance` from
-  `typescript/`.
+  release is published by hand with `npm publish --access public` from
+  `typescript/`. Provenance is generated only inside a supported CI system,
+  so a release published by hand carries none.
 - On crates.io: an API token with the `publish-update` (and, for the first
   release, `publish-new`) scope, stored as the repository secret
   `CARGO_REGISTRY_TOKEN` in a GitHub environment named `crates-io`.
