@@ -1,25 +1,50 @@
 [project]
 name = "email-reply-extractor"
 dynamic = ["version"]
-description = "Extract the author's newly written text from an email: quoted-text removal plus scoring-ready cleaning"
+description = "Extract the new text from an email reply: strip quoted text, quote headers, signatures and sign-offs. Pure Python, no dependencies."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "Jay Daley" }]
 requires-python = ">=3.10"
 dependencies = []
-keywords = ["email", "reply", "quoting", "signature", "mailing-list", "text-extraction"]
+keywords = [
+    "email",
+    "email-reply-parser",
+    "email-parser",
+    "reply",
+    "quoted-text",
+    "quote-removal",
+    "signature",
+    "signature-removal",
+    "mailing-list",
+    "outlook",
+    "gmail",
+    "top-posting",
+    "text-extraction",
+    "talon",
+]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Communications :: Email",
+    "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Text Processing",
+    "Typing :: Typed",
 ]
 
 [project.urls]
 Homepage = "https://github.com/JayDaley/email-reply-extractor"
+Documentation = "https://github.com/JayDaley/email-reply-extractor/blob/main/docs/extraction.md"
+Source = "https://github.com/JayDaley/email-reply-extractor"
 Changelog = "https://github.com/JayDaley/email-reply-extractor/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
