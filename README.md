@@ -10,21 +10,40 @@ headers, signatures and sign-offs.**
 
 `email-reply-extractor` is a Python email reply parser for mailing-list and
 other email. It removes the quoted reply (`>` lines, Gmail-style "On … wrote:"
-attribution lines, Outlook quote-header blocks, "Original message" dividers) from top-posted, bottom-posted and inline replies, then optionally
-removes greetings, signatures, sign-offs, mailing-list footers and legal
-disclaimers. It is an alternative to
+attribution lines, Outlook quote-header blocks, "Original message" dividers)
+from top-posted, bottom-posted and inline replies, then optionally removes
+greetings, signatures, sign-offs, mailing-list footers and legal disclaimers.
+It is an alternative to
 [talon](https://github.com/mailgun/talon) and
 [email-reply-parser](https://github.com/zapier/email-reply-parser): pure
 standard library, no runtime dependencies, Python 3.10 or later, with output
 pinned by a versioned test corpus of real mailing-list messages.
 
-```python
-from email_reply_extractor import clean_for_scoring, extract_new_text
+A reply with threaded inline responses, a signature and a mailing-list footer:
 
-body = """Hi Dan,
+```text
+Hi Dan,
 
-The revised text in section 3 works for me. One question: does the
-timeout apply per hop or end to end?
+Thanks for the quick turnaround. Replies inline.
+
+On Tue, Jul 7, 2026 at 3:25 AM Dan Wing <dan@example.com> wrote:
+> On Mon, Jul 6, 2026 at 9:10 PM Maria Lopez <maria@example.org> wrote:
+>> Section 3 still needs a timeout.
+>
+> I have added one in section 3.2, with a default of 30 seconds.
+
+30 seconds is too long for the mobile case. I would prefer 10, with
+the option to negotiate a longer value.
+
+>> Should the retry counter reset after a successful exchange?
+>
+> I think so, but the draft does not say.
+
+It should say so explicitly. I can send text for that.
+
+> Are you happy with the new title?
+
+Yes.
 
 Thanks,
 Maria
@@ -33,35 +52,39 @@ Maria
 Maria Lopez | Network Engineer
 +1 555 0100 | example.com
 
-Sent from my iPhone
+_______________________________________________
+wg mailing list -- wg@example.org
+To unsubscribe send an email to wg-leave@example.org
+```
 
-From: Dan Wing <dan@example.com>
-Sent: Tuesday, July 7, 2026 3:25 AM
-To: wg@example.org
-Subject: Re: Timeout handling
+The code, with that message in `body`:
 
-I have updated section 3 as discussed.
-
-> On Mon, Jul 6, 2026, Maria Lopez wrote:
-> Section 3 still needs a timeout.
-"""
+```python
+from email_reply_extractor import clean_for_scoring, extract_new_text
 
 result = extract_new_text(body)           # stage 1: quoted thread removed
 cleaned = clean_for_scoring(result.text)  # stage 2: furniture removed
 print(cleaned.text)
 ```
 
-Output:
+The output:
 
-```
-The revised text in section 3 works for me. One question: does the
-timeout apply per hop or end to end?
+```text
+Thanks for the quick turnaround. Replies inline.
+
+30 seconds is too long for the mobile case. I would prefer 10, with
+the option to negotiate a longer value.
+
+It should say so explicitly. I can send text for that.
+
+Yes.
 ```
 
-Stage 1 (`result.text`, method `erp+custom`) drops the Outlook quote-header
-block and everything below it, and keeps the greeting, sign-off, signature and
-mobile tagline. Stage 2 removes those and reports the removed line indices in
-`cleaned.ignored_lines` (`[0, 5, 6, 8, 9, 10, 12]`).
+Stage 1 (`result.text`, method `erp`) removes the attribution line and both
+levels of quoted text, and keeps each inline response along with the
+greeting, sign-off, signature and list footer. Stage 2 removes those and
+reports the removed line indices in `cleaned.ignored_lines`
+(`[0, 11, 12, 14, 15, 16, 18, 19, 20]`).
 
 ## Contents
 
