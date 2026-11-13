@@ -24,7 +24,7 @@
 
 use crate::html_parser::{self, Sink};
 use crate::pystr;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum Category {
@@ -102,6 +102,41 @@ fn class_and_id(attrs: &[(String, Option<String>)]) -> (Vec<&str>, &str) {
     (classes, id)
 }
 
+// Both parsers keep a stack of open elements, and a close tag pops the nearest
+// open frame with its tag together with every frame above it. Scanning the
+// stack for that frame costs no more than the frames it pops, except for a
+// stray close tag with no open frame, which would scan the whole stack and pop
+// nothing (quadratic on "<a>" * n + "</b>" * n). Each parser therefore also
+// counts its open frames per tag, and a close tag whose count is zero is
+// ignored without a scan.
+
+/// Add `delta` (+1 or -1) to the open-frame count of `tag` (`_count_open`).
+/// A frame is only closed after it was opened, so a count never goes below
+/// zero.
+fn count_open(counts: &mut HashMap<String, usize>, tag: &str, delta: isize) {
+    match counts.get_mut(tag) {
+        Some(count) => *count = count.saturating_add_signed(delta),
+        None => {
+            counts.insert(tag.to_string(), delta.max(0).unsigned_abs());
+        }
+    }
+}
+
+/// `_close_frame`: index of the nearest frame on `stack` whose tag is `tag`,
+/// or `None`.
+fn close_frame<F>(
+    stack: &[F],
+    counts: &HashMap<String, usize>,
+    tag: &str,
+    frame_tag: impl Fn(&F) -> &str,
+) -> Option<usize> {
+    if counts.get(tag).copied().unwrap_or(0) == 0 {
+        return None;
+    }
+    // Always found while the counts mirror the stack.
+    stack.iter().rposition(|f| frame_tag(f) == tag)
+}
+
 struct Frame {
     tag: String,
     category: Option<Category>,
@@ -110,6 +145,8 @@ struct Frame {
 
 struct Segmenter {
     stack: Vec<Frame>,
+    /// Number of frames on `stack` per tag (see [`close_frame`]).
+    open_counts: HashMap<String, usize>,
     quoted_depth: usize,
     signature_depth: usize,
     skip_depth: usize,
@@ -162,6 +199,7 @@ impl Sink for Segmenter {
         let tag = pystr::lower(tag);
         if SKIP_TAGS.contains(&tag.as_str()) {
             self.skip_depth += 1;
+            count_open(&mut self.open_counts, &tag, 1);
             self.stack.push(Frame {
                 tag,
                 category: None,
@@ -182,6 +220,7 @@ impl Sink for Segmenter {
             _ => {}
         }
         let is_block = BLOCK_TAGS.contains(&tag.as_str());
+        count_open(&mut self.open_counts, &tag, 1);
         self.stack.push(Frame {
             tag,
             category,
@@ -197,10 +236,13 @@ impl Sink for Segmenter {
         if VOID_TAGS.contains(&tag.as_str()) {
             return;
         }
-        let Some(idx) = self.stack.iter().rposition(|f| f.tag == tag) else {
+        // Find the nearest matching open frame; ignore a stray close with none.
+        let Some(idx) = close_frame(&self.stack, &self.open_counts, &tag, |f| &f.tag) else {
             return;
         };
+        // Pop that frame and any unclosed inner frames, adjusting the counters.
         for frame in &self.stack[idx..] {
+            count_open(&mut self.open_counts, &frame.tag, -1);
             if frame.is_skip {
                 self.skip_depth -= 1;
             } else if frame.category == Some(Category::Quoted) {
@@ -228,7 +270,12 @@ impl Sink for Segmenter {
 /// First pass: which Gmail wrapper instances hold a `<blockquote>`.
 #[derive(Default)]
 struct WrapperScanner {
+    /// (tag, wrapper-instance-index-or-None) for every open element.
     stack: Vec<(String, Option<usize>)>,
+    /// Number of frames on `stack` per tag (see [`close_frame`]).
+    open_counts: HashMap<String, usize>,
+    /// (stack position, wrapper index) of every open wrapper, bottom first.
+    open_wrappers: Vec<(usize, usize)>,
     wrapper_count: usize,
     interleaved: HashSet<usize>,
 }
@@ -240,11 +287,17 @@ impl Sink for WrapperScanner {
             return;
         }
         if tag == "blockquote" {
-            for (_, index) in &self.stack {
-                if let Some(i) = index {
-                    self.interleaved.insert(*i);
+            // Mark every open wrapper, from the innermost out. A marked
+            // wrapper was marked by an earlier blockquote while every wrapper
+            // below it (opened before it and still open) was open too, so
+            // those are marked already and the walk stops there. Walking the
+            // whole stack on every blockquote is quadratic.
+            for &(_, index) in self.open_wrappers.iter().rev() {
+                if !self.interleaved.insert(index) {
+                    break;
                 }
             }
+            count_open(&mut self.open_counts, &tag, 1);
             self.stack.push((tag, None));
             return;
         }
@@ -254,8 +307,11 @@ impl Sink for WrapperScanner {
         let mut index = None;
         if !is_quoted_hook && classes.iter().any(|c| GMAIL_WRAPPER_CLASSES.contains(c)) {
             index = Some(self.wrapper_count);
+            self.open_wrappers
+                .push((self.stack.len(), self.wrapper_count));
             self.wrapper_count += 1;
         }
+        count_open(&mut self.open_counts, &tag, 1);
         self.stack.push((tag, index));
     }
 
@@ -264,8 +320,19 @@ impl Sink for WrapperScanner {
         if VOID_TAGS.contains(&tag.as_str()) {
             return;
         }
-        if let Some(i) = self.stack.iter().rposition(|(t, _)| *t == tag) {
-            self.stack.truncate(i);
+        let Some(idx) = close_frame(&self.stack, &self.open_counts, &tag, |f| &f.0) else {
+            return;
+        };
+        for (frame_tag, _) in &self.stack[idx..] {
+            count_open(&mut self.open_counts, frame_tag, -1);
+        }
+        self.stack.truncate(idx);
+        while self
+            .open_wrappers
+            .last()
+            .is_some_and(|&(pos, _)| pos >= idx)
+        {
+            self.open_wrappers.pop();
         }
     }
 
@@ -282,6 +349,7 @@ fn interleaved_wrappers(html: &str) -> HashSet<usize> {
 fn segment(html: &str) -> Vec<Segment> {
     let mut seg = Segmenter {
         stack: Vec::new(),
+        open_counts: HashMap::new(),
         quoted_depth: 0,
         signature_depth: 0,
         skip_depth: 0,

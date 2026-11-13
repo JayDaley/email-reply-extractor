@@ -183,7 +183,8 @@ unchanged behaviour produces byte-identical files.
 ### How the vectors are produced
 
 `python/tools/conformance.py` runs the Python test suite (except
-`test_conformance.py` and `test_extraction_version.py`, which check this data)
+`test_conformance.py` and `test_extraction_version.py`, which check this data,
+and `test_complexity.py`, whose inputs are megabytes in size)
 with every library function that a test module imports wrapped by a recorder.
 Each call's arguments and result are logged. In addition, every call the
 pipeline makes to the vendored fragment scanner (`read_fragments`) is logged,

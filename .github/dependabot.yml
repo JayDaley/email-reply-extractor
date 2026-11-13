@@ -1,0 +1,9 @@
+# Opens weekly pull requests that update the commit SHAs (and their version
+# comments) of the GitHub Actions pinned in .github/workflows/. Package
+# dependencies of the ports are not covered here.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

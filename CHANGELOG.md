@@ -39,6 +39,24 @@ Any other line (headings above level 2, blank lines, prose in this Format
 section) is not part of a release record and can be ignored. Outside fenced
 code blocks, no release section appears before the first `## [` header.
 
+## [1.2.3] - 2026-11-13
+
+Summary: Processing time made linear in input size for inputs that previously took quadratic or cubic time; release workflows hardened.
+
+- Replaced the wrapped-attribution search in the fragment scanner with a linear matcher; a body of repeated `On ` without `wrote:` took cubic time.
+- Replaced the `Name <a@b> wrote:` attribution pattern and the titled contact-line pattern with linear matchers; a line of repeated `<a@` took cubic time.
+- Replaced the German `Am … schrieb …:` attribution patterns and the mailing-list footer pattern with linear matchers.
+- Anchored the "Original message" divider patterns so that a run of dashes is tried once; a line of 10,000 dashes took 14 seconds in the Python port.
+- Rewrote the tails of the sign-off, greeting and postal-address line patterns to remove adjacent overlapping repetitions.
+- Made the quote-header block search, the pasted-header check, the trailing sign-off debris scan and the custom signature divider scan single-pass.
+- Made the parent-diff continuation rule a worklist that re-examines only the neighbors of newly marked lines.
+- Made stray HTML end tags and the Gmail wrapper scan constant-time per tag by tracking open-element counts and open wrappers.
+- TypeScript: the inline-reply tag check no longer compiles a regular expression per tagged line.
+- Added a complexity test file to each port: adversarial inputs that must complete within a fixed time.
+- Pinned every GitHub Action to a commit SHA, set `permissions: contents: read` on every workflow, disabled credential persistence on checkout and pinned the npm version used for publishing.
+- Added `SECURITY.md` and a Dependabot configuration for GitHub Actions.
+- No change to the derived text: output is byte-identical for every input; `EXTRACTION_VERSION` remains 6.
+
 ## [1.2.2] - 2026-11-13
 
 Summary: Release-process corrections; the first release published to npm through trusted publishing.

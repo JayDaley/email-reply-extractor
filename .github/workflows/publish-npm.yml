@@ -10,11 +10,17 @@ name: Publish to npm
 # email-reply-extractor package on npmjs.com that names this repository, this
 # workflow file and the `npm` environment. `--provenance` attaches a signed
 # build provenance statement, which needs `id-token: write`. Trusted
-# publishing and provenance require npm 11.5 or later, installed below.
+# publishing and provenance require npm 11.5.1 or later. An exact npm version
+# is installed below (not `latest`), so a new npm release does not run in this
+# job, which holds the OIDC token, until the pin is changed here. npm 12
+# requires Node.js ^24.15.0 on the Node 24 line.
 on:
   push:
     tags: ["v*"]
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   publish:
@@ -27,19 +33,21 @@ jobs:
       run:
         working-directory: typescript
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.14"
       - name: Check that the ports carry the same version
         working-directory: .
         run: python python/tools/check_sync.py
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
       - name: Install npm with trusted publishing support
-        run: npm install -g npm@latest
+        run: npm install -g npm@12.2.2
       - name: Install
         run: npm ci
       - name: Lint and test

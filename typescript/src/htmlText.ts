@@ -103,6 +103,32 @@ function classesAndId(attrs: readonly Attr[]): [string[], string] {
 
 // --- parser -------------------------------------------------------------------
 
+// Both parsers keep a stack of open elements, and a close tag pops the nearest
+// open frame with its tag together with every frame above it. Scanning the
+// stack for that frame costs no more than the frames it pops, except for a stray
+// close tag with no open frame, which would scan the whole stack and pop nothing
+// (quadratic on "<a>" * n + "</b>" * n). Each parser therefore also counts its
+// open frames per tag, and a close tag whose count is zero is ignored without a
+// scan.
+
+/** Add `delta` to the open-frame count of `tag`. */
+function countOpen(counts: Map<string, number>, tag: string, delta: number): void {
+  counts.set(tag, (counts.get(tag) ?? 0) + delta);
+}
+
+/** Index of the nearest frame on `stack` whose tag is `tag`, or `-1`. */
+function closeFrame(
+  stack: readonly (readonly [string, ...unknown[]])[],
+  counts: Map<string, number>,
+  tag: string,
+): number {
+  if (!counts.get(tag)) return -1;
+  for (let i = stack.length - 1; i >= 0; i--) {
+    if ((stack[i] as readonly [string, ...unknown[]])[0] === tag) return i;
+  }
+  return -1; // unreachable while the counts mirror the stack
+}
+
 /** A segment: a category-less line break, or a run of text with its category. */
 type Segment = { readonly kind: "nl" } | { readonly kind: "text"; readonly category: Category; readonly text: string };
 
@@ -111,6 +137,8 @@ const NL: Segment = Object.freeze({ kind: "nl" });
 /** Collect category-tagged text/newline segments from an HTML document. */
 class Segmenter extends HtmlParser {
   private readonly stack: [string, Category | null, boolean][] = [];
+  /** Number of frames on `stack` per tag (see {@link closeFrame}). */
+  private readonly openCounts = new Map<string, number>();
   private quotedDepth = 0;
   private signatureDepth = 0;
   private skipDepth = 0;
@@ -146,6 +174,7 @@ class Segmenter extends HtmlParser {
     if (SKIP_TAGS.has(tag)) {
       this.skipDepth++;
       this.stack.push([tag, null, true]);
+      countOpen(this.openCounts, tag, 1);
       return;
     }
     if (VOID_TAGS.has(tag)) {
@@ -154,6 +183,7 @@ class Segmenter extends HtmlParser {
     }
     const category = this.containerCategory(tag, attrs);
     this.stack.push([tag, category, false]);
+    countOpen(this.openCounts, tag, 1);
     if (category === QUOTED) this.quotedDepth++;
     else if (category === SIGNATURE) this.signatureDepth++;
     if (BLOCK_TAGS.has(tag) && this.skipDepth === 0) this.segments.push(NL);
@@ -162,15 +192,13 @@ class Segmenter extends HtmlParser {
   protected handleEndtag(tagName: string): void {
     const tag = tagName.toLowerCase();
     if (VOID_TAGS.has(tag)) return;
-    let idx = -1;
-    for (let i = this.stack.length - 1; i >= 0; i--) {
-      if ((this.stack[i] as [string, Category | null, boolean])[0] === tag) {
-        idx = i;
-        break;
-      }
-    }
+    // Find the nearest matching open frame; ignore a stray close with none.
+    const idx = closeFrame(this.stack, this.openCounts, tag);
     if (idx < 0) return;
-    for (const [, category, isSkip] of this.stack.slice(idx)) {
+    // Pop that frame and any unclosed inner frames, adjusting the counters.
+    for (let i = idx; i < this.stack.length; i++) {
+      const [frameTag, category, isSkip] = this.stack[i] as [string, Category | null, boolean];
+      countOpen(this.openCounts, frameTag, -1);
       if (isSkip) this.skipDepth--;
       else if (category === QUOTED) this.quotedDepth--;
       else if (category === SIGNATURE) this.signatureDepth--;
@@ -217,6 +245,10 @@ function render(segments: readonly Segment[], wanted: Category | null): string {
 /** First pass: which Gmail wrapper instances hold a `<blockquote>`. */
 class WrapperScanner extends HtmlParser {
   private readonly stack: [string, number | null][] = [];
+  /** Number of frames on `stack` per tag (see {@link closeFrame}). */
+  private readonly openCounts = new Map<string, number>();
+  /** `[stack position, wrapper index]` of every open wrapper, bottom first. */
+  private readonly openWrappers: [number, number][] = [];
   private wrapperCount = 0;
   readonly interleaved = new Set<number>();
 
@@ -224,10 +256,18 @@ class WrapperScanner extends HtmlParser {
     const tag = tagName.toLowerCase();
     if (VOID_TAGS.has(tag)) return;
     if (tag === "blockquote") {
-      for (const [, index] of this.stack) {
-        if (index !== null) this.interleaved.add(index);
+      // Mark every open wrapper, from the innermost out. A marked wrapper was
+      // marked by an earlier blockquote while every wrapper below it (opened
+      // before it and still open) was open too, so those are marked already
+      // and the walk stops there. Walking the whole stack on every blockquote
+      // is quadratic.
+      for (let w = this.openWrappers.length - 1; w >= 0; w--) {
+        const index = (this.openWrappers[w] as [number, number])[1];
+        if (this.interleaved.has(index)) break;
+        this.interleaved.add(index);
       }
       this.stack.push([tag, null]);
+      countOpen(this.openCounts, tag, 1);
       return;
     }
     const [classes, elId] = classesAndId(attrs);
@@ -236,18 +276,26 @@ class WrapperScanner extends HtmlParser {
     if (!isQuotedHook && classes.some((c) => GMAIL_WRAPPER_CLASSES.has(c))) {
       index = this.wrapperCount;
       this.wrapperCount++;
+      this.openWrappers.push([this.stack.length, index]);
     }
     this.stack.push([tag, index]);
+    countOpen(this.openCounts, tag, 1);
   }
 
   protected handleEndtag(tagName: string): void {
     const tag = tagName.toLowerCase();
     if (VOID_TAGS.has(tag)) return;
-    for (let i = this.stack.length - 1; i >= 0; i--) {
-      if ((this.stack[i] as [string, number | null])[0] === tag) {
-        this.stack.length = i;
-        return;
-      }
+    const idx = closeFrame(this.stack, this.openCounts, tag);
+    if (idx < 0) return;
+    for (let i = idx; i < this.stack.length; i++) {
+      countOpen(this.openCounts, (this.stack[i] as [string, number | null])[0], -1);
+    }
+    this.stack.length = idx;
+    while (
+      this.openWrappers.length > 0 &&
+      (this.openWrappers[this.openWrappers.length - 1] as [number, number])[0] >= idx
+    ) {
+      this.openWrappers.pop();
     }
   }
 

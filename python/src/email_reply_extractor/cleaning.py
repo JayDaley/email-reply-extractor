@@ -78,6 +78,8 @@ import re
 from dataclasses import dataclass
 
 from .extraction import (
+    _dollar_line,
+    _ends_with_bracketed_address,
     _is_signoff_name_like,
     _normalize_line_for_diff,
     _SIGNOFF_LINE_RE,
@@ -129,11 +131,30 @@ _TILDE_SIGNOFF_RE = re.compile(r"^[ \t]*~[ \t]+\S")
 
 # A titled personal contact line that is only a name and a bracketed email,
 # e.g. "Dr. Markku-Juhani O. Saarinen <mjos@iki.fi>". The leading honorific keeps
-# this from matching pasted header lines like "From: Name <a@b>".
-_CONTACT_RE = re.compile(
-    r"^[ \t]*(?:Dr|Prof|Mr|Mrs|Ms|Miss|PhD|Herr|Frau|Sir|Dame|Prof\.-Dr)\.?[ \t]+"
-    r"\S.*<[^>]+@[^>]+>[ \t]*$"
+# this from matching pasted header lines like "From: Name <a@b>". The full rule
+# is ``^[ \t]*(?:Dr|…|Prof\.-Dr)\.?[ \t]+\S.*<[^>]+@[^>]+>[ \t]*$``; only the
+# prefix up to ``\S`` is a regex (:func:`_is_contact_line` decides the rest),
+# because the engine's backtracking over ``.*<[^>]+@[^>]+>`` is cubic on a line
+# of "<a@" repeated.
+_CONTACT_PREFIX_RE = re.compile(
+    r"^[ \t]*(?:Dr|Prof|Mr|Mrs|Ms|Miss|PhD|Herr|Frau|Sir|Dame|Prof\.-Dr)\.?[ \t]+\S"
 )
+#: The tail of the contact rule, applied with ``match`` just after the ``>``.
+_CONTACT_TAIL_RE = re.compile(r"[ \t]*$")
+
+
+def _is_contact_line(line: str) -> bool:
+    """True for a titled contact line (the full rule above), in linear time.
+
+    The prefix regex has a single way to match: ``[ \\t]+\\S`` must take the
+    whole blank run, and no honorific followed by an optional ``.`` and a blank
+    is a prefix of another one followed the same way. The rest is
+    :func:`~.extraction._ends_with_bracketed_address` from just after the
+    ``\\S``.
+    """
+    prefix = _CONTACT_PREFIX_RE.match(line)
+    return prefix is not None and _ends_with_bracketed_address(line, prefix.end(), _CONTACT_TAIL_RE)
+
 
 # A telephony contact line: a phone keyword directly followed by a number, e.g.
 # "Tel: +1 905.502.7000 x 3288  |  Toll Free: 888.879.5879". The number tail
@@ -179,17 +200,43 @@ _IDENTIFIER_LINE_RE = re.compile(
 # A postal-address contact line: an "Office"/"Address"-labelled line (with up to
 # two prefix words — "Tokyo Office: …") whose value carries a digit (street
 # number or postal code). The digit requirement keeps prose like "Address: see
-# the wiki" safe.
+# the wiki" safe. No ``[ \t]*`` follows the colon: ``[^\n]*`` already matches the
+# blanks, and two adjacent runs backtrack quadratically when no digit follows.
 _ADDRESS_LINE_RE = re.compile(
-    r"^[ \t]*(?:\S+[ \t]+){0,2}(?:Office|Address)[ \t]*:[ \t]*[^\n]*\d",
+    r"^[ \t]*(?:\S+[ \t]+){0,2}(?:Office|Address)[ \t]*:[^\n]*\d",
     re.IGNORECASE,
 )
 
-# Mailing-list footer debris.
+# Mailing-list footer debris. The full rule is
+# ``^[ \t]*(?:_{5,}|.*\bmailing list\b.*--.*|To unsubscribe\b.*)[ \t]*$``
+# (IGNORECASE); :func:`_is_list_footer` decides the middle alternative without
+# the regex engine, whose backtracking over ``.*….*--.*`` is quadratic on a
+# line of "mailing list" repeated.
 _LIST_FOOTER_RE = re.compile(
-    r"^[ \t]*(?:_{5,}|.*\bmailing list\b.*--.*|To unsubscribe\b.*)[ \t]*$",
+    r"^[ \t]*(?:_{5,}|To unsubscribe\b.*)[ \t]*$",
     re.IGNORECASE,
 )
+_MAILING_LIST_RE = re.compile(r"\bmailing list\b", re.IGNORECASE)
+
+
+def _is_list_footer(line: str) -> bool:
+    """True for a mailing-list footer line (the full rule above), in linear time.
+
+    No part of the rule can match ``\\n``, so it can only match within
+    :func:`~.extraction._dollar_line`'s span; checking that first also keeps
+    the ``.*[ \\t]*$`` of the regex from backtracking over a line it cannot
+    match. Within the span, ``.*`` can skip anything, so the middle
+    alternative holds exactly when a ``--`` follows the end of the first
+    "mailing list".
+    """
+    span = _dollar_line(line)
+    if span is None:
+        return False
+    if _LIST_FOOTER_RE.match(line):
+        return True
+    found = _MAILING_LIST_RE.search(span)
+    return found is not None and span.find("--", found.end()) >= 0
+
 
 # A PGP armor / key line.
 _PGP_RE = re.compile(
@@ -220,10 +267,10 @@ def _is_droppable_signature_line(line: str) -> bool:
     """
     return bool(
         _TILDE_SIGNOFF_RE.match(line)
-        or _CONTACT_RE.match(line)
+        or _is_contact_line(line)
         or _IDENTIFIER_LINE_RE.match(line)
         or _ADDRESS_LINE_RE.match(line)
-        or _LIST_FOOTER_RE.match(line)
+        or _is_list_footer(line)
         or _PGP_RE.match(line)
         or _is_contact_signature_line(line)
     )
@@ -270,6 +317,12 @@ def strip_trailing_signoff_debris(lines: list[str]) -> list[str]:
       pasted link is never mistaken for a signature.
     """
     n = len(lines)
+    # Facts about every tail lines[p:], built on the first anchor in one
+    # backward pass, so each anchor is decided in constant time (rebuilding and
+    # reclassifying the tail for every anchor is quadratic):
+    # (has a non-blank line, every non-blank line is debris, some non-blank
+    # line is droppable).
+    tails: list[tuple[bool, bool, bool]] | None = None
     for i in range(n):
         name_idx = _signoff_name_index(lines, i)
         need_droppable = False
@@ -278,17 +331,36 @@ def strip_trailing_signoff_debris(lines: list[str]) -> list[str]:
                 continue
             name_idx = i
             need_droppable = True
-        tail = [line for line in lines[name_idx + 1 :] if line.strip()]
-        if not tail:
+        if tails is None:
+            tails = _tail_debris_table(lines)
+        nonblank, all_debris, any_droppable = tails[name_idx + 1]
+        if not nonblank:
             continue
-        if all(
-            _is_droppable_signature_line(line)
-            or _LINK_ONLY_LINE_RE.match(line)
-            or _LABELED_LINK_LINE_RE.match(line)
-            for line in tail
-        ) and (not need_droppable or any(_is_droppable_signature_line(line) for line in tail)):
+        if all_debris and (not need_droppable or any_droppable):
             return lines[: name_idx + 1]
     return lines
+
+
+def _tail_debris_table(lines: list[str]) -> list[tuple[bool, bool, bool]]:
+    """For every ``p`` (``0 <= p <= len(lines)``), facts about the non-blank
+    lines of ``lines[p:]``: whether there is one, whether every one is debris
+    (droppable, link-only or labeled-link), and whether one is droppable.
+    """
+    table = [(False, True, False)] * (len(lines) + 1)
+    for p in range(len(lines) - 1, -1, -1):
+        line = lines[p]
+        nonblank, all_debris, any_droppable = table[p + 1]
+        if line.strip():
+            droppable = _is_droppable_signature_line(line)
+            debris = (
+                droppable
+                or _LINK_ONLY_LINE_RE.match(line) is not None
+                or _LABELED_LINK_LINE_RE.match(line) is not None
+            )
+            table[p] = (True, all_debris and debris, any_droppable or droppable)
+        else:
+            table[p] = table[p + 1]
+    return table
 
 
 # --- greeting / closing sign-off ----------------------------------------------
@@ -309,8 +381,12 @@ _GREETING_WORDS = (
     # Māori (common in NZ English mail)
     r"|kia[ \t]+ora|t(?:ē|e)n(?:ā|a)[ \t]+koe"
 )
+# The bare form's tail is ``(?:[ \t]*[,!.])?[ \t]*$``, which accepts the same
+# strings as the original ``[ \t]*[,!.]?[ \t]*$``: written that way, two
+# adjacent ``[ \t]*`` runs split a long blank run in quadratically many ways
+# before a non-blank character fails the line.
 _GREETING_RE = re.compile(
-    rf"^[ \t]*(?:{_GREETING_WORDS})\b(?:[^.!?;:]{{0,60}}[,!.]|[ \t]*[,!.]?)[ \t]*$",
+    rf"^[ \t]*(?:{_GREETING_WORDS})\b(?:[^.!?;:]{{0,60}}[,!.]|(?:[ \t]*[,!.])?)[ \t]*$",
     re.IGNORECASE,
 )
 
@@ -425,8 +501,14 @@ def _truncate_at_custom_signature_divider(pairs: list[tuple[int, str]]) -> list[
             continue
         if pos > 0 and pairs[pos - 1][1].strip():
             continue  # heading underline, not a signature divider
-        nxt = next((ln for _i, ln in pairs[pos + 1 :] if ln.strip()), None)
-        if nxt is not None and _is_signoff_name_like(nxt):
+        # The first non-blank line after the divider, found by stepping over
+        # the blank run (not by slicing the rest of the list, which made every
+        # divider cost the length of the text). Divider lines are non-blank,
+        # so the runs stepped over for different dividers do not overlap.
+        nxt_pos = pos + 1
+        while nxt_pos < len(pairs) and not pairs[nxt_pos][1].strip():
+            nxt_pos += 1
+        if nxt_pos < len(pairs) and _is_signoff_name_like(pairs[nxt_pos][1]):
             return pairs[:pos]
     return pairs
 

@@ -77,34 +77,45 @@ pub fn read_fragments(text: &str) -> Result<Vec<Fragment>, PatternError> {
 
 // --- the wrapped-attribution collapse -----------------------------------------
 
-/// `_MULTI_QUOTE_HDR_SEARCH_RE.search` and `_MULTI_QUOTE_HDR_SUB_RE.sub`:
-/// the pattern `(?!On.*On\s.+?wrote:)(On\s(.+?)wrote:)` under `re.DOTALL`.
+/// `_find_multi_quote_header`: the match of upstream's
+/// `(?!On.*On\s.+?wrote:)(On\s(.+?)wrote:)` (`re.DOTALL`) in `chars`, found
+/// in linear time, as `(p, r)`: the match is `chars[p..r + 6]`, starting
+/// with `On\s` at `p` and ending with the `wrote:` at `r`.
 ///
-/// The negative lookahead rejects a start position from which a later
-/// `On\s` is followed (after at least one character) by `wrote:`. So the
-/// only position that can match is the last `On\s` that some `wrote:`
-/// follows, and the pattern matches at most once in a string: the search
-/// and the substitution see the same single match.
-fn collapse_wrapped_attribution(text: &str) -> Result<String, PatternError> {
-    let chars: Vec<char> = text.chars().collect();
+/// The pattern matches `On\s` at a position `p`, then the first `wrote:`
+/// starting at `p + 4` or later (`.+?` needs one character). Its lookahead
+/// rejects `p` when another such `On\s` at `q >= p + 2` also has a `wrote:`
+/// starting at `q + 4` or later. With `W` the start of the last `wrote:`,
+/// the qualifying positions are the `On\s` positions `p <= W - 4`, and the
+/// lookahead accepts only the last of them. That position is the only match,
+/// both for the search and for every match the substitution would replace.
+/// Run by a backtracking engine over a whole body, the lookahead is cubic in
+/// the number of "On" + whitespace positions; the reference computes the
+/// match the same way as here.
+fn find_multi_quote_header(chars: &[char]) -> Option<(usize, usize)> {
     let n = chars.len();
     let wrote: Vec<char> = "wrote:".chars().collect();
     let wrote_at = |i: usize| i + 6 <= n && chars[i..i + 6] == wrote[..];
-    let Some(last_wrote) = (0..n).rev().find(|&i| wrote_at(i)) else {
-        return Ok(text.to_string());
-    };
-    if last_wrote < 4 {
-        return Ok(text.to_string());
-    }
+    let last_wrote = (0..n).rev().find(|&i| wrote_at(i))?;
     // The last "On\s" at or before last_wrote - 4.
-    let Some(p) = (0..=last_wrote - 4).rev().find(|&p| {
+    let p = (0..=last_wrote.checked_sub(4)?).rev().find(|&p| {
         p + 2 < n && chars[p] == 'O' && chars[p + 1] == 'n' && pystr::is_space(chars[p + 2])
-    }) else {
+    })?;
+    // The first "wrote:" at p + 4 or later; last_wrote is one.
+    let r = (p + 4..=last_wrote).find(|&r| wrote_at(r))?;
+    Some((p, r))
+}
+
+/// `read_fragments`' collapse of a wrapped "On … wrote:" header onto one
+/// line. Upstream ran `re.sub` with the pattern and the first match's text
+/// (newlines removed) as the template; the pattern has exactly one match
+/// (see [`find_multi_quote_header`]), so the template is expanded against
+/// that match, with Python's rules and errors, and spliced in.
+fn collapse_wrapped_attribution(text: &str) -> Result<String, PatternError> {
+    let chars: Vec<char> = text.chars().collect();
+    let Some((p, r)) = find_multi_quote_header(&chars) else {
         return Ok(text.to_string());
     };
-    let r = (p + 4..n)
-        .find(|&r| wrote_at(r))
-        .expect("last_wrote >= p + 4");
     let whole: String = chars[p..r + 6].iter().collect();
     let inner: String = chars[p + 3..r].iter().collect();
     let template: Vec<char> = whole.chars().filter(|&c| c != '\n').collect();

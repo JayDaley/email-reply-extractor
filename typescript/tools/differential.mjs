@@ -7,7 +7,8 @@
 // Generates inputs by mutating the conformance corpus and vector arguments
 // (inserting characters and fragments chosen to exercise the semantic hazards
 // in docs/ports.md, deleting ranges, slicing lines, changing case) and by
-// generating random HTML, evaluates every call with both implementations, and
+// generating random HTML and runs of the tokens of the linear-time rewrites
+// ($ADVERSARIAL_SHARE of inputs, default 0.1), evaluates every call with both implementations, and
 // reports each call whose encoded results differ. The Python side runs
 // tools/reference.py with ../.venv/bin/python (override with $PYTHON). Not part
 // of `npm test`.
@@ -30,6 +31,8 @@ const PYTHON = process.env.PYTHON ?? join(ROOT, ".venv", "bin", "python");
 
 const PER_FN = Number(process.argv[2] ?? 400);
 let seed = Number(process.argv[3] ?? 1);
+// Fraction of text and HTML inputs drawn from the adversarial token runs.
+const ADVERSARIAL_SHARE = Number(process.env.ADVERSARIAL_SHARE ?? 0.1);
 
 // --- seeded PRNG (mulberry32) ----------------------------------------------------------
 
@@ -292,6 +295,216 @@ const HTML_SPICE = [
   "Bob wrote:",
 ];
 
+// Tokens of the patterns and scans rewritten for linear running time (the
+// attribution forms, the "On … wrote:" collapse, dividers, sign-off and
+// greeting tails, contact and list-footer lines, quote-header walks, HTML
+// stacks), with non-BMP characters next to the delimiters (UTF-16 offset
+// hazards). Joined in runs by adversarialText() and adversarialHtml().
+const ADVERSARIAL = [
+  "On",
+  "On ",
+  "On\n",
+  "On\u00a0",
+  "Am",
+  "Am ",
+  "schrieb",
+  " schrieb ",
+  "schrieb:",
+  "wrote:",
+  " wrote:",
+  "<",
+  ">",
+  "@",
+  "-",
+  "--",
+  "---",
+  ":",
+  " :",
+  "\n",
+  "\n\n",
+  "\u00a0",
+  "\u202f",
+  " ",
+  "\t",
+  "From:",
+  "From: ",
+  "From: a@b",
+  "De :",
+  "De\u00a0: ",
+  "Objet : x",
+  "Sent: x",
+  "X: y",
+  "Message-ID: x",
+  "mailing list",
+  "Mailing List",
+  "best",
+  "Best",
+  "hi",
+  "Hi",
+  ",",
+  ".",
+  "!",
+  "Dr",
+  "Dr ",
+  "Dr. ",
+  "Prof.-Dr ",
+  "Original Message",
+  "Forwarded Message",
+  "Message d'origine",
+  "Ursprüngliche Nachricht",
+  "邮件原件",
+  "a écrit :",
+  "escribió:",
+  "のメール:",
+  "2026年",
+  "\\",
+  "\\g<1>",
+  "\\g<0>",
+  "\\g<3>",
+  "\\1",
+  "\\2",
+  "\\9",
+  "\\n",
+  "\\q",
+  "\\0",
+  "\\x",
+  "\u{1f600}",
+  "\u{1d49c}",
+  "x",
+  "a",
+  "Bob",
+  "A.io",
+  "===",
+  "_____",
+  "To unsubscribe",
+  "www.x.org",
+  "Tel: 555 0100",
+];
+
+const ADVERSARIAL_HTML = [
+  "<blockquote>",
+  "</blockquote>",
+  "<div class=gmail_quote>",
+  '<div class="gmail_quote_container">',
+  '<div class="gmail_attr">',
+  "<div class=gmail_signature>",
+  "<div>",
+  "</div>",
+  "<a>",
+  "</a>",
+  "</b>",
+  "<p>",
+  "</p>",
+  "<br>",
+  "<script>",
+  "</script>",
+  "</script",
+  "<style>",
+  "</style>",
+  "<title>",
+  "</title>",
+  "<textarea>",
+  "<head>",
+  "</head>",
+  "<!--",
+  "-->",
+  "--!>",
+  "<!-",
+  "<!",
+  "<![",
+  "<![CDATA[",
+  "]]>",
+  "<?",
+  "<!doctype",
+  "<a x='",
+  '<a x="',
+  "<a ",
+  "</",
+  "</x ",
+  "<",
+  ">",
+  "'",
+  '"',
+  "=",
+  "&",
+  "&amp",
+  "&#",
+  "&#x",
+  "&#1",
+  "&notit",
+  ";",
+  "\u{1f600}",
+  "x",
+  " ",
+  "\n",
+];
+
+// Small alphabets, one per rewritten rule: short strings over them reach the
+// boundaries of each rule ("<a@>", "On wrote:", a ":" right after "schrieb")
+// far more often than strings over the whole vocabulary.
+const FOCUSED_TEXT = [
+  ["<", ">", "@", "a", " wrote:", "wrote:", " ", "\t", "\n", "\u{1f600}", "Dr ", "Dr. x", "\u00a0"],
+  ["On", "On ", " ", "\n", "wrote:", "x", "\\g<1>", "\\g<2>", "\\1", "\\", "\u{1f600}", "On\u00a0", "\t"],
+  ["Am", "Am ", " ", "schrieb", ":", "\t", "\n", "x", "\u{1f600}", "ä", "_", "On "],
+  ["-", "--", " ", "Original Message", "Message d'origine", "x", "\u00a0", "\n", "\u{1f600}", "邮件原件"],
+  ["best", "Best", "hi", "Hi", " ", "\t", ",", ".", "!", "x", "\n", "Bob", "\u00a0"],
+  ["mailing list", "Mailing List", "--", "-", " ", "x", "\n", "_____", "To unsubscribe", "_", "\u{1f600}"],
+  ["From: a@b", "From: x", "De : x", "Objet : x", "Envoyé : x", "Sent: x", "X: y", "Message-ID: x", "\n", " x", "x"],
+  ["A.io", "Bob", "Best,", "www.x.org", "Tel: 555 0100", "\n", "===", "Dr. A <a@b.c>", "x Office: 1", "Cheers"],
+];
+const FOCUSED_HTML = [
+  "<blockquote>",
+  "</blockquote>",
+  "<div class=gmail_quote>",
+  "</div>",
+  "<div>",
+  "<a>",
+  "</a>",
+  "</b>",
+  "x",
+  "<script>",
+  "</script>",
+  "<head>",
+  "</head>",
+  '<div class="gmail_signature">',
+  '<div class="gmail_attr">',
+];
+
+/** Text around an inline-reply tag's name (the whole-word test of `_is_author_tag`). */
+const AUTHOR_HEAD = ["Med", "Bob", "Bo", "o", "x", " ", "\n", "\u{1d49c}", "\u{1f600}", "_", "1", "é", "\u0301", "-"];
+
+/** A short string over a small alphabet. */
+function focused(alphabet) {
+  const parts = [];
+  const length = 1 + randint(20);
+  for (let k = 0; k < length; k++) parts.push(pick(alphabet));
+  return parts.join(alphabet === FOCUSED_HTML || alphabet.includes("\n") ? "" : pick(["", "\n"]));
+}
+
+/** A string of runs of adversarial tokens. */
+function adversarialRuns(tokens) {
+  const parts = [];
+  const runs = 1 + randint(6);
+  for (let r = 0; r < runs; r++) {
+    const unit = [];
+    const width = 1 + randint(3);
+    for (let k = 0; k < width; k++) unit.push(pick(tokens));
+    const reps = 1 + randint(rand() < 0.2 ? 60 : 8);
+    for (let k = 0; k < reps; k++) parts.push(unit.join(""));
+  }
+  return parts.join("");
+}
+
+function adversarialText() {
+  if (rand() < 0.5) return focused(pick(FOCUSED_TEXT));
+  return adversarialRuns(rand() < 0.8 ? ADVERSARIAL : [...ADVERSARIAL, ...SPICE]);
+}
+
+function adversarialHtml() {
+  if (rand() < 0.5) return focused(FOCUSED_HTML);
+  return adversarialRuns(rand() < 0.7 ? ADVERSARIAL_HTML : [...ADVERSARIAL_HTML, ...ADVERSARIAL]);
+}
+
 // Positions are aligned to code points so no lone surrogate is produced.
 function cpIndex(s, i) {
   if (i > 0 && i < s.length) {
@@ -369,6 +582,7 @@ function shortText() {
 
 function textInput() {
   const r = rand();
+  if (r < ADVERSARIAL_SHARE) return adversarialText();
   if (r < 0.2) return shortText();
   const base = pick(textSeeds);
   // Keep big bodies manageable: a random window of lines.
@@ -390,6 +604,7 @@ function htmlSoup() {
 
 function htmlInput() {
   const r = rand();
+  if (r < ADVERSARIAL_SHARE) return adversarialHtml();
   if (r < 0.45) return htmlSoup();
   let s = pick(htmlSeeds);
   if (s.length > 6000 && rand() < 0.8) {
@@ -401,6 +616,7 @@ function htmlInput() {
 
 /** One line built from pattern vocabulary, twisted. */
 function oneLine() {
+  if (rand() < ADVERSARIAL_SHARE) return adversarialText().replaceAll("\n", " ");
   const parts = [];
   const n = 1 + randint(4);
   for (let k = 0; k < n; k++) parts.push(pick(SPICE).replaceAll("\n", " "));
@@ -457,8 +673,24 @@ const GENERATORS = {
     parent_body: rand() < 0.5 ? null : textInput(),
   }),
   "extraction._is_author_tag": () => ({
-    label: pick(["Med", "SAH", "Linda3", "a.b", "x y", "J\u0301", "İ", "(x", "$", "\\"]),
-    head: textInput(),
+    label: pick([
+      "Med",
+      "SAH",
+      "Linda3",
+      "a.b",
+      "x y",
+      "J\u0301",
+      "İ",
+      "(x",
+      "$",
+      "\\",
+      "Bob",
+      "Bo",
+      "o",
+      "\u{1d49c}x",
+      "_",
+    ]),
+    head: rand() < 0.5 ? focused(AUTHOR_HEAD) : textInput(),
     parent_body: rand() < 0.5 ? null : textInput(),
   }),
   "_fragments.read_fragments": () => ({ text: extraction.normalizeBody(textInput()) }),

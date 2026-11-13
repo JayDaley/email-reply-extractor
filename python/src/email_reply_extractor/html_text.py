@@ -158,6 +158,29 @@ class HtmlParts:
 
 # --- parser -------------------------------------------------------------------
 
+# Both parsers keep a stack of open elements, and a close tag pops the nearest
+# open frame with its tag together with every frame above it. Scanning the
+# stack for that frame costs no more than the frames it pops, except for a stray
+# close tag with no open frame, which would scan the whole stack and pop nothing
+# (quadratic on "<a>" * n + "</b>" * n). Each parser therefore also counts its
+# open frames per tag, and a close tag whose count is zero is ignored without a
+# scan.
+
+
+def _count_open(counts: dict[str, int], tag: str, delta: int) -> None:
+    """Add ``delta`` to the open-frame count of ``tag``."""
+    counts[tag] = counts.get(tag, 0) + delta
+
+
+def _close_frame(stack: list[tuple], counts: dict[str, int], tag: str) -> int | None:
+    """Index of the nearest frame on ``stack`` whose tag is ``tag``, or ``None``."""
+    if not counts.get(tag):
+        return None
+    for i in range(len(stack) - 1, -1, -1):
+        if stack[i][0] == tag:
+            return i
+    return None  # unreachable while the counts mirror the stack
+
 
 class _Segmenter(HTMLParser):
     """Collect a flat list of text/newline segments, each tagged with its active
@@ -174,6 +197,8 @@ class _Segmenter(HTMLParser):
         super().__init__(convert_charrefs=True)
         # Each entry: (tag, category-or-None, is_skip).
         self._stack: list[tuple[str, str | None, bool]] = []
+        #: Number of frames on ``_stack`` per tag (see :func:`_close_frame`).
+        self._open_counts: dict[str, int] = {}
         self._quoted_depth = 0
         self._signature_depth = 0
         self._skip_depth = 0
@@ -222,6 +247,7 @@ class _Segmenter(HTMLParser):
         if tag in _SKIP_TAGS:
             self._skip_depth += 1
             self._stack.append((tag, None, True))
+            _count_open(self._open_counts, tag, 1)
             return
         if tag in _VOID_TAGS:
             if tag == "br" and self._skip_depth == 0:
@@ -229,6 +255,7 @@ class _Segmenter(HTMLParser):
             return
         category = self._container_category(tag, attrs)
         self._stack.append((tag, category, False))
+        _count_open(self._open_counts, tag, 1)
         if category == _QUOTED:
             self._quoted_depth += 1
         elif category == _SIGNATURE:
@@ -244,15 +271,12 @@ class _Segmenter(HTMLParser):
         if tag in _VOID_TAGS:
             return
         # Find the nearest matching open frame; ignore a stray close with none.
-        idx = None
-        for i in range(len(self._stack) - 1, -1, -1):
-            if self._stack[i][0] == tag:
-                idx = i
-                break
+        idx = _close_frame(self._stack, self._open_counts, tag)
         if idx is None:
             return
         # Pop that frame and any unclosed inner frames, adjusting the counters.
-        for _tag, category, is_skip in self._stack[idx:]:
+        for frame_tag, category, is_skip in self._stack[idx:]:
+            _count_open(self._open_counts, frame_tag, -1)
             if is_skip:
                 self._skip_depth -= 1
             elif category == _QUOTED:
@@ -319,6 +343,10 @@ class _WrapperScanner(HTMLParser):
         super().__init__(convert_charrefs=True)
         #: (tag, wrapper-instance-index-or-None) for every open element.
         self._stack: list[tuple[str, int | None]] = []
+        #: Number of frames on ``_stack`` per tag (see :func:`_close_frame`).
+        self._open_counts: dict[str, int] = {}
+        #: (stack position, wrapper index) of every open wrapper, bottom first.
+        self._open_wrappers: list[tuple[int, int]] = []
         self._wrapper_count = 0
         self.interleaved: set[int] = set()
 
@@ -327,10 +355,17 @@ class _WrapperScanner(HTMLParser):
         if tag in _VOID_TAGS:
             return
         if tag == "blockquote":
-            for _tag, index in self._stack:
-                if index is not None:
-                    self.interleaved.add(index)
+            # Mark every open wrapper, from the innermost out. A marked wrapper
+            # was marked by an earlier blockquote while every wrapper below it
+            # (opened before it and still open) was open too, so those are
+            # marked already and the walk stops there. Walking the whole stack
+            # on every blockquote is quadratic.
+            for _pos, index in reversed(self._open_wrappers):
+                if index in self.interleaved:
+                    break
+                self.interleaved.add(index)
             self._stack.append((tag, None))
+            _count_open(self._open_counts, tag, 1)
             return
         d = dict(attrs)
         classes = (d.get("class") or "").split()
@@ -340,16 +375,22 @@ class _WrapperScanner(HTMLParser):
         if not is_quoted_hook and any(c in _GMAIL_WRAPPER_CLASSES for c in classes):
             index = self._wrapper_count
             self._wrapper_count += 1
+            self._open_wrappers.append((len(self._stack), index))
         self._stack.append((tag, index))
+        _count_open(self._open_counts, tag, 1)
 
     def handle_endtag(self, tag: str) -> None:
         tag = tag.lower()
         if tag in _VOID_TAGS:
             return
-        for i in range(len(self._stack) - 1, -1, -1):
-            if self._stack[i][0] == tag:
-                del self._stack[i:]
-                return
+        idx = _close_frame(self._stack, self._open_counts, tag)
+        if idx is None:
+            return
+        for frame_tag, _index in self._stack[idx:]:
+            _count_open(self._open_counts, frame_tag, -1)
+        del self._stack[idx:]
+        while self._open_wrappers and self._open_wrappers[-1][0] >= idx:
+            self._open_wrappers.pop()
 
 
 def _interleaved_wrappers(html: str) -> frozenset[int]:

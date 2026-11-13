@@ -12,6 +12,8 @@
 
 import {
   collapseAndTrim,
+  dollarLine,
+  endsWithBracketedAddress,
   isSignoffNameLike,
   isSignoffNameLine,
   normalizeLineForDiff,
@@ -54,10 +56,30 @@ const CUSTOM_SIG_DIVIDER_RE = new PyPattern(String.raw`^[ \t]*[=~*#_]{3,}[ \t]*$
 
 const TILDE_SIGNOFF_RE = new PyPattern(String.raw`^[ \t]*~[ \t]+\S`);
 
-const CONTACT_RE = new PyPattern(
-  String.raw`^[ \t]*(?:Dr|Prof|Mr|Mrs|Ms|Miss|PhD|Herr|Frau|Sir|Dame|Prof\.-Dr)\.?[ \t]+` +
-    String.raw`\S.*<[^>]+@[^>]+>[ \t]*$`,
+// A titled personal contact line that is only a name and a bracketed email. The
+// full rule is `^[ \t]*(?:Dr|…|Prof\.-Dr)\.?[ \t]+\S.*<[^>]+@[^>]+>[ \t]*$`; only
+// the prefix up to `\S` is a regex (isContactLine decides the rest), because
+// the engine's backtracking over `.*<[^>]+@[^>]+>` is cubic on a line of "<a@"
+// repeated.
+const CONTACT_PREFIX_RE = new PyPattern(
+  String.raw`^[ \t]*(?:Dr|Prof|Mr|Mrs|Ms|Miss|PhD|Herr|Frau|Sir|Dame|Prof\.-Dr)\.?[ \t]+\S`,
 );
+/** The tail of the contact rule, applied with `match` just after the `>`. */
+const CONTACT_TAIL_RE = new PyPattern(String.raw`[ \t]*$`);
+
+/**
+ * True for a titled contact line (the full rule above), in linear time.
+ *
+ * The prefix regex has a single way to match: `[ \t]+\S` must take the whole
+ * blank run, and no honorific followed by an optional `.` and a blank is a
+ * prefix of another one followed the same way. The rest is
+ * {@link endsWithBracketedAddress} from just after the `\S` (in UTF-16 units:
+ * the end of the match, so a non-BMP `\S` is consumed whole).
+ */
+function isContactLine(line: string): boolean {
+  const prefix = CONTACT_PREFIX_RE.match(line);
+  return prefix !== null && endsWithBracketedAddress(line, prefix.index + prefix[0].length, CONTACT_TAIL_RE);
+}
 
 const PHONE_LINE_RE = new PyPattern(
   String.raw`\b(?:tel|telephone|phone|mobile|cell|fax|toll[ -]?free)\b[.:]?[ \t]*[+(]?\d[\d \t().x/-]{5,}`,
@@ -81,13 +103,42 @@ const IDENTIFIER_LINE_RE = new PyPattern(
   { ignoreCase: true },
 );
 
-const ADDRESS_LINE_RE = new PyPattern(String.raw`^[ \t]*(?:\S+[ \t]+){0,2}(?:Office|Address)[ \t]*:[ \t]*[^\n]*\d`, {
+// A labeled office / postal address line. The reference's pattern ends in
+// `:[ \t]*[^\n]*\d`; the `[ \t]*` is dropped here because `[^\n]*` already
+// accepts every blank, so the two accept the same strings, but adjacent they
+// split a long blank run in quadratically many ways before a line without a
+// digit fails (a 40,000-blank line took seconds). The pattern is only used
+// with `test`, so no group or span depends on the split.
+const ADDRESS_LINE_RE = new PyPattern(String.raw`^[ \t]*(?:\S+[ \t]+){0,2}(?:Office|Address)[ \t]*:[^\n]*\d`, {
   ignoreCase: true,
 });
 
-const LIST_FOOTER_RE = new PyPattern(String.raw`^[ \t]*(?:_{5,}|.*\bmailing list\b.*--.*|To unsubscribe\b.*)[ \t]*$`, {
+// Mailing-list footer debris. The full rule is
+// `^[ \t]*(?:_{5,}|.*\bmailing list\b.*--.*|To unsubscribe\b.*)[ \t]*$`
+// (IGNORECASE); isListFooter decides the middle alternative without the regex
+// engine, whose backtracking over `.*….*--.*` is quadratic on a line of
+// "mailing list" repeated.
+const LIST_FOOTER_RE = new PyPattern(String.raw`^[ \t]*(?:_{5,}|To unsubscribe\b.*)[ \t]*$`, {
   ignoreCase: true,
 });
+const MAILING_LIST_RE = new PyPattern(String.raw`\bmailing list\b`, { ignoreCase: true });
+
+/**
+ * True for a mailing-list footer line (the full rule above), in linear time.
+ *
+ * No part of the rule can match `\n`, so it can only match within
+ * {@link dollarLine}'s span; checking that first also keeps the `.*[ \t]*$` of
+ * the regex from backtracking over a line it cannot match. Within the span,
+ * `.*` can skip anything, so the middle alternative holds exactly when a `--`
+ * follows the end of the first "mailing list".
+ */
+function isListFooter(line: string): boolean {
+  const span = dollarLine(line);
+  if (span === null) return false;
+  if (LIST_FOOTER_RE.test(line)) return true;
+  const found = MAILING_LIST_RE.search(span);
+  return found !== null && span.indexOf("--", found.index + found[0].length) >= 0;
+}
 
 const PGP_RE = new PyPattern(String.raw`^[ \t]*(?:-----(?:BEGIN|END) PGP|PGP key-(?:id|fingerprint)\b)`, {
   ignoreCase: true,
@@ -103,10 +154,10 @@ function isContactSignatureLine(line: string): boolean {
 export function isDroppableSignatureLine(line: string): boolean {
   return (
     TILDE_SIGNOFF_RE.test(line) ||
-    CONTACT_RE.test(line) ||
+    isContactLine(line) ||
     IDENTIFIER_LINE_RE.test(line) ||
     ADDRESS_LINE_RE.test(line) ||
-    LIST_FOOTER_RE.test(line) ||
+    isListFooter(line) ||
     PGP_RE.test(line) ||
     isContactSignatureLine(line)
   );
@@ -128,6 +179,10 @@ const LABELED_LINK_LINE_RE = new PyPattern(String.raw`^[ \t]*[^:\n]{1,40}:[ \t]*
 /** Drop personal-signature furniture trailing a closing sign-off. */
 export function stripTrailingSignoffDebris(lines: readonly string[]): string[] {
   const n = lines.length;
+  // Facts about every tail lines[p:], built on the first anchor in one backward
+  // pass, so each anchor is decided in constant time (rebuilding and
+  // reclassifying the tail for every anchor is quadratic).
+  let tails: TailFacts[] | null = null;
   for (let i = 0; i < n; i++) {
     let nameIdx = signoffNameIndex(lines, i);
     let needDroppable = false;
@@ -136,18 +191,38 @@ export function stripTrailingSignoffDebris(lines: readonly string[]): string[] {
       nameIdx = i;
       needDroppable = true;
     }
-    const tail = lines.slice(nameIdx + 1).filter((line) => !isBlank(line));
-    if (tail.length === 0) continue;
-    if (
-      tail.every(
-        (line) => isDroppableSignatureLine(line) || LINK_ONLY_LINE_RE.test(line) || LABELED_LINK_LINE_RE.test(line),
-      ) &&
-      (!needDroppable || tail.some(isDroppableSignatureLine))
-    ) {
+    if (tails === null) tails = tailDebrisTable(lines);
+    const [nonblank, allDebris, anyDroppable] = tails[nameIdx + 1] as TailFacts;
+    if (!nonblank) continue;
+    if (allDebris && (!needDroppable || anyDroppable)) {
       return lines.slice(0, nameIdx + 1);
     }
   }
   return [...lines];
+}
+
+/** `[has a non-blank line, every non-blank line is debris, some non-blank line is droppable]`. */
+type TailFacts = readonly [nonblank: boolean, allDebris: boolean, anyDroppable: boolean];
+
+/**
+ * For every `p` (`0 <= p <= lines.length`), facts about the non-blank lines of
+ * `lines[p:]`: whether there is one, whether every one is debris (droppable,
+ * link-only or labeled-link), and whether one is droppable.
+ */
+function tailDebrisTable(lines: readonly string[]): TailFacts[] {
+  const table: TailFacts[] = new Array<TailFacts>(lines.length + 1).fill([false, true, false]);
+  for (let p = lines.length - 1; p >= 0; p--) {
+    const line = lines[p] as string;
+    const [nonblank, allDebris, anyDroppable] = table[p + 1] as TailFacts;
+    if (!isBlank(line)) {
+      const droppable = isDroppableSignatureLine(line);
+      const debris = droppable || LINK_ONLY_LINE_RE.test(line) || LABELED_LINK_LINE_RE.test(line);
+      table[p] = [true, allDebris && debris, anyDroppable || droppable];
+    } else {
+      table[p] = [nonblank, allDebris, anyDroppable];
+    }
+  }
+  return table;
 }
 
 // --- greeting / closing sign-off ----------------------------------------------
@@ -164,8 +239,12 @@ const GREETING_WORDS =
   // Māori (common in NZ English mail)
   String.raw`|kia[ \t]+ora|t(?:ē|e)n(?:ā|a)[ \t]+koe`;
 
+// The bare form's tail is `(?:[ \t]*[,!.])?[ \t]*$`, which accepts the same
+// strings as the original `[ \t]*[,!.]?[ \t]*$`: written that way, two adjacent
+// `[ \t]*` runs split a long blank run in quadratically many ways before a
+// non-blank character fails the line.
 const GREETING_RE = new PyPattern(
-  String.raw`^[ \t]*(?:${GREETING_WORDS})\b(?:[^.!?;:]{0,60}[,!.]|[ \t]*[,!.]?)[ \t]*$`,
+  String.raw`^[ \t]*(?:${GREETING_WORDS})\b(?:[^.!?;:]{0,60}[,!.]|(?:[ \t]*[,!.])?)[ \t]*$`,
   {
     ignoreCase: true,
   },
@@ -243,8 +322,13 @@ function truncateAtCustomSignatureDivider(pairs: readonly Pair[]): Pair[] {
     const line = (pairs[pos] as Pair)[1];
     if (!CUSTOM_SIG_DIVIDER_RE.test(line)) continue;
     if (pos > 0 && !isBlank((pairs[pos - 1] as Pair)[1])) continue; // heading underline
-    const nxt = pairs.slice(pos + 1).find(([, ln]) => !isBlank(ln));
-    if (nxt !== undefined && isSignoffNameLike(nxt[1])) return pairs.slice(0, pos);
+    // The first non-blank line after the divider, found by stepping over the
+    // blank run (not by slicing the rest of the list, which made every divider
+    // cost the length of the text). Divider lines are non-blank, so the runs
+    // stepped over for different dividers do not overlap.
+    let nxtPos = pos + 1;
+    while (nxtPos < pairs.length && isBlank((pairs[nxtPos] as Pair)[1])) nxtPos++;
+    if (nxtPos < pairs.length && isSignoffNameLike((pairs[nxtPos] as Pair)[1])) return pairs.slice(0, pos);
   }
   return [...pairs];
 }

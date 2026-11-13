@@ -21,8 +21,8 @@ use std::collections::HashSet;
 use std::sync::LazyLock;
 
 use crate::extraction::{
-    collapse_and_trim, is_signoff_name_like, is_signoff_name_line, normalize_line_for_diff,
-    signoff_name_index, SIGNOFF_LINE_RE,
+    collapse_and_trim, dollar_line, ends_with_bracketed_address, is_signoff_name_like,
+    is_signoff_name_line, normalize_line_for_diff, signoff_name_index, SIGNOFF_LINE_RE,
 };
 use crate::pyre::{Re, IGNORECASE};
 use crate::pystr;
@@ -56,15 +56,34 @@ static CUSTOM_SIG_DIVIDER_RE: LazyLock<Re> =
 
 static TILDE_SIGNOFF_RE: LazyLock<Re> = LazyLock::new(|| Re::matcher(r"^[ \t]*~[ \t]+\S", 0));
 
-static CONTACT_RE: LazyLock<Re> = LazyLock::new(|| {
+// A titled personal contact line that is only a name and a bracketed email.
+// The full rule is `^[ \t]*(?:Dr|…|Prof\.-Dr)\.?[ \t]+\S.*<[^>]+@[^>]+>[ \t]*$`;
+// as in the reference, only the prefix up to `\S` is a pattern and
+// [`is_contact_line`] decides the rest, because a backtracking engine is
+// cubic over `.*<[^>]+@[^>]+>` on a line of "<a@" repeated. (The `regex`
+// crate runs the full rule in linear time; the split keeps the ports
+// aligned.)
+static CONTACT_PREFIX_RE: LazyLock<Re> = LazyLock::new(|| {
     Re::matcher(
-        concat!(
-            r"^[ \t]*(?:Dr|Prof|Mr|Mrs|Ms|Miss|PhD|Herr|Frau|Sir|Dame|Prof\.-Dr)\.?[ \t]+",
-            r"\S.*<[^>]+@[^>]+>[ \t]*$",
-        ),
+        r"^[ \t]*(?:Dr|Prof|Mr|Mrs|Ms|Miss|PhD|Herr|Frau|Sir|Dame|Prof\.-Dr)\.?[ \t]+\S",
         0,
     )
 });
+
+/// The tail of the contact rule, matched just after the `>`.
+static CONTACT_TAIL_RE: LazyLock<Re> = LazyLock::new(|| Re::matcher(r"[ \t]*$", 0));
+
+/// True for a titled contact line (the full rule above), in linear time.
+///
+/// The prefix pattern has a single way to match: `[ \t]+\S` must take the
+/// whole blank run, and no honorific followed by an optional `.` and a blank
+/// is a prefix of another one followed the same way. The rest is
+/// [`ends_with_bracketed_address`] from just after the `\S`.
+fn is_contact_line(line: &str) -> bool {
+    CONTACT_PREFIX_RE
+        .find(line)
+        .is_some_and(|(_, end)| ends_with_bracketed_address(line, end, &CONTACT_TAIL_RE))
+}
 
 static PHONE_LINE_RE: LazyLock<Re> = LazyLock::new(|| {
     Re::searcher(
@@ -100,23 +119,65 @@ static IDENTIFIER_LINE_RE: LazyLock<Re> = LazyLock::new(|| {
 
 static ADDRESS_LINE_RE: LazyLock<Re> = LazyLock::new(|| {
     Re::matcher(
-        r"^[ \t]*(?:\S+[ \t]+){0,2}(?:Office|Address)[ \t]*:[ \t]*[^\n]*\d",
+        r"^[ \t]*(?:\S+[ \t]+){0,2}(?:Office|Address)[ \t]*:[^\n]*\d",
         IGNORECASE,
     )
 });
 
+// Mailing-list footer debris. The full rule is
+// `^[ \t]*(?:_{5,}|.*\bmailing list\b.*--.*|To unsubscribe\b.*)[ \t]*$`
+// (IGNORECASE); as in the reference, [`is_list_footer`] decides the middle
+// alternative without the pattern, over which a backtracking engine is
+// quadratic on a line of "mailing list" repeated. The remaining `\b` sits
+// next to `.*` and is rewritten as in extraction's attribution patterns (a
+// non-word character that `.*` consumes).
 static LIST_FOOTER_RE: LazyLock<Re> = LazyLock::new(|| {
     Re::matcher(
-        // ^[ \t]*(?:_{5,}|.*\bmailing list\b.*--.*|To unsubscribe\b.*)[ \t]*$, with
-        // each `\b` next to `.*` rewritten as in extraction's attribution
-        // patterns (a non-word character that `.*` consumes).
-        concat!(
-            r"^[ \t]*(?:_{5,}|(?:.*[^\w\n])?mailing list(?:[^\w\n].*)?--.*",
-            r"|To unsubscribe(?:[^\w\n].*)?)[ \t]*$",
-        ),
+        // ^[ \t]*(?:_{5,}|To unsubscribe\b.*)[ \t]*$
+        r"^[ \t]*(?:_{5,}|To unsubscribe(?:[^\w\n].*)?)[ \t]*$",
         IGNORECASE,
     )
 });
+
+/// The literal of `\bmailing list\b` (IGNORECASE); [`search_mailing_list`]
+/// checks the boundaries.
+static MAILING_LIST_RE: LazyLock<Re> = LazyLock::new(|| Re::searcher(r"mailing list", IGNORECASE));
+
+/// `_MAILING_LIST_RE.search(text)` for `\bmailing list\b`: the byte end of
+/// the first case-insensitive "mailing list" with no word character on
+/// either side.
+fn search_mailing_list(text: &str) -> Option<usize> {
+    let mut from = 0;
+    while let Some((start, end)) = MAILING_LIST_RE.find_at(text, from) {
+        let before_ok = !text[..start]
+            .chars()
+            .next_back()
+            .is_some_and(pystr::is_word);
+        let after_ok = !text[end..].chars().next().is_some_and(pystr::is_word);
+        if before_ok && after_ok {
+            return Some(end);
+        }
+        from = start + text[start..].chars().next().map_or(1, char::len_utf8);
+    }
+    None
+}
+
+/// True for a mailing-list footer line (the full rule above), in linear time.
+///
+/// No part of the rule can match `\n`, so it can only match within
+/// [`dollar_line`]'s span; checking that first also keeps the `.*[ \t]*$` of
+/// the pattern from scanning a line it cannot match. Within the span, `.*`
+/// can skip anything, so the middle alternative holds exactly when a `--`
+/// follows the end of the first "mailing list".
+fn is_list_footer(line: &str) -> bool {
+    let Some(span) = dollar_line(line) else {
+        return false;
+    };
+    if LIST_FOOTER_RE.is_match(line) {
+        return true;
+    }
+    search_mailing_list(span).is_some_and(|end| span[end..].contains("--"))
+}
 
 static PGP_RE: LazyLock<Re> = LazyLock::new(|| {
     Re::matcher(
@@ -135,10 +196,10 @@ fn is_contact_signature_line(line: &str) -> bool {
 
 fn is_droppable_signature_line(line: &str) -> bool {
     TILDE_SIGNOFF_RE.is_match(line)
-        || CONTACT_RE.is_match(line)
+        || is_contact_line(line)
         || IDENTIFIER_LINE_RE.is_match(line)
         || ADDRESS_LINE_RE.is_match(line)
-        || LIST_FOOTER_RE.is_match(line)
+        || is_list_footer(line)
         || PGP_RE.is_match(line)
         || is_contact_signature_line(line)
 }
@@ -168,6 +229,10 @@ static LABELED_LINK_LINE_RE: LazyLock<Re> = LazyLock::new(|| {
 
 fn strip_trailing_signoff_debris(lines: &[&str]) -> usize {
     let n = lines.len();
+    // Facts about every tail lines[p..], built on the first anchor in one
+    // backward pass, so each anchor is decided in constant time (rebuilding
+    // and reclassifying the tail for every anchor is quadratic).
+    let mut tails: Option<Vec<TailFacts>> = None;
     for i in 0..n {
         let mut need_droppable = false;
         let name_idx = match signoff_name_index(lines, i) {
@@ -180,28 +245,66 @@ fn strip_trailing_signoff_debris(lines: &[&str]) -> usize {
                 i
             }
         };
-        let tail: Vec<&str> = lines[name_idx + 1..]
-            .iter()
-            .copied()
-            .filter(|l| pystr::has_content(l))
-            .collect();
-        if tail.is_empty() {
+        let facts = tails.get_or_insert_with(|| tail_debris_table(lines))[name_idx + 1];
+        if !facts.nonblank {
             continue;
         }
-        let all_debris = tail.iter().all(|l| {
-            is_droppable_signature_line(l)
-                || LINK_ONLY_LINE_RE.is_match(l)
-                || LABELED_LINK_LINE_RE.is_match(l)
-        });
-        if all_debris && (!need_droppable || tail.iter().any(|l| is_droppable_signature_line(l))) {
+        if facts.all_debris && (!need_droppable || facts.any_droppable) {
             return name_idx + 1;
         }
     }
     n
 }
 
+/// Facts about the non-blank lines of a tail `lines[p..]`.
+#[derive(Clone, Copy)]
+struct TailFacts {
+    /// There is one.
+    nonblank: bool,
+    /// Every one is debris (droppable, link-only or labeled-link).
+    all_debris: bool,
+    /// One is droppable.
+    any_droppable: bool,
+}
+
+/// `_tail_debris_table`: [`TailFacts`] for every `p` (`0 <= p <= len`).
+fn tail_debris_table(lines: &[&str]) -> Vec<TailFacts> {
+    let mut table = vec![
+        TailFacts {
+            nonblank: false,
+            all_debris: true,
+            any_droppable: false,
+        };
+        lines.len() + 1
+    ];
+    for p in (0..lines.len()).rev() {
+        let line = lines[p];
+        let next = table[p + 1];
+        table[p] = if pystr::has_content(line) {
+            let droppable = is_droppable_signature_line(line);
+            let debris = droppable
+                || LINK_ONLY_LINE_RE.is_match(line)
+                || LABELED_LINK_LINE_RE.is_match(line);
+            TailFacts {
+                nonblank: true,
+                all_debris: next.all_debris && debris,
+                any_droppable: next.any_droppable || droppable,
+            }
+        } else {
+            next
+        };
+    }
+    table
+}
+
 // --- greeting / closing sign-off ----------------------------------------------
 
+// The bare form's tail is `(?:[ \t]*[,!.])?[ \t]*$`, which accepts the same
+// strings as the original `[ \t]*[,!.]?[ \t]*$`: written that way, two
+// adjacent `[ \t]*` runs split a long blank run in quadratically many ways
+// before a non-blank character fails the line. The `\b` makes this a
+// `fancy-regex` (backtracking) pattern here, so the rewrite matters in this
+// port too.
 static GREETING_RE: LazyLock<Re> = LazyLock::new(|| {
     Re::matcher(
         concat!(
@@ -211,7 +314,7 @@ static GREETING_RE: LazyLock<Re> = LazyLock::new(|| {
             r"|bonjour|salut|ch(?:è|e)re?s?|hola|estimad[oa]s?|buenos[ \t]+d(?:í|i)as|ciao|ol(?:á|a)",
             r"|beste|geachte|hej|hoi",
             r"|kia[ \t]+ora|t(?:ē|e)n(?:ā|a)[ \t]+koe",
-            r")\b(?:[^.!?;:]{0,60}[,!.]|[ \t]*[,!.]?)[ \t]*$",
+            r")\b(?:[^.!?;:]{0,60}[,!.]|(?:[ \t]*[,!.])?)[ \t]*$",
         ),
         IGNORECASE,
     )
@@ -297,11 +400,16 @@ fn truncate_at_custom_signature_divider(pairs: Pairs<'_>) -> Pairs<'_> {
         if pos > 0 && pystr::has_content(pairs[pos - 1].1) {
             continue;
         }
-        let next = pairs[pos + 1..]
-            .iter()
-            .map(|(_, l)| *l)
-            .find(|l| pystr::has_content(l));
-        if next.is_some_and(is_signoff_name_like) {
+        // The first non-blank line after the divider, found by stepping over
+        // the blank run, as in the reference (whose slice of the rest of the
+        // list made every divider cost the length of the text). Divider
+        // lines are non-blank, so the runs stepped over for different
+        // dividers do not overlap.
+        let mut nxt_pos = pos + 1;
+        while nxt_pos < pairs.len() && !pystr::has_content(pairs[nxt_pos].1) {
+            nxt_pos += 1;
+        }
+        if nxt_pos < pairs.len() && is_signoff_name_like(pairs[nxt_pos].1) {
             return pairs[..pos].to_vec();
         }
     }

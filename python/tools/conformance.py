@@ -23,7 +23,9 @@ What it writes (formats in ``conformance/README.md``):
 
 The recording run excludes ``test_conformance.py`` and
 ``test_extraction_version.py``: those check this data rather than exercising
-behaviour, and they would fail mid-way through an intended regeneration.
+behaviour, and they would fail mid-way through an intended regeneration. It
+also excludes ``test_complexity.py``, whose adversarial inputs run to
+megabytes and pin running time rather than output.
 """
 
 from __future__ import annotations
@@ -57,7 +59,7 @@ from conformance_support import (  # noqa: E402
 from email_reply_extractor.extraction import EXTRACTION_VERSION  # noqa: E402
 
 #: Test modules left out of the recording run (see the module docstring).
-_NOT_RECORDED = ("test_conformance.py", "test_extraction_version.py")
+_NOT_RECORDED = ("test_conformance.py", "test_extraction_version.py", "test_complexity.py")
 
 #: Library-internal call sites also recorded, as ``(module, name)``: the bound
 #: name inside ``module`` is wrapped, so every call the pipeline makes through

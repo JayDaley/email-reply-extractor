@@ -235,33 +235,137 @@ def is_quote_line(line: str) -> bool:
 # --- attribution lines --------------------------------------------------------
 
 # Full single-line attribution forms. Add a language by adding a pattern.
+#
+# Two forms are not run as single regexes, because the engine's backtracking
+# over them is polynomial on adversarial lines (a line of "<a@" repeated, or of
+# "schrieb:" repeated): "<who> <a@b> wrote:" (:func:`_is_address_attribution`)
+# and the German "Am <date> schrieb <who>:" (:func:`_is_german_attribution`).
+# Each is decided by a linear helper that accepts exactly the strings the
+# original pattern (given in its docstring) accepts under ``re.match``.
 _ATTRIBUTION_RES = (
     # English: "On <date>, <who> wrote:". No word boundary before "wrote" —
     # ERP unwraps a line-wrapped attribution by deleting the newline, which can
     # glue the author's address straight onto it ("…example.comwrote:").
     re.compile(r"^[ \t]*On\b.*wrote:[ \t]*$"),
-    # "<who> <a@b> wrote:" (no leading "On")
-    re.compile(r"^.*<[^>]+@[^>]+>[ \t]+wrote:[ \t]*$"),
-    # "<who> via Datatracker <a@b> wrote:" and similar are covered by the above.
-    # German: "Am <date> schrieb <who>:"
-    re.compile(r"^[ \t]*Am\b.*\bschrieb\b.*:[ \t]*$"),
     # Japanese (Spark / Apple Mail): "2026年7月22日 18:12 +0900、<who>のメール:"
     # ("mail from <who>"). Anchored on a leading year so prose mentioning
     # someone's mail never matches.
     re.compile(r"^[ \t]*\d{4}(?:年|[/.-]).*のメール:[ \t]*$"),
 )
 
+
+def _dollar_line(text: str) -> str | None:
+    """The span a newline-free pattern ending in ``$`` can cover, or ``None``.
+
+    Without ``re.MULTILINE``, ``$`` matches at the end of the string or before
+    a final ``\\n``. A pattern none of whose parts can match ``\\n`` (``.``,
+    ``[ \\t]``, literals) can therefore only reach ``$`` when the string has
+    no ``\\n`` (the whole string), or a single ``\\n`` as its last character
+    (the string without it). Any other ``\\n`` makes such a pattern fail.
+    """
+    nl = text.find("\n")
+    if nl < 0:
+        return text
+    if nl == len(text) - 1:
+        return text[:nl]
+    return None
+
+
+#: The tail of the address attribution form, applied with ``match`` just after
+#: the closing ``>``.
+_ADDRESS_ATTRIBUTION_TAIL_RE = re.compile(r"[ \t]+wrote:[ \t]*$")
+
+
+def _ends_with_bracketed_address(text: str, start: int, tail_re: re.Pattern[str]) -> bool:
+    """True when ``.*<[^>]+@[^>]+>`` followed by ``tail_re`` matches ``text`` at
+    ``start`` (``re.match`` semantics, ``.`` excluding ``\\n``), in linear time.
+
+    ``tail_re`` must end in ``$`` and must not be able to match ``>``. Then the
+    ``>`` of any match is the last ``>`` in ``text``, and the ``<`` lies after
+    the ``>`` before it (``[^>]+`` cannot cross one), at or after ``start``,
+    and before the first ``\\n`` at or after ``start`` (``.*`` cannot cross
+    one). The leftmost such ``<`` leaves the widest span for ``[^>]+@[^>]+``,
+    which needs an ``@`` with at least one character on each side.
+    """
+    gt = text.rfind(">")
+    if gt < start or not tail_re.match(text, gt + 1):
+        return False
+    nl = text.find("\n", start)
+    if nl < 0:
+        nl = len(text)
+    lt = text.find("<", max(start, text.rfind(">", 0, gt) + 1), min(gt, nl))
+    return lt >= 0 and text.find("@", lt + 2, gt - 1) >= 0
+
+
+def _is_address_attribution(line: str) -> bool:
+    """``re.match(r"^.*<[^>]+@[^>]+>[ \\t]+wrote:[ \\t]*$", line)``, linear.
+
+    "<who> <a@b> wrote:" (no leading "On"); "<who> via Datatracker <a@b>
+    wrote:" and similar are covered too.
+    """
+    return _ends_with_bracketed_address(line, 0, _ADDRESS_ATTRIBUTION_TAIL_RE)
+
+
+_AM_PREFIX_RE = re.compile(r"[ \t]*Am\b")
+_SCHRIEB_RE = re.compile(r"\bschrieb\b")
+
+
+def _is_german_attribution(line: str) -> bool:
+    """``re.match(r"^[ \\t]*Am\\b.*\\bschrieb\\b.*:[ \\t]*$", line)``, linear.
+
+    German: "Am <date> schrieb <who>:". No part of the pattern matches ``\\n``,
+    so it applies to :func:`_dollar_line`'s span as a whole. After the prefix,
+    ``.*`` can skip anything, so the condition is: a ``\\bschrieb\\b`` occurs
+    (it cannot start inside the prefix, which is ``[ \\t]*Am`` followed by a
+    non-word character), and the span, with trailing blanks removed, ends in
+    a ``:`` at or after the end of the first occurrence.
+    """
+    span = _dollar_line(line)
+    if span is None or not _AM_PREFIX_RE.match(span):
+        return False
+    schrieb = _SCHRIEB_RE.search(line)
+    body = span.rstrip(" \t")
+    return schrieb is not None and body.endswith(":") and len(body) - 1 >= schrieb.end()
+
+
 # For two-line-wrapped attributions: a start token and a terminator that may
 # appear on the following line(s). Structured per language for easy extension.
 _ATTRIBUTION_START_RE = re.compile(r"^[ \t]*(?:(?:On|Am|Le|El|El día)\b|\d{4}(?:年|[/.-]))")
-_ATTRIBUTION_END_RE = re.compile(
-    r"(?:wrote:|\bschrieb\b.*:|\ba écrit\s*:|\bescribió:|のメール:)[ \t]*$"
-)
+#: The terminators, except ``\bschrieb\b.*:``, which :func:`_has_attribution_end`
+#: decides separately: under ``search`` the engine retried ``.*:`` from every
+#: "schrieb", which is quadratic. The remaining alternatives are literals, or
+#: ``\s*`` runs that follow distinct literals, and search in linear time.
+_ATTRIBUTION_END_RE = re.compile(r"(?:wrote:|\ba écrit\s*:|\bescribió:|のメール:)[ \t]*$")
+
+
+def _has_attribution_end(line: str) -> bool:
+    """True when ``line`` contains a wrapped attribution's terminator.
+
+    Equivalent to ``re.search`` of the original pattern
+    ``(?:wrote:|\\bschrieb\\b.*:|\\ba écrit\\s*:|\\bescribió:|のメール:)[ \\t]*$``.
+    Its ``\\bschrieb\\b.*:[ \\t]*$`` alternative ends at ``$`` — the end of the
+    string, or before a final ``\\n`` — so its ``:`` is the last character
+    other than blanks before that point, and its "schrieb" must lie on the
+    same line as the ``:``, ending at or before it. The first "schrieb" at or
+    after the start of that line is the best candidate.
+    """
+    if _ATTRIBUTION_END_RE.search(line):
+        return True
+    body = (line[:-1] if line.endswith("\n") else line).rstrip(" \t")
+    if not body.endswith(":"):
+        return False
+    colon = len(body) - 1
+    schrieb = _SCHRIEB_RE.search(line, body.rfind("\n", 0, colon) + 1)
+    return schrieb is not None and schrieb.end() <= colon
 
 
 def is_attribution_line(line: str) -> bool:
     """True if ``line`` on its own is a complete attribution line."""
-    return any(pat.match(line) for pat in _ATTRIBUTION_RES)
+    return (
+        any(pat.match(line) for pat in _ATTRIBUTION_RES)
+        or _is_address_attribution(line)
+        or _is_german_attribution(line)
+    )
 
 
 def _wrapped_attribution_end(lines: list[str], i: int) -> int | None:
@@ -269,12 +373,12 @@ def _wrapped_attribution_end(lines: list[str], i: int) -> int | None:
     "Am …") whose terminator ("wrote:" / "schrieb …:") lands on the next line or
     two, with no blank between — return the terminator line's index, else None.
     """
-    if not _ATTRIBUTION_START_RE.match(lines[i]) or _ATTRIBUTION_END_RE.search(lines[i]):
+    if not _ATTRIBUTION_START_RE.match(lines[i]) or _has_attribution_end(lines[i]):
         return None
     for j in range(i + 1, min(i + 3, len(lines))):
         if not lines[j].strip():
             return None
-        if _ATTRIBUTION_END_RE.search(lines[j]):
+        if _has_attribution_end(lines[j]):
             return j
     return None
 
@@ -329,8 +433,12 @@ _SIGNOFF_SALUTATIONS = (
     r"|v(?:ä|a)nliga\s+h(?:ä|a)lsningar|med\s+v(?:e|ä)nlig\s+h(?:i|ä)lsen|mvh|terveisin"
     r"|cumprimentos|atenciosamente|ciao|saluti|cordiali\s+saluti"
 )
+# The tail is ``[ \t]*(?:[,.!][ \t]*)?$``, which accepts the same strings as
+# the original ``[ \t]*[,.!]?[ \t]*$``: written that way, two adjacent
+# ``[ \t]*`` runs split a long blank run in quadratically many ways before a
+# non-blank character fails the line.
 _SIGNOFF_LINE_RE = re.compile(
-    rf"^[ \t]*(?:{_SIGNOFF_SALUTATIONS})[ \t]*[,.!]?[ \t]*$", re.IGNORECASE
+    rf"^[ \t]*(?:{_SIGNOFF_SALUTATIONS})[ \t]*(?:[,.!][ \t]*)?$", re.IGNORECASE
 )
 
 # The one-line form: "Cheers, Peter" — salutation, comma, then the name.
@@ -527,7 +635,7 @@ _CJK_HEADER_LABEL = r"[\u4e00-\u9fff][\u4e00-\u9fff\u3000]{0,10}[ \t]*[:：]"
 
 # Any RFC5322-looking header field ("Name: …" / "Name:"), ASCII or CJK-labeled.
 # Used to (a) delimit the header run above a ``From:`` that
-# :func:`_in_pasted_header_run` inspects for transport fields, and (b) walk the
+# :func:`_pasted_header_runs` inspects for transport fields, and (b) walk the
 # run once a real block has started. Requiring whitespace or end-of-line after
 # an ASCII label's colon keeps "https://…" and other scheme-like prose (no
 # space after the colon) from matching.
@@ -561,17 +669,65 @@ _TRANSPORT_HEADER_RE = re.compile(
 )
 
 
-def _in_pasted_header_run(lines: list[str], i: int) -> bool:
-    """True when the contiguous header-field run above ``lines[i]`` contains a
-    transport field: the ``From:`` then sits inside pasted header evidence
-    rather than opening a client's quote header.
+def _pasted_header_runs(lines: list[str]) -> list[bool]:
+    """For every index ``i``, whether the contiguous header-field run directly
+    above ``lines[i]`` contains a transport field: a ``From:`` at ``i`` then
+    sits inside pasted header evidence rather than opening a client's quote
+    header.
+
+    Computed in one forward pass — the run above ``i`` is ``lines[i - 1]``
+    plus, when that line is a header field, the run above ``i - 1`` — instead
+    of walking the run upward from every ``From:``, which is quadratic when
+    many ``From:`` lines follow a long run of fields.
     """
-    j = i - 1
-    while j >= 0 and _HEADER_FIELD_RE.match(lines[j]):
-        if _TRANSPORT_HEADER_RE.match(lines[j]):
+    pasted = [False] * len(lines)
+    for i in range(1, len(lines)):
+        above = lines[i - 1]
+        pasted[i] = _HEADER_FIELD_RE.match(above) is not None and (
+            _TRANSPORT_HEADER_RE.match(above) is not None or pasted[i - 1]
+        )
+    return pasted
+
+
+def _header_walk_table(
+    lines: list[str], is_localized: bool, tolerant: bool
+) -> list[tuple[int, bool]]:
+    """The field walk of :func:`find_quote_header_block`, for every start.
+
+    The walk from an opener at ``i`` visits ``lines[i + 1:]`` and stops at the
+    first line that is neither a header field, nor a folded continuation, nor
+    (``tolerant`` only) a single blank directly above a field. Whether it stops
+    at a line depends only on that line, the next one and the mode
+    (``is_localized``, ``tolerant``), never on where the walk started. Entry
+    ``j`` (``0 <= j <= len(lines)``) holds ``(fields, has_signal)`` for a walk
+    entering at ``j``: the number of field lines it passes and whether one of
+    them is a signal field. Built backward in one pass, so each opener is
+    decided in constant time; rewalking from every opener is quadratic when
+    many openers share one long run.
+    """
+
+    def is_field(text: str) -> bool:
+        if _HEADER_FIELD_RE.match(text):
             return True
-        j -= 1
-    return False
+        return is_localized and _LOCALIZED_FIELD_RE.match(text) is not None
+
+    signal_re = _LOCALIZED_SUBJECT_RE if is_localized else _QUOTE_HEADER_SIGNAL_RE
+    n = len(lines)
+    field = [is_field(line) for line in lines]
+    table: list[tuple[int, bool]] = [(0, False)] * (n + 1)
+    for j in range(n - 1, -1, -1):
+        nxt = lines[j]
+        fields, has_signal = table[j + 1]
+        if field[j]:
+            table[j] = (fields + 1, has_signal or signal_re.match(nxt) is not None)
+        elif nxt.strip() and (tolerant or nxt[:1] in (" ", "\t")):
+            # Folded continuation of the preceding header field.
+            table[j] = (fields, has_signal)
+        elif not nxt.strip() and tolerant and j + 1 < n and field[j + 1]:
+            # Double-spaced rendering: a single blank between fields.
+            table[j] = (fields, has_signal)
+        # Otherwise the walk stops at j: the entry stays (0, False).
+    return table
 
 
 def find_quote_header_block(lines: list[str], *, localized: bool = True) -> int | None:
@@ -579,7 +735,7 @@ def find_quote_header_block(lines: list[str], *, localized: bool = True) -> int 
     block, or ``None`` if the body has no such block.
 
     A qualifying block: a ``From:`` line that does not sit inside pasted header
-    evidence (see :func:`_in_pasted_header_run`), followed by at least one more
+    evidence (see :func:`_pasted_header_runs`), followed by at least one more
     header line, at least one of which is a quote-header signal field
     (``Sent:``/``Date:``/``To:``/``Cc:``/``Subject:``/German/Chinese).
 
@@ -600,9 +756,13 @@ def find_quote_header_block(lines: list[str], *, localized: bool = True) -> int 
     another header field follows directly. Without an address the classic
     strict walk applies — header fields and whitespace-indented continuations
     only — so a prose line that happens to start "From: …" cannot reach across
-    its paragraph for a signal field.
+    its paragraph for a signal field (see :func:`_header_walk_table`).
+
+    The pasted-evidence flags and each walk mode's table are built once, on
+    first use, so the search is linear in the number of lines.
     """
-    n = len(lines)
+    pasted: list[bool] | None = None
+    tables: dict[tuple[bool, bool], list[tuple[int, bool]]] = {}
     for i, line in enumerate(lines):
         if _FROM_LINE_RE.match(line):
             is_localized = False
@@ -610,38 +770,15 @@ def find_quote_header_block(lines: list[str], *, localized: bool = True) -> int 
             is_localized = True
         else:
             continue
-        if i > 0 and _in_pasted_header_run(lines, i):
+        if pasted is None:
+            pasted = _pasted_header_runs(lines)
+        if pasted[i]:
             continue
-
-        def is_field(text: str, is_localized: bool = is_localized) -> bool:
-            if _HEADER_FIELD_RE.match(text):
-                return True
-            return is_localized and _LOCALIZED_FIELD_RE.match(text) is not None
-
-        tolerant = "@" in line
-        header_lines = 1
-        has_signal = False
-        j = i + 1
-        while j < n:
-            nxt = lines[j]
-            if is_field(nxt):
-                header_lines += 1
-                if (
-                    _LOCALIZED_SUBJECT_RE.match(nxt)
-                    if is_localized
-                    else _QUOTE_HEADER_SIGNAL_RE.match(nxt)
-                ):
-                    has_signal = True
-                j += 1
-            elif nxt.strip() and (tolerant or nxt[:1] in (" ", "\t")):
-                # Folded continuation of the preceding header field.
-                j += 1
-            elif not nxt.strip() and tolerant and j + 1 < n and is_field(lines[j + 1]):
-                # Double-spaced rendering: a single blank between fields.
-                j += 1
-            else:
-                break
-        if has_signal and header_lines >= (3 if is_localized else 2):
+        mode = (is_localized, "@" in line)
+        if mode not in tables:
+            tables[mode] = _header_walk_table(lines, *mode)
+        fields, has_signal = tables[mode][i + 1]
+        if has_signal and 1 + fields >= (3 if is_localized else 2):
             return i
     return None
 
@@ -685,8 +822,16 @@ def strip_after_quote_header_block(lines: list[str], *, localized: bool = True) 
 # prefix before it is kept. Dashes are required on BOTH sides, so prose that
 # merely mentions an "original message" never matches. Chinese clients localize
 # the wording: 邮件原件 (Chinese Outlook) and 原始邮件 (QQ Mail / Foxmail).
+#
+# The leading ``(?<!-)`` (here and in :data:`_LOCALIZED_DIVIDER_RE`) lets a
+# match start only at the first dash of a run. It changes no result: the
+# wording cannot start with a dash, so a match from inside a run has its
+# ``-{2,}`` end at the run's end, and the same match extended to the run's
+# first dash is found first. Without it, ``search`` retried ``-{2,}`` from
+# every dash of a long rule, which is quadratic (a 10,000-dash line took
+# seconds).
 _ORIGINAL_MESSAGE_DIVIDER_RE = re.compile(
-    r"-{2,}[ \t]*(?:(?:Original|Forwarded)[ \t]+Message|邮件原件|原始邮件)[ \t]*-{2,}",
+    r"(?<!-)-{2,}[ \t]*(?:(?:Original|Forwarded)[ \t]+Message|邮件原件|原始邮件)[ \t]*-{2,}",
     re.IGNORECASE,
 )
 
@@ -698,7 +843,7 @@ _ORIGINAL_MESSAGE_DIVIDER_RE = re.compile(
 # Nachricht" / "Weitergeleitete Nachricht". Dashes are required on both sides,
 # as above; the spacing may include U+00A0 / U+202F.
 _LOCALIZED_DIVIDER_RE = re.compile(
-    rf"-{{2,}}{_LABEL_SPACE}*(?:"
+    rf"(?<!-)-{{2,}}{_LABEL_SPACE}*(?:"
     rf"Message{_LABEL_SPACE}+d['’]origine|Message{_LABEL_SPACE}+transf[ée]r[ée]"
     rf"|Mensaje{_LABEL_SPACE}+(?:original|reenviado)"
     rf"|Mensagem{_LABEL_SPACE}+(?:original|encaminhada)"
@@ -762,9 +907,11 @@ def custom_clean(text: str, *, localized: bool = True) -> str:
     lines = [line for line in lines if not is_quote_line(line)]
     # Trim per-line trailing whitespace and blank edge lines, but preserve the
     # first content line's indentation (significant for digest tables).
+    # (Leading blanks are sliced off at once: popping them one by one from the
+    # front of the list is quadratic in their number.)
     lines = [line.rstrip() for line in lines]
-    while lines and not lines[0]:
-        lines.pop(0)
+    first = next((i for i, line in enumerate(lines) if line), len(lines))
+    lines = lines[first:]
     while lines and not lines[-1]:
         lines.pop()
     return "\n".join(lines)
@@ -925,23 +1072,38 @@ def strip_parent_content(text: str, parent_body: str, *, continuation: bool = Fa
             marked.add(orig_i)
 
     # Rule (c): chain short remainder lines off marked neighbors, to a fixpoint.
-    changed = continuation and len(marked) >= _PARENT_DIFF_CONTINUATION_MIN_SEEDS
-    while changed:
-        changed = False
-        for k, (orig_i, norm) in enumerate(child_pairs):
-            if orig_i in marked:
+    # The rule is monotone (a mark only ever enables more marks), so its
+    # fixpoint is the same whatever order lines are examined in. A worklist
+    # re-examines only the neighbors of a newly marked line; repeating full
+    # passes until nothing changed needed one pass per backward-chained mark.
+    if continuation and len(marked) >= _PARENT_DIFF_CONTINUATION_MIN_SEEDS:
+        count = len(child_pairs)
+        is_marked = [orig_i in marked for orig_i, _norm in child_pairs]
+
+        def chains(k: int) -> bool:
+            """Unmarked ``k`` joins a marked neighbor contiguously in the parent."""
+            norm = child_pairs[k][1]
+            if k > 0 and is_marked[k - 1]:
+                if (child_pairs[k - 1][1] + " " + norm) in parent_stream:
+                    return True
+            if k + 1 < count and is_marked[k + 1]:
+                if (norm + " " + child_pairs[k + 1][1]) in parent_stream:
+                    return True
+            return False
+
+        pending = [
+            k
+            for k in range(count)
+            if not is_marked[k]
+            and ((k > 0 and is_marked[k - 1]) or (k + 1 < count and is_marked[k + 1]))
+        ]
+        while pending:
+            k = pending.pop()
+            if is_marked[k] or not chains(k):
                 continue
-            if k > 0:
-                prev_i, prev_norm = child_pairs[k - 1]
-                if prev_i in marked and (prev_norm + " " + norm) in parent_stream:
-                    marked.add(orig_i)
-                    changed = True
-                    continue
-            if k + 1 < len(child_pairs):
-                next_i, next_norm = child_pairs[k + 1]
-                if next_i in marked and (norm + " " + next_norm) in parent_stream:
-                    marked.add(orig_i)
-                    changed = True
+            is_marked[k] = True
+            marked.add(child_pairs[k][0])
+            pending.extend(j for j in (k - 1, k + 1) if 0 <= j < count and not is_marked[j])
 
     survivors = [line.rstrip() for i, line in enumerate(child_raw) if i not in marked]
 

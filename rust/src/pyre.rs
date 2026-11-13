@@ -367,6 +367,20 @@ impl Re {
         }
     }
 
+    /// The byte span of the first match starting at or after byte offset
+    /// `start` (Python's `search(s, start)`: anchors and lookbehind still see
+    /// the text before `start`).
+    pub(crate) fn find_at(&self, s: &str, start: usize) -> Option<(usize, usize)> {
+        match &self.inner {
+            Inner::Plain(r) => r.find_at(s, start).map(|m| (m.start(), m.end())),
+            Inner::Fancy(r) => r
+                .find_from_pos(s, start)
+                .ok()
+                .flatten()
+                .map(|m| (m.start(), m.end())),
+        }
+    }
+
     /// The text of the named group in the first match.
     pub(crate) fn named<'t>(&self, s: &'t str, name: &str) -> Option<&'t str> {
         match &self.inner {

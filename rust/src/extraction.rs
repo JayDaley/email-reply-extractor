@@ -127,23 +127,139 @@ pub fn is_quote_line(line: &str) -> bool {
 // - `On\b.*wrote:` is `On[^\w\n].*wrote:`: the character after "On" must be
 //   a non-word character, and `.*` (no newline) consumes it, because
 //   "wrote:" starts with a word character;
-// - `Am\b.*\bschrieb\b.*:` is `Am[^\w\n](?:.*[^\w\n])?schrieb(?:[^\w\n].*)?:`
-//   by the same argument on both sides of each `\b`;
+// - `To unsubscribe\b.*` (in cleaning) is `To unsubscribe(?:[^\w\n].*)?` by
+//   the same argument;
 // - a trailing `\b` in a match whose end is not used is `(?:[^\w]|$)`, and
 //   a leading `\b` in a search whose position is not used is `(?:^|[^\w])`.
-static ATTRIBUTION_RES: LazyLock<[Re; 4]> = LazyLock::new(|| {
+//
+// Two forms are not run as single patterns, as in the reference, whose
+// engine's backtracking over them is polynomial on adversarial lines (a line
+// of "<a@" repeated, or of "schrieb:" repeated): "<who> <a@b> wrote:"
+// ([`is_address_attribution`]) and the German "Am <date> schrieb <who>:"
+// ([`is_german_attribution`]). The `regex` crate runs the original patterns
+// in linear time, so here the helpers only keep the ports aligned; each
+// accepts exactly the strings the original pattern accepts under `re.match`.
+static ATTRIBUTION_RES: LazyLock<[Re; 2]> = LazyLock::new(|| {
     [
         // ^[ \t]*On\b.*wrote:[ \t]*$
         Re::matcher(r"^[ \t]*On[^\w\n].*wrote:[ \t]*$", 0),
-        Re::matcher(r"^.*<[^>]+@[^>]+>[ \t]+wrote:[ \t]*$", 0),
-        // ^[ \t]*Am\b.*\bschrieb\b.*:[ \t]*$
-        Re::matcher(
-            r"^[ \t]*Am[^\w\n](?:.*[^\w\n])?schrieb(?:[^\w\n].*)?:[ \t]*$",
-            0,
-        ),
         Re::matcher(r"^[ \t]*\d{4}(?:年|[/.-]).*のメール:[ \t]*$", 0),
     ]
 });
+
+/// `_dollar_line`: the span a newline-free pattern ending in `$` can cover,
+/// or `None`.
+///
+/// Without `re.MULTILINE`, `$` matches at the end of the string or before a
+/// final `\n`. A pattern none of whose parts can match `\n` can therefore only
+/// reach `$` when the string has no `\n` (the whole string), or a single `\n`
+/// as its last character (the string without it).
+pub(crate) fn dollar_line(text: &str) -> Option<&str> {
+    match text.find('\n') {
+        None => Some(text),
+        Some(nl) if nl + 1 == text.len() => Some(&text[..nl]),
+        Some(_) => None,
+    }
+}
+
+/// The tail of the address attribution form, matched just after the `>`.
+static ADDRESS_ATTRIBUTION_TAIL_RE: LazyLock<Re> =
+    LazyLock::new(|| Re::matcher(r"[ \t]+wrote:[ \t]*$", 0));
+
+/// `_ends_with_bracketed_address`: true when `.*<[^>]+@[^>]+>` followed by
+/// `tail_re` matches `text` at byte offset `start` (`re.match` semantics,
+/// `.` excluding `\n`), in linear time.
+///
+/// `tail_re` must end in `$` and must not be able to match `>`. Then the `>`
+/// of any match is the last `>` in `text`, and the `<` lies after the `>`
+/// before it, at or after `start`, and before the first `\n` at or after
+/// `start`. The leftmost such `<` leaves the widest span for `[^>]+@[^>]+`,
+/// which needs an `@` with at least one character on each side. Every bound
+/// is next to an ASCII delimiter, so the reference's code point arithmetic
+/// holds in bytes; the `@` is searched in the bytes, because `lt + 2` can
+/// fall inside a multi-byte character.
+pub(crate) fn ends_with_bracketed_address(text: &str, start: usize, tail_re: &Re) -> bool {
+    let bytes = text.as_bytes();
+    let Some(gt) = text.rfind('>') else {
+        return false;
+    };
+    if gt < start || !tail_re.is_match(&text[gt + 1..]) {
+        return false;
+    }
+    let nl = bytes[start..]
+        .iter()
+        .position(|&b| b == b'\n')
+        .map_or(text.len(), |p| start + p);
+    let from = start.max(text[..gt].rfind('>').map_or(0, |p| p + 1));
+    let to = gt.min(nl);
+    if from >= to {
+        return false;
+    }
+    let Some(lt) = bytes[from..to]
+        .iter()
+        .position(|&b| b == b'<')
+        .map(|p| from + p)
+    else {
+        return false;
+    };
+    lt + 2 < gt - 1 && bytes[lt + 2..gt - 1].contains(&b'@')
+}
+
+/// `re.match(r"^.*<[^>]+@[^>]+>[ \t]+wrote:[ \t]*$", line)`, linear.
+///
+/// "<who> <a@b> wrote:" (no leading "On"); "<who> via Datatracker <a@b>
+/// wrote:" and similar are covered too.
+fn is_address_attribution(line: &str) -> bool {
+    ends_with_bracketed_address(line, 0, &ADDRESS_ATTRIBUTION_TAIL_RE)
+}
+
+// [ \t]*Am\b (the trailing `\b` rewritten as above)
+static AM_PREFIX_RE: LazyLock<Re> = LazyLock::new(|| Re::matcher(r"[ \t]*Am(?:[^\w]|$)", 0));
+
+/// `_SCHRIEB_RE.search(text, pos)` for `\bschrieb\b`: the byte span of the
+/// first "schrieb" at or after `pos` with no word character on either side.
+/// `\b` at `pos` looks at the character before `pos`, as Python's does.
+fn search_schrieb(text: &str, pos: usize) -> Option<(usize, usize)> {
+    const WORD: &str = "schrieb";
+    let mut from = pos;
+    while let Some(off) = text[from..].find(WORD) {
+        let start = from + off;
+        let end = start + WORD.len();
+        let before_ok = !text[..start]
+            .chars()
+            .next_back()
+            .is_some_and(pystr::is_word);
+        let after_ok = !text[end..].chars().next().is_some_and(pystr::is_word);
+        if before_ok && after_ok {
+            return Some((start, end));
+        }
+        from = start + 1; // "s" is one byte
+    }
+    None
+}
+
+/// `re.match(r"^[ \t]*Am\b.*\bschrieb\b.*:[ \t]*$", line)`, linear.
+///
+/// German: "Am <date> schrieb <who>:". No part of the pattern matches `\n`,
+/// so it applies to [`dollar_line`]'s span as a whole. After the prefix, `.*`
+/// can skip anything, so the condition is: a `\bschrieb\b` occurs (it cannot
+/// start inside the prefix, which is `[ \t]*Am` followed by a non-word
+/// character), and the span, with trailing blanks removed, ends in a `:` at
+/// or after the end of the first occurrence.
+fn is_german_attribution(line: &str) -> bool {
+    let Some(span) = dollar_line(line) else {
+        return false;
+    };
+    if !AM_PREFIX_RE.is_match(span) {
+        return false;
+    }
+    let Some((_, end)) = search_schrieb(line, 0) else {
+        return false;
+    };
+    let body = span.trim_end_matches([' ', '\t']);
+    // The ':' at body.len() - 1 lies at or after `end`.
+    body.ends_with(':') && body.len() > end
+}
 
 // ^[ \t]*(?:(?:On|Am|Le|El|El día)\b|\d{4}(?:年|[/.-]))
 static ATTRIBUTION_START_RE: LazyLock<Re> = LazyLock::new(|| {
@@ -153,24 +269,51 @@ static ATTRIBUTION_START_RE: LazyLock<Re> = LazyLock::new(|| {
     )
 });
 
-// (?:wrote:|\bschrieb\b.*:|\ba écrit\s*:|\bescribió:|のメール:)[ \t]*$
+// The terminators, except `\bschrieb\b.*:`, which [`has_attribution_end`]
+// decides separately (as in the reference, where `search` retried `.*:` from
+// every "schrieb", which is quadratic):
+// (?:wrote:|\ba écrit\s*:|\bescribió:|のメール:)[ \t]*$
 static ATTRIBUTION_END_RE: LazyLock<Re> = LazyLock::new(|| {
     Re::searcher(
-        concat!(
-            r"(?:wrote:|(?:^|[^\w])schrieb(?:[^\w\n].*)?:|(?:^|[^\w])a écrit\s*:",
-            r"|(?:^|[^\w])escribió:|のメール:)[ \t]*$",
-        ),
+        r"(?:wrote:|(?:^|[^\w])a écrit\s*:|(?:^|[^\w])escribió:|のメール:)[ \t]*$",
         0,
     )
 });
 
+/// True when `line` contains a wrapped attribution's terminator.
+///
+/// Equivalent to `re.search` of the original pattern
+/// `(?:wrote:|\bschrieb\b.*:|\ba écrit\s*:|\bescribió:|のメール:)[ \t]*$`.
+/// Its `\bschrieb\b.*:[ \t]*$` alternative ends at `$` (the end of the
+/// string, or before a final `\n`), so its `:` is the last character other
+/// than blanks before that point, and its "schrieb" must lie on the same
+/// line as the `:`, ending at or before it. The first "schrieb" at or after
+/// the start of that line is the best candidate.
+fn has_attribution_end(line: &str) -> bool {
+    if ATTRIBUTION_END_RE.is_match(line) {
+        return true;
+    }
+    let body = line
+        .strip_suffix('\n')
+        .unwrap_or(line)
+        .trim_end_matches([' ', '\t']);
+    if !body.ends_with(':') {
+        return false;
+    }
+    let colon = body.len() - 1;
+    let line_start = body[..colon].rfind('\n').map_or(0, |p| p + 1);
+    search_schrieb(line, line_start).is_some_and(|(_, end)| end <= colon)
+}
+
 /// True if `line` on its own is a complete attribution line.
 pub fn is_attribution_line(line: &str) -> bool {
     ATTRIBUTION_RES.iter().any(|re| re.is_match(line))
+        || is_address_attribution(line)
+        || is_german_attribution(line)
 }
 
 fn wrapped_attribution_end(lines: &[&str], i: usize) -> Option<usize> {
-    if !ATTRIBUTION_START_RE.is_match(lines[i]) || ATTRIBUTION_END_RE.is_match(lines[i]) {
+    if !ATTRIBUTION_START_RE.is_match(lines[i]) || has_attribution_end(lines[i]) {
         return None;
     }
     for (j, line) in lines
@@ -182,7 +325,7 @@ fn wrapped_attribution_end(lines: &[&str], i: usize) -> Option<usize> {
         if !pystr::has_content(line) {
             return None;
         }
-        if ATTRIBUTION_END_RE.is_match(line) {
+        if has_attribution_end(line) {
             return Some(j);
         }
     }
@@ -232,9 +375,15 @@ const SIGNOFF_SALUTATIONS: &str = concat!(
     r"|cumprimentos|atenciosamente|ciao|saluti|cordiali\s+saluti",
 );
 
+// The tail is `[ \t]*(?:[,.!][ \t]*)?$`, which accepts the same strings as
+// the original `[ \t]*[,.!]?[ \t]*$`: written that way, two adjacent
+// `[ \t]*` runs split a long blank run in quadratically many ways under a
+// backtracking engine before a non-blank character fails the line. (The
+// `regex` crate runs either form in linear time; the text follows the
+// reference.)
 pub(crate) static SIGNOFF_LINE_RE: LazyLock<Re> = LazyLock::new(|| {
     Re::matcher(
-        &format!(r"^[ \t]*(?:{SIGNOFF_SALUTATIONS})[ \t]*[,.!]?[ \t]*$"),
+        &format!(r"^[ \t]*(?:{SIGNOFF_SALUTATIONS})[ \t]*(?:[,.!][ \t]*)?$"),
         IGNORECASE,
     )
 });
@@ -388,22 +537,82 @@ static TRANSPORT_HEADER_RE: LazyLock<Re> = LazyLock::new(|| {
     )
 });
 
-fn in_pasted_header_run(lines: &[&str], i: usize) -> bool {
-    let mut j = i;
-    while j > 0 && HEADER_FIELD_RE.is_match(lines[j - 1]) {
-        if TRANSPORT_HEADER_RE.is_match(lines[j - 1]) {
-            return true;
-        }
-        j -= 1;
+/// `_pasted_header_runs`: for every index `i`, whether the contiguous
+/// header-field run directly above `lines[i]` contains a transport field: a
+/// `From:` at `i` then sits inside pasted header evidence rather than opening
+/// a client's quote header.
+///
+/// Computed in one forward pass (the run above `i` is `lines[i - 1]` plus,
+/// when that line is a header field, the run above `i - 1`) instead of
+/// walking the run upward from every `From:`, which is quadratic when many
+/// `From:` lines follow a long run of fields.
+fn pasted_header_runs(lines: &[&str]) -> Vec<bool> {
+    let mut pasted = vec![false; lines.len()];
+    for i in 1..lines.len() {
+        let above = lines[i - 1];
+        pasted[i] = HEADER_FIELD_RE.is_match(above)
+            && (TRANSPORT_HEADER_RE.is_match(above) || pasted[i - 1]);
     }
-    false
+    pasted
+}
+
+/// `(fields, has_signal)` for a walk entering at each index (see
+/// [`header_walk_table`]).
+type WalkTable = Vec<(usize, bool)>;
+
+/// `_header_walk_table`: the field walk of [`find_quote_header_block`], for
+/// every start. See [`WalkTable`].
+///
+/// The walk from an opener at `i` visits `lines[i + 1..]` and stops at the
+/// first line that is neither a header field, nor a folded continuation, nor
+/// (`tolerant` only) a single blank directly above a field. Whether it stops
+/// at a line depends only on that line, the next one and the mode
+/// (`is_localized`, `tolerant`), never on where the walk started. Entry `j`
+/// (`0 <= j <= lines.len()`) holds `(fields, has_signal)` for a walk entering
+/// at `j`: the number of field lines it passes and whether one of them is a
+/// signal field. Built backward in one pass, so each opener is decided in
+/// constant time; rewalking from every opener is quadratic when many openers
+/// share one long run.
+fn header_walk_table(lines: &[&str], is_localized: bool, tolerant: bool) -> WalkTable {
+    let is_field = |text: &str| {
+        HEADER_FIELD_RE.is_match(text) || (is_localized && LOCALIZED_FIELD_RE.is_match(text))
+    };
+    let signal_re: &Re = if is_localized {
+        &LOCALIZED_SUBJECT_RE
+    } else {
+        &QUOTE_HEADER_SIGNAL_RE
+    };
+    let n = lines.len();
+    let field: Vec<bool> = lines.iter().map(|l| is_field(l)).collect();
+    let mut table = vec![(0usize, false); n + 1];
+    for j in (0..n).rev() {
+        let nxt = lines[j];
+        let (fields, has_signal) = table[j + 1];
+        if field[j] {
+            table[j] = (fields + 1, has_signal || signal_re.is_match(nxt));
+        } else if (pystr::has_content(nxt) && (tolerant || nxt.starts_with([' ', '\t'])))
+            // Folded continuation of the preceding header field, or a
+            // single blank between fields (double-spaced rendering).
+            || (!pystr::has_content(nxt) && tolerant && j + 1 < n && field[j + 1])
+        {
+            table[j] = (fields, has_signal);
+        }
+        // Otherwise the walk stops at j: the entry stays (0, false).
+    }
+    table
 }
 
 /// The index of the `From:` line that opens a forwarded/quote-header block,
 /// or `None`. `localized` enables the Latin-script localized blocks
 /// (`true` in the reference's default).
+///
+/// The pasted-evidence flags ([`pasted_header_runs`]) and each walk mode's
+/// table ([`header_walk_table`]) are built once, on first use, so the search
+/// is linear in the number of lines.
 pub fn find_quote_header_block(lines: &[&str], localized: bool) -> Option<usize> {
-    let n = lines.len();
+    let mut pasted: Option<Vec<bool>> = None;
+    // Indexed by (is_localized, tolerant).
+    let mut tables: [[Option<WalkTable>; 2]; 2] = Default::default();
     for (i, line) in lines.iter().enumerate() {
         let is_localized = if FROM_LINE_RE.is_match(line) {
             false
@@ -412,40 +621,14 @@ pub fn find_quote_header_block(lines: &[&str], localized: bool) -> Option<usize>
         } else {
             continue;
         };
-        if i > 0 && in_pasted_header_run(lines, i) {
+        if pasted.get_or_insert_with(|| pasted_header_runs(lines))[i] {
             continue;
         }
-        let is_field = |text: &str| {
-            HEADER_FIELD_RE.is_match(text) || (is_localized && LOCALIZED_FIELD_RE.is_match(text))
-        };
         let tolerant = line.contains('@');
-        let mut header_lines = 1;
-        let mut has_signal = false;
-        let mut j = i + 1;
-        while j < n {
-            let nxt = lines[j];
-            if is_field(nxt) {
-                header_lines += 1;
-                let signal = if is_localized {
-                    LOCALIZED_SUBJECT_RE.is_match(nxt)
-                } else {
-                    QUOTE_HEADER_SIGNAL_RE.is_match(nxt)
-                };
-                if signal {
-                    has_signal = true;
-                }
-                j += 1;
-            } else if (pystr::has_content(nxt) && (tolerant || nxt.starts_with([' ', '\t'])))
-                // Folded continuation of the preceding header field, or a
-                // single blank between fields (double-spaced rendering).
-                || (!pystr::has_content(nxt) && tolerant && j + 1 < n && is_field(lines[j + 1]))
-            {
-                j += 1;
-            } else {
-                break;
-            }
-        }
-        if has_signal && header_lines >= if is_localized { 3 } else { 2 } {
+        let table = tables[usize::from(is_localized)][usize::from(tolerant)]
+            .get_or_insert_with(|| header_walk_table(lines, is_localized, tolerant));
+        let (fields, has_signal) = table[i + 1];
+        if has_signal && 1 + fields >= if is_localized { 3 } else { 2 } {
             return Some(i);
         }
     }
@@ -497,11 +680,34 @@ static LOCALIZED_DIVIDER_RE: LazyLock<Re> = LazyLock::new(|| {
     )
 });
 
+/// `re.search` of `(?<!-)` followed by `re` in `line`: the start of the first
+/// match that is not preceded by a dash.
+///
+/// The reference prefixes both divider patterns with `(?<!-)`, so that a
+/// match can start only at the first dash of a run: without it, a
+/// backtracking `search` retried `-{2,}` from every dash of a long rule, which
+/// is quadratic. The lookbehind changes no result, because the wording cannot
+/// start with a dash: a match from inside a run has its `-{2,}` end at the
+/// run's end, and the same match extended to the run's first dash is found
+/// first. The `regex` crate cannot express lookbehind; the preceding byte is
+/// checked here instead, which keeps the search in the linear-time engine.
+/// (By the argument above, the first candidate already passes the check.)
+fn search_not_after_dash(re: &Re, line: &str) -> Option<usize> {
+    let mut from = 0;
+    while let Some((start, _)) = re.find_at(line, from) {
+        if start == 0 || line.as_bytes()[start - 1] != b'-' {
+            return Some(start);
+        }
+        from = start + 1; // the match starts with "-", one byte
+    }
+    None
+}
+
 /// The byte offset of the first "Original message" divider in `line`.
 fn find_divider(line: &str, localized: bool) -> Option<usize> {
-    let english = ORIGINAL_MESSAGE_DIVIDER_RE.find(line).map(|m| m.0);
+    let english = search_not_after_dash(&ORIGINAL_MESSAGE_DIVIDER_RE, line);
     let local = if localized {
-        LOCALIZED_DIVIDER_RE.find(line).map(|m| m.0)
+        search_not_after_dash(&LOCALIZED_DIVIDER_RE, line)
     } else {
         None
     };
@@ -668,32 +874,48 @@ pub fn strip_parent_content(text: &str, parent_body: &str, continuation: bool) -
     }
 
     // Rule (c): chain short remainder lines off marked neighbors, to a fixpoint.
-    let mut changed = continuation && marked.len() >= PARENT_DIFF_CONTINUATION_MIN_SEEDS;
-    while changed {
-        changed = false;
-        for k in 0..child_pairs.len() {
-            let (orig_i, norm) = child_pairs[k];
-            if marked.contains(&orig_i) {
+    // The rule is monotone (a mark only ever enables more marks), so its
+    // fixpoint is the same whatever order lines are examined in. A worklist
+    // re-examines only the neighbors of a newly marked line; repeating full
+    // passes until nothing changed needed one pass per backward-chained mark.
+    if continuation && marked.len() >= PARENT_DIFF_CONTINUATION_MIN_SEEDS {
+        let count = child_pairs.len();
+        let mut is_marked: Vec<bool> = child_pairs
+            .iter()
+            .map(|(orig_i, _)| marked.contains(orig_i))
+            .collect();
+
+        // Unmarked `k` joins a marked neighbor contiguously in the parent.
+        let chains = |k: usize, is_marked: &[bool]| {
+            let norm = child_pairs[k].1;
+            if k > 0
+                && is_marked[k - 1]
+                && parent_stream.contains(&format!("{} {norm}", child_pairs[k - 1].1))
+            {
+                return true;
+            }
+            k + 1 < count
+                && is_marked[k + 1]
+                && parent_stream.contains(&format!("{norm} {}", child_pairs[k + 1].1))
+        };
+
+        let mut pending: Vec<usize> = (0..count)
+            .filter(|&k| {
+                !is_marked[k]
+                    && ((k > 0 && is_marked[k - 1]) || (k + 1 < count && is_marked[k + 1]))
+            })
+            .collect();
+        while let Some(k) = pending.pop() {
+            if is_marked[k] || !chains(k, &is_marked) {
                 continue;
             }
-            if k > 0 {
-                let (prev_i, prev_norm) = child_pairs[k - 1];
-                if marked.contains(&prev_i)
-                    && parent_stream.contains(&format!("{prev_norm} {norm}"))
-                {
-                    marked.insert(orig_i);
-                    changed = true;
-                    continue;
-                }
+            is_marked[k] = true;
+            marked.insert(child_pairs[k].0);
+            if k > 0 && !is_marked[k - 1] {
+                pending.push(k - 1);
             }
-            if k + 1 < child_pairs.len() {
-                let (next_i, next_norm) = child_pairs[k + 1];
-                if marked.contains(&next_i)
-                    && parent_stream.contains(&format!("{norm} {next_norm}"))
-                {
-                    marked.insert(orig_i);
-                    changed = true;
-                }
+            if k + 1 < count && !is_marked[k + 1] {
+                pending.push(k + 1);
             }
         }
     }

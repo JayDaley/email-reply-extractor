@@ -6,7 +6,11 @@ Usage (from the repository root)::
 
 Generates inputs beyond the conformance vectors — truncated, sliced and
 mutated fixture bodies, generated lines built from the reference's keyword
-lists, Unicode edge strings, and HTML fragments — runs each through the
+lists, Unicode edge strings, HTML fragments, and adversarial inputs for the
+linear-time rewrites (token soups of the delimiters those paths slice at,
+multi-byte characters next to them, header runs, sign-off tails, tag
+sequences and parent-diff chains; ``--adversarial`` sets their share) —
+runs each through the
 Python reference (``python/src``) and through the Rust port
 (``cargo run --release --example difftest``), and reports every case whose
 outputs differ. Exit status 1 when any case differs or the Rust driver
@@ -570,7 +574,380 @@ def mutate(rng: random.Random, text: str) -> str:
     return "\n".join(lines)
 
 
-def cases(rng: random.Random, count: int, corpus: list[dict]) -> list[dict]:
+ADVERSARIAL_TOKENS = [
+    "On",
+    "On ",
+    "On\xa0",
+    "Am",
+    "Am ",
+    "schrieb",
+    "schrieb:",
+    " schrieb ",
+    "wrote:",
+    "wrote",
+    "<",
+    ">",
+    "@",
+    "<a@",
+    "<a@b>",
+    "a@b",
+    "-",
+    "--",
+    "------",
+    ":",
+    " :",
+    "\n",
+    "\xa0",
+    " ",
+    "  ",
+    "\t",
+    "From:",
+    "From: a@b",
+    "De :",
+    "mailing list",
+    "MAILING LIST",
+    "mailing list--",
+    "best",
+    "Best,",
+    "Dr",
+    "Dr. ",
+    "Prof.-Dr ",
+    "Original Message",
+    "Forwarded Message",
+    "Message d'origine",
+    "Urspr\xfcngliche Nachricht",
+    "\\",
+    "\\1",
+    "\\g<1>",
+    "\\U",
+    "\\n",
+    "x",
+    "A",
+    "_",
+    "1",
+    ",",
+    ".",
+    "!",
+    "hi",
+    "To unsubscribe",
+    "\xe9",
+    "ͅ",
+    "́",
+    "İ",
+    "ſ",
+    "年",
+    "\U0001f600",
+    "\U00010348",
+    "\r",
+]
+
+ADVERSARIAL_LINES = [
+    "From: a@b x",
+    "From: Ann <a@b>",
+    "From: z",
+    "De : Ann <a@b>",
+    "Von: Ann",
+    "X: y",
+    "Message-ID: <1@b>",
+    "Received: x",
+    "Subject: s",
+    "Sent: Mon",
+    "Date: d",
+    "To: b",
+    "Objet : o",
+    "Betreff: b",
+    "Envoy\xe9 : e",
+    " folded",
+    "\tfolded",
+    "",
+    "",
+    "A.io",
+    "www.a.io",
+    "https://a.io/x",
+    "Ann",
+    "Ann Lee",
+    "Ann | CEO",
+    "Best,",
+    "best",
+    "Cheers, Ann",
+    "Dr x <a@b>",
+    "Dr. Ann <a@\U0001f600>",
+    "mailing list -- x",
+    "mailing list",
+    "Tel: +1 905 502 7000",
+    "ORCID: 1",
+    "===",
+    "~~~",
+    "-- ",
+    "-----Original Message-----",
+    "------",
+    "On Mon, Ann wrote:",
+    "On Mon,",
+    "Ann <a@b> wrote:",
+    "Am Mo schrieb Ann:",
+    "Am Mo",
+    "schrieb Ann:",
+    "> q",
+    "hi",
+    "Hello Bob,",
+    "Sent from my iPhone",
+    "\xe9\U0001f600",
+]
+
+ADVERSARIAL_HTML = [
+    "<a>",
+    "</a>",
+    "</b>",
+    "<b>",
+    "<div>",
+    "</div>",
+    "<div class=gmail_quote>",
+    "<div class='gmail_quote_container'>",
+    "<div class=gmail_attr>",
+    '<div class="gmail_signature">',
+    "<blockquote>",
+    "</blockquote>",
+    "<span>",
+    "</span>",
+    "<p>",
+    "</p>",
+    "<br>",
+    "<script>",
+    "</script>",
+    "</scrip",
+    "<style>",
+    "</style>",
+    "<head>",
+    "</head>",
+    "<!--",
+    "-->",
+    "<!-->",
+    "<!",
+    "<![CDATA[",
+    "]]>",
+    "<?",
+    "</",
+    "<a b='",
+    '<a b="x"',
+    "&#",
+    "&amp",
+    "&#x",
+    "<",
+    ">",
+    "text",
+    "\xe9",
+    "\U0001f600",
+    " ",
+    "\n",
+]
+
+
+def adversarial_soup(rng: random.Random, tokens: list[str], low: int, high: int) -> str:
+    return "".join(rng.choice(tokens) for _ in range(rng.randint(low, high)))
+
+
+def adversarial_body(rng: random.Random) -> str:
+    lines = []
+    for _ in range(rng.randint(1, 40)):
+        if rng.random() < 0.8:
+            line = rng.choice(ADVERSARIAL_LINES)
+        else:
+            line = adversarial_soup(rng, ADVERSARIAL_TOKENS, 1, 8).replace("\n", " ")
+        if rng.random() < 0.1:
+            i = rng.randint(0, len(line))
+            line = line[:i] + rng.choice(["\xe9", "\U0001f600", "ͅ", "\xa0"]) + line[i:]
+        lines.append(line)
+    return "\n".join(lines)
+
+
+def adversarial_chain(rng: random.Random) -> dict:
+    """A child and parent for the parent-diff rules: short lines that can chain
+    off long seed lines in either direction (rule (c))."""
+    vocab = ["a", "b", "a b", "w1", "w2", "x \xe9", "\U0001f600"]
+    seeds = ["s1 s2 s3 s4 s5 s6 s7 s8", "t1 t2 t3 t4 t5 t6 t7 t8", "u1 u2 u3 u4 u5 u6 u7 u8"]
+    child = [rng.choice(vocab + seeds + [""]) for _ in range(rng.randint(1, 30))]
+    parent = [rng.choice(vocab + seeds) for _ in range(rng.randint(1, 30))]
+    joiner = rng.choice([" ", "\n", "\n> "])
+    return {
+        "text": "\n".join(child),
+        "parent_body": joiner.join(parent),
+        "continuation": rng.random() < 0.8,
+    }
+
+
+SHAPE_FILL = ["", "", "x", "Ann", " ", "<", ">", "@", "\n", "-", ":", "\xe9", "\U0001f600", "ͅ"]
+SHAPE_EDGE = ["", "", " ", "\t", "x", "_", "\xe9", "ͅ", "\n", ":", "-", "1"]
+
+
+def fill(rng: random.Random, high: int = 4) -> str:
+    return adversarial_soup(rng, SHAPE_FILL, 0, high)
+
+
+def structured_line(rng: random.Random) -> str:
+    """Near-misses of the rules rewritten as linear helpers."""
+    shape = rng.randrange(5)
+    edge = rng.choice
+    blank = ["", " ", "\t"]
+    if shape == 0:  # "<who> <a@b> wrote:"
+        tail = edge([" wrote:", "\twrote: ", " wrote:\n", "wrote:", " wrote:x", " wrote: \n\n", ""])
+        return "".join([fill(rng), "<", fill(rng, 2), "@", fill(rng, 2), ">", fill(rng, 2), tail])
+    if shape == 1:  # "Am <date> schrieb <who>:"
+        return "".join(
+            [
+                edge(blank + ["x"]),
+                "Am",
+                edge(SHAPE_EDGE),
+                fill(rng),
+                edge(["schrieb", "Schrieb", "schriebx"]),
+                edge(SHAPE_EDGE),
+                fill(rng),
+                edge([":", ": ", ":\t\n", ":\n\n", ":x", ""]),
+            ]
+        )
+    if shape == 2:  # "Original message" dividers
+        wording = edge(
+            [
+                "Original Message",
+                "forwarded\tmessage",
+                "原始邮件",
+                "Message d'origine",
+                "Mensaje\xa0original",
+                "Urspr\xfcngliche Nachricht",
+                "Original",
+            ]
+        )
+        return "".join(
+            [
+                fill(rng),
+                "-" * rng.randint(0, 5),
+                edge(["", " ", "\xa0"]),
+                wording,
+                edge(["", " ", " "]),
+                "-" * rng.randint(0, 5),
+                fill(rng),
+            ]
+        )
+    if shape == 3:  # titled contact line
+        return "".join(
+            [
+                edge(blank),
+                edge(["Dr", "Prof", "Prof.-Dr", "Mrs", "Herr", "dr", "Drx"]),
+                edge(["", "."]),
+                edge(blank + ["  "]),
+                fill(rng),
+                "<",
+                fill(rng, 2),
+                "@",
+                fill(rng, 2),
+                ">",
+                edge(["", " ", "\n", " x", "\t\n"]),
+            ]
+        )
+    # mailing-list footer
+    words = ["mailing list", "Mailing List", "MAİLING LİST", "mailing liſt", "mailinglist"]
+    return "".join(
+        [
+            edge(["", " ", "_____", "To unsubscribe"]),
+            fill(rng),
+            edge(SHAPE_EDGE),
+            edge(words),
+            edge(SHAPE_EDGE),
+            fill(rng),
+            edge(["--", "-", ""]),
+            fill(rng),
+            edge(["", "\n", " "]),
+        ]
+    )
+
+
+def adversarial_case(rng: random.Random) -> dict:
+    r = rng.random()
+    if r < 0.15:
+        line = structured_line(rng)
+        fn = rng.choice(
+            [
+                "is_attribution_line",
+                "strip_attribution_lines",
+                "clean_for_scoring",
+                "strip_after_original_message_divider",
+            ]
+        )
+        if fn == "is_attribution_line":
+            return {"fn": fn, "args": {"line": line}}
+        if fn == "clean_for_scoring":
+            return {"fn": fn, "args": {"extracted_text": "Body.\n\nAnn\n" + line}}
+        if fn == "strip_attribution_lines":
+            lines = [structured_line(rng) if rng.random() < 0.5 else "On Mon", line, "x"]
+            return {"fn": fn, "args": {"lines": lines}}
+        return {"fn": fn, "args": {"lines": [line, "x"], "localized": rng.random() < 0.7}}
+    if r < 0.3:
+        line = adversarial_soup(rng, ADVERSARIAL_TOKENS, 1, 30)
+        fn = rng.choice(
+            [
+                "is_attribution_line",
+                "strip_attribution_lines",
+                "clean_for_scoring",
+                "read_fragments",
+                "strip_after_original_message_divider",
+                "extract_new_text",
+            ]
+        )
+        if fn == "is_attribution_line":
+            return {"fn": fn, "args": {"line": line}}
+        if fn == "clean_for_scoring":
+            return {"fn": fn, "args": {"extracted_text": line}}
+        if fn == "read_fragments":
+            return {"fn": fn, "args": {"text": line}}
+        if fn == "extract_new_text":
+            return {"fn": fn, "args": {"body": line}}
+        args = {"lines": line.split("\n")}
+        if fn == "strip_after_original_message_divider":
+            args["localized"] = rng.random() < 0.7
+        return {"fn": fn, "args": args}
+    if r < 0.6:
+        body = adversarial_body(rng)
+        fn = rng.choice(
+            [
+                "extract_new_text",
+                "clean_for_scoring",
+                "find_quote_header_block",
+                "custom_clean",
+                "count_unquoted_content_lines",
+                "find_signoff_boundary",
+                "strip_attribution_lines",
+            ]
+        )
+        if fn == "extract_new_text":
+            args = {"body": body}
+            if rng.random() < 0.2:
+                args["parent_body"] = adversarial_body(rng)
+            return {"fn": fn, "args": args}
+        if fn == "clean_for_scoring":
+            args = {"extracted_text": body}
+            if rng.random() < 0.2:
+                args["html_signature_text"] = adversarial_body(rng)
+            return {"fn": fn, "args": args}
+        if fn == "custom_clean":
+            return {"fn": fn, "args": {"text": body, "localized": rng.random() < 0.7}}
+        if fn == "count_unquoted_content_lines":
+            return {"fn": fn, "args": {"body": body, "localized": rng.random() < 0.7}}
+        args = {"lines": body.split("\n")}
+        if fn == "find_quote_header_block":
+            args["localized"] = rng.random() < 0.7
+        return {"fn": fn, "args": args}
+    if r < 0.85:
+        html = adversarial_soup(rng, ADVERSARIAL_HTML, 1, 40)
+        fn = rng.choice(["split_html_parts", "html_to_text", "extract_new_text"])
+        if fn == "extract_new_text":
+            body = adversarial_body(rng) if rng.random() < 0.7 else None
+            return {"fn": fn, "args": {"body": body, "html_body": html}}
+        return {"fn": fn, "args": {"html": html}}
+    return {"fn": "strip_parent_content", "args": adversarial_chain(rng)}
+
+
+def cases(
+    rng: random.Random, count: int, corpus: list[dict], adversarial: float = 0.0
+) -> list[dict]:
     bodies = [e["body"] for e in corpus if e["body"]]
     htmls = [e["html_body"] for e in corpus if e["html_body"]]
     stage1 = [e["extract_new_text"]["text"] for e in corpus]
@@ -596,6 +973,9 @@ def cases(rng: random.Random, count: int, corpus: list[dict]) -> list[dict]:
         return mutate(rng, text) if rng.random() < 0.5 else text
 
     while len(out) < count:
+        if adversarial and rng.random() < adversarial:
+            out.append(adversarial_case(rng))
+            continue
         r = rng.random()
         if r < 0.15:
             args = {"body": text_source() if rng.random() < 0.9 else None}
@@ -731,6 +1111,12 @@ def main() -> int:
     parser.add_argument("--cases", type=int, default=3000)
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument(
+        "--adversarial",
+        type=float,
+        default=0.2,
+        help="share of adversarial cases (0 reproduces the earlier case stream)",
+    )
+    parser.add_argument(
         "--keep", type=pathlib.Path, help="write cases and results to this directory"
     )
     opts = parser.parse_args()
@@ -739,7 +1125,7 @@ def main() -> int:
     corpus = json.loads((ROOT / "conformance" / "corpus.json").read_text(encoding="utf-8"))[
         "entries"
     ]
-    all_cases = cases(rng, opts.cases, corpus)
+    all_cases = cases(rng, opts.cases, corpus, opts.adversarial)
     expected = [reference(c) for c in all_cases]
 
     payload = "".join(json.dumps(c, ensure_ascii=False) + "\n" for c in all_cases)

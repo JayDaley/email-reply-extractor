@@ -20,11 +20,22 @@ const SIG_RE = new PyPattern(String.raw`(--|__|-\w)|(^Sent from my (\w+\s*){1,3}
 const QUOTE_HDR_RE = new PyPattern("On.*wrote:$");
 const QUOTED_RE = new PyPattern("(>+)");
 const HEADER_RE = new PyPattern(String.raw`^\*?(From|Sent|To|Subject):\*? .+`);
-const MULTI_QUOTE_HDR = String.raw`(?!On.*On\s.+?wrote:)(On\s(.+?)wrote:)`;
-/** Upstream's `MULTI_QUOTE_HDR_REGEX` (DOTALL | MULTILINE; no anchors, so MULTILINE is inert). */
-const MULTI_QUOTE_HDR_SUB_RE = new PyPattern(MULTI_QUOTE_HDR, { dotAll: true });
-/** Upstream's `MULTI_QUOTE_HDR_REGEX_MULTILINE` (DOTALL). */
-const MULTI_QUOTE_HDR_SEARCH_RE = MULTI_QUOTE_HDR_SUB_RE;
+/**
+ * Upstream's `MULTI_QUOTE_HDR_REGEX` (DOTALL | MULTILINE, used for the
+ * substitution) and `MULTI_QUOTE_HDR_REGEX_MULTILINE` (DOTALL, used for the
+ * search). Kept for reference only: run by the regex engine over a whole body,
+ * the lookahead makes it cubic in the number of "On" + whitespace positions.
+ * {@link findMultiQuoteHeader} computes the same match in linear time.
+ */
+export const MULTI_QUOTE_HDR = String.raw`(?!On.*On\s.+?wrote:)(On\s(.+?)wrote:)`;
+/** An "On" followed by whitespace (`\s` as in {@link MULTI_QUOTE_HDR}). */
+const ON_SPACE_RE = new PyPattern(String.raw`On(?=\s)`);
+/**
+ * {@link MULTI_QUOTE_HDR} without the lookahead, with the same two groups.
+ * Applied with `match` at the one start position {@link findMultiQuoteHeader}
+ * finds; the lazy `.+?` stops at the first `wrote:`, so it is linear.
+ */
+const MULTI_QUOTE_HDR_AT_RE = new PyPattern(String.raw`(On\s(.+?)wrote:)`, { dotAll: true });
 /** Number of groups in {@link MULTI_QUOTE_HDR}. */
 const MULTI_QUOTE_HDR_GROUPS = 2;
 const OUTLOOK_BOUNDARY_RE = new PyPattern("([^\n])(?=\n ?[_-]{7,})");
@@ -176,14 +187,45 @@ function expand(template: Template, m: RegExpExecArray): string {
   return out;
 }
 
+/**
+ * The match of {@link MULTI_QUOTE_HDR} in `text`, found in linear time.
+ *
+ * The pattern matches `On\s` at a position `p`, then the first `wrote:`
+ * starting at `p + 4` or later (`.+?` needs one character). Its lookahead
+ * rejects `p` when another such `On\s` at `q >= p + 2` also has a `wrote:`
+ * starting at `q + 4` or later. With `W` the start of the last `wrote:`, the
+ * qualifying positions are the `On\s` positions `p <= W - 4`, and the lookahead
+ * accepts only the last of them (two "On" occurrences are never one character
+ * apart, so every earlier one has a later one at `q >= p + 2`). That position
+ * is the only match, both for `search` and for every match `sub` would
+ * replace. In UTF-16 units the bound is the same: `p <= W - 4` says at least
+ * one code unit, hence at least one code point, lies between `On\s` and
+ * `wrote:`, and `\s` is always a single BMP code unit.
+ */
+function findMultiQuoteHeader(text: string): RegExpExecArray | null {
+  const lastWrote = text.lastIndexOf("wrote:");
+  if (lastWrote < 0) return null;
+  let start = -1;
+  for (let on = ON_SPACE_RE.search(text); on !== null; on = ON_SPACE_RE.search(text, on.index + 2)) {
+    if (on.index > lastWrote - 4) break;
+    start = on.index;
+  }
+  if (start < 0) return null;
+  return MULTI_QUOTE_HDR_AT_RE.match(text, start);
+}
+
 /** Scan `text` (LF-normalized) into document-order fragments. */
 export function readFragments(text: string): Fragment[] {
-  const match = MULTI_QUOTE_HDR_SEARCH_RE.search(text);
+  const match = findMultiQuoteHeader(text);
   if (match) {
     // Collapse a wrapped multi-line "On … wrote:" header onto one line; the
     // matched text is a replacement *template* (see the module comment).
+    // Upstream ran `re.sub` with the pattern; it has exactly one match (see
+    // findMultiQuoteHeader), so the template is expanded against that match
+    // and spliced in. The template is parsed with the same rules and errors
+    // as before, and the match carries the same two groups.
     const template = parseTemplate((match[1] as string).replaceAll("\n", ""), MULTI_QUOTE_HDR_GROUPS);
-    text = MULTI_QUOTE_HDR_SUB_RE.sub(text, (m) => expand(template, m));
+    text = text.slice(0, match.index) + expand(template, match) + text.slice(match.index + match[0].length);
   }
 
   // Break the reply off an Outlook-style boundary line it sits directly on top

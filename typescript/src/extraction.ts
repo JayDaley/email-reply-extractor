@@ -101,21 +101,127 @@ export function isQuoteLine(line: string): boolean {
 
 // --- attribution lines --------------------------------------------------------
 
+// Two forms are not run as single regexes, because the engine's backtracking
+// over them is polynomial on adversarial lines (a line of "<a@" repeated, or of
+// "schrieb:" repeated): "<who> <a@b> wrote:" ({@link isAddressAttribution}) and
+// the German "Am <date> schrieb <who>:" ({@link isGermanAttribution}). Each is
+// decided by a linear helper that accepts exactly the strings the original
+// pattern (given in its comment) accepts under `re.match`.
 const ATTRIBUTION_RES: readonly PyPattern[] = [
   new PyPattern(String.raw`^[ \t]*On\b.*wrote:[ \t]*$`),
-  new PyPattern(String.raw`^.*<[^>]+@[^>]+>[ \t]+wrote:[ \t]*$`),
-  new PyPattern(String.raw`^[ \t]*Am\b.*\bschrieb\b.*:[ \t]*$`),
   new PyPattern(String.raw`^[ \t]*\d{4}(?:年|[/.-]).*のメール:[ \t]*$`),
 ];
 
+/**
+ * The span a newline-free pattern ending in `$` can cover, or `null`.
+ *
+ * Without `re.MULTILINE`, `$` matches at the end of the string or before a
+ * final `\n`. A pattern none of whose parts can match `\n` (`.`, `[ \t]`,
+ * literals) can therefore only reach `$` when the string has no `\n` (the
+ * whole string), or a single `\n` as its last character (the string without
+ * it). Any other `\n` makes such a pattern fail.
+ */
+export function dollarLine(text: string): string | null {
+  const nl = text.indexOf("\n");
+  if (nl < 0) return text;
+  if (nl === text.length - 1) return text.slice(0, nl);
+  return null;
+}
+
+/** The tail of the address attribution form, applied with `match` just after the closing `>`. */
+const ADDRESS_ATTRIBUTION_TAIL_RE = new PyPattern(String.raw`[ \t]+wrote:[ \t]*$`);
+
+/**
+ * True when `.*<[^>]+@[^>]+>` followed by `tailRe` matches `text` at `start`
+ * (`re.match` semantics, `.` excluding `\n`), in linear time.
+ *
+ * `tailRe` must end in `$` and must not be able to match `>`. Then the `>` of
+ * any match is the last `>` in `text`, and the `<` lies after the `>` before it
+ * (`[^>]+` cannot cross one), at or after `start`, and before the first `\n` at
+ * or after `start` (`.*` cannot cross one). The leftmost such `<` leaves the
+ * widest span for `[^>]+@[^>]+`, which needs an `@` with at least one
+ * character on each side. In UTF-16 units the `+2` / `-1` bounds hold
+ * unchanged: one code unit or more is one code point or more, and every
+ * delimiter is a single code unit.
+ */
+export function endsWithBracketedAddress(text: string, start: number, tailRe: PyPattern): boolean {
+  const gt = text.lastIndexOf(">");
+  if (gt < start || tailRe.match(text, gt + 1) === null) return false;
+  let nl = text.indexOf("\n", start);
+  if (nl < 0) nl = text.length;
+  // Python: text.rfind(">", 0, gt) (lastIndexOf with a negative position would search index 0).
+  const prevGt = gt > 0 ? text.lastIndexOf(">", gt - 1) : -1;
+  const lt = text.indexOf("<", Math.max(start, prevGt + 1));
+  if (lt < 0 || lt >= Math.min(gt, nl)) return false;
+  const at = text.indexOf("@", lt + 2);
+  return at >= 0 && at < gt - 1;
+}
+
+/**
+ * `re.match(r"^.*<[^>]+@[^>]+>[ \t]+wrote:[ \t]*$", line)`, in linear time.
+ *
+ * "<who> <a@b> wrote:" (no leading "On"); "<who> via Datatracker <a@b>
+ * wrote:" and similar are covered too.
+ */
+function isAddressAttribution(line: string): boolean {
+  return endsWithBracketedAddress(line, 0, ADDRESS_ATTRIBUTION_TAIL_RE);
+}
+
+const AM_PREFIX_RE = new PyPattern(String.raw`[ \t]*Am\b`);
+const SCHRIEB_RE = new PyPattern(String.raw`\bschrieb\b`);
+
+/**
+ * `re.match(r"^[ \t]*Am\b.*\bschrieb\b.*:[ \t]*$", line)`, in linear time.
+ *
+ * German: "Am <date> schrieb <who>:". No part of the pattern matches `\n`, so
+ * it applies to {@link dollarLine}'s span as a whole. After the prefix, `.*`
+ * can skip anything, so the condition is: a `\bschrieb\b` occurs (it cannot
+ * start inside the prefix, which is `[ \t]*Am` followed by a non-word
+ * character), and the span, with trailing blanks removed, ends in a `:` at or
+ * after the end of the first occurrence.
+ */
+function isGermanAttribution(line: string): boolean {
+  const span = dollarLine(line);
+  if (span === null || AM_PREFIX_RE.match(span) === null) return false;
+  const schrieb = SCHRIEB_RE.search(line);
+  const body = pyRstripChars(span, " \t");
+  return schrieb !== null && body.endsWith(":") && body.length - 1 >= schrieb.index + schrieb[0].length;
+}
+
 const ATTRIBUTION_START_RE = new PyPattern(String.raw`^[ \t]*(?:(?:On|Am|Le|El|El día)\b|\d{4}(?:年|[/.-]))`);
-const ATTRIBUTION_END_RE = new PyPattern(
-  String.raw`(?:wrote:|\bschrieb\b.*:|\ba écrit\s*:|\bescribió:|のメール:)[ \t]*$`,
-);
+/**
+ * The terminators, except `\bschrieb\b.*:`, which {@link hasAttributionEnd}
+ * decides separately: under `search` the engine retried `.*:` from every
+ * "schrieb", which is quadratic. The remaining alternatives are literals, or
+ * `\s*` runs that follow distinct literals, and search in linear time.
+ */
+const ATTRIBUTION_END_RE = new PyPattern(String.raw`(?:wrote:|\ba écrit\s*:|\bescribió:|のメール:)[ \t]*$`);
+
+/**
+ * True when `line` contains a wrapped attribution's terminator.
+ *
+ * Equivalent to `re.search` of the original pattern
+ * `(?:wrote:|\bschrieb\b.*:|\ba écrit\s*:|\bescribió:|のメール:)[ \t]*$`. Its
+ * `\bschrieb\b.*:[ \t]*$` alternative ends at `$` — the end of the string, or
+ * before a final `\n` — so its `:` is the last character other than blanks
+ * before that point, and its "schrieb" must lie on the same line as the `:`,
+ * ending at or before it. The first "schrieb" at or after the start of that
+ * line is the best candidate.
+ */
+function hasAttributionEnd(line: string): boolean {
+  if (ATTRIBUTION_END_RE.search(line) !== null) return true;
+  const body = pyRstripChars(line.endsWith("\n") ? line.slice(0, -1) : line, " \t");
+  if (!body.endsWith(":")) return false;
+  const colon = body.length - 1;
+  // Python: body.rfind("\n", 0, colon) + 1.
+  const lineStart = colon > 0 ? body.lastIndexOf("\n", colon - 1) + 1 : 0;
+  const schrieb = SCHRIEB_RE.search(line, lineStart);
+  return schrieb !== null && schrieb.index + schrieb[0].length <= colon;
+}
 
 /** True if `line` on its own is a complete attribution line. */
 export function isAttributionLine(line: string): boolean {
-  return ATTRIBUTION_RES.some((pat) => pat.test(line));
+  return ATTRIBUTION_RES.some((pat) => pat.test(line)) || isAddressAttribution(line) || isGermanAttribution(line);
 }
 
 /**
@@ -124,11 +230,11 @@ export function isAttributionLine(line: string): boolean {
  */
 export function wrappedAttributionEnd(lines: readonly string[], i: number): number | null {
   const line = lines[i] as string;
-  if (!ATTRIBUTION_START_RE.test(line) || ATTRIBUTION_END_RE.search(line)) return null;
+  if (!ATTRIBUTION_START_RE.test(line) || hasAttributionEnd(line)) return null;
   for (let j = i + 1; j < Math.min(i + 3, lines.length); j++) {
     const next = lines[j] as string;
     if (isBlank(next)) return null;
-    if (ATTRIBUTION_END_RE.search(next)) return j;
+    if (hasAttributionEnd(next)) return j;
   }
   return null;
 }
@@ -177,8 +283,15 @@ const SIGNOFF_SALUTATIONS =
   String.raw`|v(?:ä|a)nliga\s+h(?:ä|a)lsningar|med\s+v(?:e|ä)nlig\s+h(?:i|ä)lsen|mvh|terveisin` +
   String.raw`|cumprimentos|atenciosamente|ciao|saluti|cordiali\s+saluti`;
 
-/** A line that is only a sign-off salutation (optional trailing `,` `.` or `!`). */
-export const SIGNOFF_LINE_RE = new PyPattern(String.raw`^[ \t]*(?:${SIGNOFF_SALUTATIONS})[ \t]*[,.!]?[ \t]*$`, {
+/**
+ * A line that is only a sign-off salutation (optional trailing `,` `.` or `!`).
+ *
+ * The tail is `[ \t]*(?:[,.!][ \t]*)?$`, which accepts the same strings as the
+ * original `[ \t]*[,.!]?[ \t]*$`: written that way, two adjacent `[ \t]*` runs
+ * split a long blank run in quadratically many ways before a non-blank
+ * character fails the line.
+ */
+export const SIGNOFF_LINE_RE = new PyPattern(String.raw`^[ \t]*(?:${SIGNOFF_SALUTATIONS})[ \t]*(?:[,.!][ \t]*)?$`, {
   ignoreCase: true,
 });
 
@@ -307,24 +420,82 @@ const TRANSPORT_HEADER_RE = new PyPattern(
   { ignoreCase: true },
 );
 
-/** True when the contiguous header-field run above `lines[i]` contains a transport field. */
-function inPastedHeaderRun(lines: readonly string[], i: number): boolean {
-  let j = i - 1;
-  while (j >= 0 && HEADER_FIELD_RE.test(lines[j] as string)) {
-    if (TRANSPORT_HEADER_RE.test(lines[j] as string)) return true;
-    j--;
+/**
+ * For every index `i`, whether the contiguous header-field run directly above
+ * `lines[i]` contains a transport field: a `From:` at `i` then sits inside
+ * pasted header evidence rather than opening a client's quote header.
+ *
+ * Computed in one forward pass — the run above `i` is `lines[i - 1]` plus,
+ * when that line is a header field, the run above `i - 1` — instead of walking
+ * the run upward from every `From:`, which is quadratic when many `From:`
+ * lines follow a long run of fields.
+ */
+function pastedHeaderRuns(lines: readonly string[]): boolean[] {
+  const pasted: boolean[] = new Array<boolean>(lines.length).fill(false);
+  for (let i = 1; i < lines.length; i++) {
+    const above = lines[i - 1] as string;
+    pasted[i] = HEADER_FIELD_RE.test(above) && (TRANSPORT_HEADER_RE.test(above) || (pasted[i - 1] as boolean));
   }
-  return false;
+  return pasted;
+}
+
+/** One entry of {@link headerWalkTable}: `[fields, hasSignal]`. */
+type WalkEntry = readonly [fields: number, hasSignal: boolean];
+
+const WALK_STOP: WalkEntry = [0, false];
+
+/**
+ * The field walk of {@link findQuoteHeaderBlock}, for every start.
+ *
+ * The walk from an opener at `i` visits `lines[i + 1:]` and stops at the first
+ * line that is neither a header field, nor a folded continuation, nor
+ * (`tolerant` only) a single blank directly above a field. Whether it stops at
+ * a line depends only on that line, the next one and the mode (`isLocalized`,
+ * `tolerant`), never on where the walk started. Entry `j`
+ * (`0 <= j <= lines.length`) holds `[fields, hasSignal]` for a walk entering
+ * at `j`: the number of field lines it passes and whether one of them is a
+ * signal field. Built backward in one pass, so each opener is decided in
+ * constant time; rewalking from every opener is quadratic when many openers
+ * share one long run.
+ */
+function headerWalkTable(lines: readonly string[], isLocalized: boolean, tolerant: boolean): WalkEntry[] {
+  const isField = (text: string): boolean =>
+    HEADER_FIELD_RE.test(text) || (isLocalized && LOCALIZED_FIELD_RE.test(text));
+  const signalRe = isLocalized ? LOCALIZED_SUBJECT_RE : QUOTE_HEADER_SIGNAL_RE;
+  const n = lines.length;
+  const field = lines.map(isField);
+  const table: WalkEntry[] = new Array<WalkEntry>(n + 1).fill(WALK_STOP);
+  for (let j = n - 1; j >= 0; j--) {
+    const nxt = lines[j] as string;
+    const [fields, hasSignal] = table[j + 1] as WalkEntry;
+    if (field[j]) {
+      table[j] = [fields + 1, hasSignal || signalRe.test(nxt)];
+    } else if (!isBlank(nxt) && (tolerant || nxt.charAt(0) === " " || nxt.charAt(0) === "\t")) {
+      // Folded continuation of the preceding header field.
+      table[j] = [fields, hasSignal];
+    } else if (isBlank(nxt) && tolerant && j + 1 < n && field[j + 1]) {
+      // Double-spaced rendering: a single blank between fields.
+      table[j] = [fields, hasSignal];
+    }
+    // Otherwise the walk stops at j: the entry stays [0, false].
+  }
+  return table;
 }
 
 /**
  * Return the index of the `From:` line that opens a forwarded/quote-header
  * block, or `null` if the body has no such block. `localized: false`
  * recognizes only the English, German-label and Chinese blocks.
+ *
+ * The pasted-evidence flags ({@link pastedHeaderRuns}) and each walk mode's
+ * table ({@link headerWalkTable}) are built once, on first use, so the search
+ * is linear in the number of lines.
  */
 export function findQuoteHeaderBlock(lines: readonly string[], options: LocalizedOptions = {}): number | null {
   const localized = options.localized ?? true;
   const n = lines.length;
+  let pasted: boolean[] | null = null;
+  const tables = new Map<string, WalkEntry[]>();
   for (let i = 0; i < n; i++) {
     const line = lines[i] as string;
     let isLocalized: boolean;
@@ -335,32 +506,17 @@ export function findQuoteHeaderBlock(lines: readonly string[], options: Localize
     } else {
       continue;
     }
-    if (i > 0 && inPastedHeaderRun(lines, i)) continue;
-
-    const isField = (text: string): boolean =>
-      HEADER_FIELD_RE.test(text) || (isLocalized && LOCALIZED_FIELD_RE.test(text));
-
+    if (pasted === null) pasted = pastedHeaderRuns(lines);
+    if (pasted[i]) continue;
     const tolerant = line.includes("@");
-    let headerLines = 1;
-    let hasSignal = false;
-    let j = i + 1;
-    while (j < n) {
-      const nxt = lines[j] as string;
-      if (isField(nxt)) {
-        headerLines++;
-        if (isLocalized ? LOCALIZED_SUBJECT_RE.test(nxt) : QUOTE_HEADER_SIGNAL_RE.test(nxt)) hasSignal = true;
-        j++;
-      } else if (!isBlank(nxt) && (tolerant || nxt.charAt(0) === " " || nxt.charAt(0) === "\t")) {
-        // Folded continuation of the preceding header field.
-        j++;
-      } else if (isBlank(nxt) && tolerant && j + 1 < n && isField(lines[j + 1] as string)) {
-        // Double-spaced rendering: a single blank between fields.
-        j++;
-      } else {
-        break;
-      }
+    const mode = `${isLocalized}/${tolerant}`;
+    let table = tables.get(mode);
+    if (table === undefined) {
+      table = headerWalkTable(lines, isLocalized, tolerant);
+      tables.set(mode, table);
     }
-    if (hasSignal && headerLines >= (isLocalized ? 3 : 2)) return i;
+    const [fields, hasSignal] = table[i + 1] as WalkEntry;
+    if (hasSignal && 1 + fields >= (isLocalized ? 3 : 2)) return i;
   }
   return null;
 }
@@ -380,13 +536,19 @@ export function stripAfterQuoteHeaderBlock(lines: readonly string[], options: Lo
 
 // --- "Original message" / "Forwarded message" dividers -------------------------
 
+// The leading `(?<!-)` (here and in LOCALIZED_DIVIDER_RE) lets a match start
+// only at the first dash of a run. It changes no result: the wording cannot
+// start with a dash, so a match from inside a run has its `-{2,}` end at the
+// run's end, and the same match extended to the run's first dash is found
+// first. Without it, `search` retried `-{2,}` from every dash of a long rule,
+// which is quadratic (a 20,000-dash line took seconds).
 const ORIGINAL_MESSAGE_DIVIDER_RE = new PyPattern(
-  String.raw`-{2,}[ \t]*(?:(?:Original|Forwarded)[ \t]+Message|邮件原件|原始邮件)[ \t]*-{2,}`,
+  String.raw`(?<!-)-{2,}[ \t]*(?:(?:Original|Forwarded)[ \t]+Message|邮件原件|原始邮件)[ \t]*-{2,}`,
   { ignoreCase: true },
 );
 
 const LOCALIZED_DIVIDER_RE = new PyPattern(
-  String.raw`-{2,}${LABEL_SPACE}*(?:` +
+  String.raw`(?<!-)-{2,}${LABEL_SPACE}*(?:` +
     String.raw`Message${LABEL_SPACE}+d['’]origine|Message${LABEL_SPACE}+transf[ée]r[ée]` +
     String.raw`|Mensaje${LABEL_SPACE}+(?:original|reenviado)` +
     String.raw`|Mensagem${LABEL_SPACE}+(?:original|encaminhada)` +
@@ -531,26 +693,33 @@ export function stripParentContent(text: string, parentBody: string, options: St
   }
 
   // Rule (c): chain short remainder lines off marked neighbors, to a fixpoint.
-  let changed = continuation && marked.size >= PARENT_DIFF_CONTINUATION_MIN_SEEDS;
-  while (changed) {
-    changed = false;
-    for (let k = 0; k < childPairs.length; k++) {
-      const [origI, norm] = childPairs[k] as [number, string];
-      if (marked.has(origI)) continue;
-      if (k > 0) {
-        const [prevI, prevNorm] = childPairs[k - 1] as [number, string];
-        if (marked.has(prevI) && parentStream.includes(`${prevNorm} ${norm}`)) {
-          marked.add(origI);
-          changed = true;
-          continue;
-        }
-      }
-      if (k + 1 < childPairs.length) {
-        const [nextI, nextNorm] = childPairs[k + 1] as [number, string];
-        if (marked.has(nextI) && parentStream.includes(`${norm} ${nextNorm}`)) {
-          marked.add(origI);
-          changed = true;
-        }
+  // The rule is monotone (a mark only ever enables more marks), so its
+  // fixpoint is the same whatever order lines are examined in. A worklist
+  // re-examines only the neighbors of a newly marked line; repeating full
+  // passes until nothing changed needed one pass per backward-chained mark.
+  if (continuation && marked.size >= PARENT_DIFF_CONTINUATION_MIN_SEEDS) {
+    const count = childPairs.length;
+    const isMarked = childPairs.map(([origI]) => marked.has(origI));
+    const normAt = (k: number): string => (childPairs[k] as [number, string])[1];
+
+    /** Unmarked `k` joins a marked neighbor contiguously in the parent. */
+    const chains = (k: number): boolean => {
+      const norm = normAt(k);
+      if (k > 0 && isMarked[k - 1] && parentStream.includes(`${normAt(k - 1)} ${norm}`)) return true;
+      if (k + 1 < count && isMarked[k + 1] && parentStream.includes(`${norm} ${normAt(k + 1)}`)) return true;
+      return false;
+    };
+
+    const pending: number[] = [];
+    for (let k = 0; k < count; k++) {
+      if (!isMarked[k] && ((k > 0 && isMarked[k - 1]) || (k + 1 < count && isMarked[k + 1]))) pending.push(k);
+    }
+    for (let k = pending.pop(); k !== undefined; k = pending.pop()) {
+      if (isMarked[k] || !chains(k)) continue;
+      isMarked[k] = true;
+      marked.add((childPairs[k] as [number, string])[0]);
+      for (const j of [k - 1, k + 1]) {
+        if (j >= 0 && j < count && !isMarked[j]) pending.push(j);
       }
     }
   }
@@ -622,8 +791,56 @@ export function isAuthorTag(label: string, head: string, parentBody: string | nu
   if (parentBody !== null && !parentBody.includes(`[${label}`)) return true;
   const name = pyStrip(pyRstripChars(label, "0123456789"));
   if (!name) return false;
-  const re = new RegExp(`(?<!${WORD_RE_CLASS})${escapeRegex(name)}(?!${WORD_RE_CLASS})`, "u");
-  return re.test(head);
+  return containsWholeWord(head, name);
+}
+
+/** `re`'s Unicode `\w` (one code point), matched with `test` at a set position. */
+const WORD_AT_RE = new RegExp(WORD_RE_CLASS, "uy");
+
+function isSurrogate(code: number, low: boolean): boolean {
+  return low ? code >= 0xdc00 && code <= 0xdfff : code >= 0xd800 && code <= 0xdbff;
+}
+
+/**
+ * `re.search(rf"(?<!\w){re.escape(name)}(?!\w)", head)`.
+ *
+ * Compiling that pattern for every tag line is the dominant cost here: the
+ * Unicode `\w` class makes each compilation take tens of microseconds, so a
+ * span of many tagged lines cost far more than the reference, whose `re`
+ * module caches compiled patterns. The occurrences of `name` are found with
+ * `indexOf` instead (every start, overlapping ones included, as a regex
+ * search tries them) and the code points on either side are tested against
+ * one precompiled `\w`. A name holding a surrogate code unit (a non-BMP
+ * character) still takes the regex path, so that occurrences that start or end
+ * inside a surrogate pair are treated exactly as the `u`-flag pattern treats
+ * them; without one, every occurrence starts and ends on a code-point
+ * boundary.
+ */
+function containsWholeWord(head: string, name: string): boolean {
+  for (let i = 0; i < name.length; i++) {
+    const code = name.charCodeAt(i);
+    if (code >= 0xd800 && code <= 0xdfff) {
+      return new RegExp(`(?<!${WORD_RE_CLASS})${escapeRegex(name)}(?!${WORD_RE_CLASS})`, "u").test(head);
+    }
+  }
+  const isWordAt = (pos: number): boolean => {
+    WORD_AT_RE.lastIndex = pos;
+    return WORD_AT_RE.test(head);
+  };
+  for (let p = head.indexOf(name); p >= 0; p = head.indexOf(name, p + 1)) {
+    if (p > 0) {
+      // The code point that ends at p: a surrogate pair, or one code unit.
+      const before =
+        p >= 2 && isSurrogate(head.charCodeAt(p - 1), true) && isSurrogate(head.charCodeAt(p - 2), false)
+          ? p - 2
+          : p - 1;
+      if (isWordAt(before)) continue;
+    }
+    const end = p + name.length;
+    if (end < head.length && isWordAt(end)) continue;
+    return true;
+  }
+  return false;
 }
 
 // --- public entry point -------------------------------------------------------

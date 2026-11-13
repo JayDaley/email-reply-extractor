@@ -43,7 +43,9 @@ commit and release. Never edit the JSON under `conformance/` by hand.
     `conformance_support.py` (the conformance file formats),
     `test_conformance.py` (committed data matches live output; vector replay),
     `test_extraction_version.py` (the digest contract), `test_sync.py`,
-    `test_port_hazards.py` (pins Python-specific semantics for the ports)
+    `test_port_hazards.py` (pins Python-specific semantics for the ports),
+    `test_complexity.py` (adversarial inputs that must complete in linear
+    time; each port carries the same file)
   - `tools/conformance.py` — generates and checks `conformance/`
   - `tools/check_sync.py` — version, `EXTRACTION_VERSION` and `LICENSE` sync
     across ports
@@ -137,7 +139,7 @@ re-record.
 ## Versioning
 
 The packages use [semantic versioning](https://semver.org/); the current
-version is **1.2.2**. The three ports always carry the same version. The
+version is **1.2.3**. The three ports always carry the same version. The
 sources are `__version__` in `python/src/email_reply_extractor/__init__.py`
 (`python/pyproject.toml` reads it dynamically), `version` in
 `typescript/package.json`, and `version` in `rust/Cargo.toml`; `make

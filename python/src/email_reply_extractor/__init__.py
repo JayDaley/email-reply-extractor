@@ -28,7 +28,7 @@ from .extraction import (
 )
 from .html_text import HtmlParts, html_to_text, split_html_parts
 
-__version__ = "1.2.2"
+__version__ = "1.2.3"
 
 __all__ = [
     "EXTRACTION_VERSION",
