@@ -1,0 +1,535 @@
+{
+ "format": 1,
+ "function": "find_quote_header_block",
+ "module": "extraction",
+ "public": false,
+ "parameters": [
+  {
+   "name": "lines",
+   "kind": "positional_or_keyword"
+  },
+  {
+   "name": "localized",
+   "kind": "keyword_only",
+   "default": true
+  }
+ ],
+ "returns": "int | None",
+ "vectors": [
+  {
+   "args": {
+    "lines": [
+     "Cheers,",
+     "Nate",
+     "",
+     "From: Wesley Eddy via Datatracker <noreply@example.org>",
+     "Sent: Tuesday, June 23, 2026 3:45 PM",
+     "To: tsv-art@example.org",
+     "Subject: [Int-area] draft review",
+     "",
+     "Reviewer: Wesley Eddy",
+     ""
+    ]
+   },
+   "result": 3
+  },
+  {
+   "args": {
+    "lines": [
+     "De : Mario Rossi <mario@example.org>",
+     "Date : mercredi 9 septembre 2026 10:38",
+     "A : Anna Schmidt <anna@example.org>",
+     "Objet : Re: [wg] charter scope"
+    ]
+   },
+   "result": 0
+  },
+  {
+   "args": {
+    "lines": [
+     "De : Mario Rossi <mario@example.org>",
+     "Envoye : mercredi 9 septembre 2026 10:38",
+     "A : Anna Schmidt <anna@example.org>",
+     "Objet : Re: [wg] charter scope"
+    ]
+   },
+   "result": 0
+  },
+  {
+   "args": {
+    "lines": [
+     "De : Mario Rossi <mario@example.org>",
+     "Objet : Re: [wg] scope",
+     "Texte."
+    ]
+   },
+   "result": null
+  },
+  {
+   "args": {
+    "lines": [
+     "De : manière générale, je suis d'accord.",
+     "",
+     "Objet : la suite."
+    ]
+   },
+   "result": null
+  },
+  {
+   "args": {
+    "lines": [
+     "De : nos jours, la question reste ouverte.",
+     "A : premier point.",
+     "Date : à confirmer.",
+     "Suite du texte."
+    ]
+   },
+   "result": null
+  },
+  {
+   "args": {
+    "lines": [
+     "From: my perspective, the proposal is fine.",
+     "It aligns with what we said earlier in the thread.",
+     "Subject: naming is the only open question.",
+     ""
+    ]
+   },
+   "result": null
+  },
+  {
+   "args": {
+    "lines": [
+     "From: someone",
+     "Just ordinary prose here.",
+     "More prose."
+    ]
+   },
+   "result": null
+  },
+  {
+   "args": {
+    "lines": [
+     "Hi Nat,",
+     "",
+     "Thank you for the follow-up. Please see inline.",
+     "",
+     "Cheers,",
+     "Med",
+     "",
+     "De : Nat Kao <nat@example.org>",
+     "Envoyé : vendredi 3 juillet 2026 04:16",
+     "À : BOUCADAIR Mohamed <med@example.org>",
+     "Objet : Re: review of draft-ietf-wg-example",
+     "",
+     "Hi Med,",
+     "",
+     "Many thanks for the review. Please see our responses below.",
+     "",
+     "# Consider adding a pointer to the registry cited here in the introduction",
+     "",
+     "Updated as suggested, with a pointer to the IANA registry group.",
+     "[Med] ACK",
+     "",
+     "# Early allocation is mentioned but the policy text is outdated now",
+     "",
+     "Updated. We have added a reference to the policy document as well.",
+     "[Med] I think this can be simplified further by citing the policy document alone.",
+     "",
+     "Regards,",
+     "Nat",
+     ""
+    ],
+    "localized": false
+   },
+   "result": null
+  },
+  {
+   "args": {
+    "lines": [
+     "Hi Nat,",
+     "",
+     "Thank you for the follow-up. Please see inline.",
+     "",
+     "Cheers,",
+     "Med",
+     "",
+     "De : Nat Kao <nat@example.org>",
+     "Envoyé : vendredi 3 juillet 2026 04:16",
+     "À : BOUCADAIR Mohamed <med@example.org>",
+     "Objet : Re: review of draft-ietf-wg-example",
+     "",
+     "Hi Med,",
+     "",
+     "Many thanks for the review. Please see our responses below.",
+     "",
+     "# Consider adding a pointer to the registry cited here in the introduction",
+     "",
+     "Updated as suggested, with a pointer to the IANA registry group.",
+     "[Med] ACK",
+     "",
+     "# Early allocation is mentioned but the policy text is outdated now",
+     "",
+     "Updated. We have added a reference to the policy document as well.",
+     "[Med] I think this can be simplified further by citing the policy document alone.",
+     "",
+     "Regards,",
+     "Nat",
+     ""
+    ]
+   },
+   "result": 7
+  },
+  {
+   "args": {
+    "lines": [
+     "Looking forward to the discussions.",
+     "Regards,",
+     "Wei Zhang",
+     "------------------------------------------------------------------",
+     "发件人：Li Ming <li.ming@example.org>",
+     "发送时间：2026年7月15日(周三) 10:05",
+     "收件人：Anna Schmidt<anna.schmidt@example.org>",
+     "主\u3000题：[wg] Re: charter scope",
+     "Old quoted content here.",
+     ""
+    ]
+   },
+   "result": 4
+  },
+  {
+   "args": {
+    "lines": [
+     "Merci pour la revue.",
+     "",
+     "De : Mario Rossi <mario@example.org>",
+     "Envoyé : mercredi 9 septembre 2026 10:38",
+     "À : Anna Schmidt <anna@example.org>; wg-chairs@example.org",
+     "Cc : wg@example.org",
+     "Objet : Re: [wg] charter scope",
+     "",
+     "Quoted message."
+    ]
+   },
+   "result": 2
+  },
+  {
+   "args": {
+    "lines": [
+     "Merci pour la revue.",
+     "",
+     "De\t: Mario Rossi <mario@example.org>",
+     "Envoyé\t: mercredi 9 septembre 2026 10:38",
+     "À\t: Anna Schmidt <anna@example.org>; wg-chairs@example.org",
+     "Cc\t:\twg@example.org",
+     "Objet\t: Re: [wg] charter scope",
+     "",
+     "Quoted message."
+    ]
+   },
+   "result": 2
+  },
+  {
+   "args": {
+    "lines": [
+     "Merci pour la revue.",
+     "",
+     "De\u00a0: Mario Rossi <mario@example.org>",
+     "Envoyé\u00a0: mercredi 9 septembre 2026 10:38",
+     "À\u00a0: Anna Schmidt <anna@example.org>; wg-chairs@example.org",
+     "Cc\u00a0:\u00a0wg@example.org",
+     "Objet\u00a0: Re: [wg] charter scope",
+     "",
+     "Quoted message."
+    ]
+   },
+   "result": 2
+  },
+  {
+   "args": {
+    "lines": [
+     "Merci pour la revue.",
+     "",
+     "De\u202f: Mario Rossi <mario@example.org>",
+     "Envoyé\u202f: mercredi 9 septembre 2026 10:38",
+     "À\u202f: Anna Schmidt <anna@example.org>; wg-chairs@example.org",
+     "Cc\u202f:\u202fwg@example.org",
+     "Objet\u202f: Re: [wg] charter scope",
+     "",
+     "Quoted message."
+    ]
+   },
+   "result": 2
+  },
+  {
+   "args": {
+    "lines": [
+     "My reply.",
+     "",
+     "Da: Mario Rossi <mario@example.org>",
+     "Inviato: venerdì 7 agosto 2026 14:13",
+     "A: wg <wg@example.org>",
+     "Oggetto: Re: [wg] scope",
+     "",
+     "Quoted message."
+    ],
+    "localized": false
+   },
+   "result": null
+  },
+  {
+   "args": {
+    "lines": [
+     "My reply.",
+     "",
+     "Da: Mario Rossi <mario@example.org>",
+     "Inviato: venerdì 7 agosto 2026 14:13",
+     "A: wg <wg@example.org>",
+     "Oggetto: Re: [wg] scope",
+     "",
+     "Quoted message."
+    ]
+   },
+   "result": 2
+  },
+  {
+   "args": {
+    "lines": [
+     "My reply.",
+     "",
+     "De: Ana Pérez <ana@example.org>",
+     "Enviado el: miércoles, 8 de julio de 2026 19:56",
+     "Para: wg@example.org",
+     "Asunto: Re: [wg] scope",
+     "",
+     "Quoted message."
+    ],
+    "localized": false
+   },
+   "result": null
+  },
+  {
+   "args": {
+    "lines": [
+     "My reply.",
+     "",
+     "De: Ana Pérez <ana@example.org>",
+     "Enviado el: miércoles, 8 de julio de 2026 19:56",
+     "Para: wg@example.org",
+     "Asunto: Re: [wg] scope",
+     "",
+     "Quoted message."
+    ]
+   },
+   "result": 2
+  },
+  {
+   "args": {
+    "lines": [
+     "My reply.",
+     "",
+     "De: João Silva <joao@example.org>",
+     "Enviada em: segunda-feira, 6 de julho de 2026 16:52",
+     "Para: wg@example.org",
+     "Assunto: Re: [wg] scope",
+     "",
+     "Quoted message."
+    ],
+    "localized": false
+   },
+   "result": null
+  },
+  {
+   "args": {
+    "lines": [
+     "My reply.",
+     "",
+     "De: João Silva <joao@example.org>",
+     "Enviada em: segunda-feira, 6 de julho de 2026 16:52",
+     "Para: wg@example.org",
+     "Assunto: Re: [wg] scope",
+     "",
+     "Quoted message."
+    ]
+   },
+   "result": 2
+  },
+  {
+   "args": {
+    "lines": [
+     "My reply.",
+     "",
+     "From: Mahesh Jethanandani <mjethanandani@example.org>",
+     "",
+     "Sent: Tuesday, June 23, 2026 2:33 PM",
+     "",
+     "To: wg@example.org",
+     "",
+     "Subject: Re: draft",
+     "",
+     "Quoted content.",
+     ""
+    ]
+   },
+   "result": 2
+  },
+  {
+   "args": {
+    "lines": [
+     "My reply.",
+     "",
+     "From: wg@example.org [mailto:wg-bounces@example.org] On",
+     "Behalf Of Jordi Ros Giralt",
+     "Sent: Monday, June 1, 2026 9:00 AM",
+     "To: wg@example.org",
+     "Subject: Re: draft",
+     "",
+     "Quoted.",
+     ""
+    ]
+   },
+   "result": 2
+  },
+  {
+   "args": {
+    "lines": [
+     "My reply.",
+     "",
+     "Van: Jan de Vries <jan@example.org>",
+     "Verzonden: maandag 27 juli 2026 14:00",
+     "Aan: wg@example.org",
+     "Onderwerp: Re: [wg] scope",
+     "",
+     "Quoted message."
+    ],
+    "localized": false
+   },
+   "result": null
+  },
+  {
+   "args": {
+    "lines": [
+     "My reply.",
+     "",
+     "Van: Jan de Vries <jan@example.org>",
+     "Verzonden: maandag 27 juli 2026 14:00",
+     "Aan: wg@example.org",
+     "Onderwerp: Re: [wg] scope",
+     "",
+     "Quoted message."
+    ]
+   },
+   "result": 2
+  },
+  {
+   "args": {
+    "lines": [
+     "My reply.",
+     "",
+     "Von: Anna Schmidt <anna@example.org>",
+     "Gesendet: Montag, 13. Juli 2026 17:15",
+     "An: wg@example.org",
+     "Betreff: Re: [wg] scope",
+     "",
+     "Quoted message."
+    ],
+    "localized": false
+   },
+   "result": null
+  },
+  {
+   "args": {
+    "lines": [
+     "My reply.",
+     "",
+     "Von: Anna Schmidt <anna@example.org>",
+     "Gesendet: Montag, 13. Juli 2026 17:15",
+     "An: wg@example.org",
+     "Betreff: Re: [wg] scope",
+     "",
+     "Quoted message."
+    ]
+   },
+   "result": 2
+  },
+  {
+   "args": {
+    "lines": [
+     "Regards,",
+     "Alice",
+     "",
+     "From: Bob Smith <bob@example.org>",
+     "Date: Mon, 20 Jul 2026 10:00:00 +0000",
+     "To: wg@example.org",
+     "Cc: chairs@example.org",
+     "Subject: Re: draft comments",
+     "",
+     "Old quoted content.",
+     ""
+    ]
+   },
+   "result": 3
+  },
+  {
+   "args": {
+    "lines": [
+     "TECHNICAL EVIDENCE",
+     "",
+     "Message-ID: <a@b>",
+     "Date: Tue, 12 May 2026 10:15:36 +0200",
+     "From: Timo Gerke <timo.gerke@alice-dsl.net>",
+     "To: Deb Cooley <debcooley1@gmail.com>",
+     "Subject: Notice",
+     "",
+     "Best regards,",
+     "Timo Gerke",
+     ""
+    ]
+   },
+   "result": null
+  },
+  {
+   "args": {
+    "lines": [
+     "Thanks for clarifying.",
+     "",
+     "Email: dick@example.org",
+     "Tel: +1 978-555-0100",
+     "From: Amaury Chamayou <amaury@example.com>",
+     "Sent: Sunday, November 16, 2025 12:16 PM",
+     "To: someone@example.org",
+     "Subject: Re: WGLC",
+     "",
+     "Hi Dick,",
+     ""
+    ]
+   },
+   "result": 4
+  },
+  {
+   "args": {
+    "lines": [
+     "Thanks for the summary.",
+     "",
+     "发件人: Anna Schmidt [mailto:anna.schmidt@example.org]",
+     "发送时间: 2026年7月15日 8:40",
+     "收件人: Li Ming <li.ming@example.org>; wg@example.org",
+     "主题: [wg] Re: charter scope",
+     "Old quoted content here.",
+     ""
+    ]
+   },
+   "result": 2
+  },
+  {
+   "args": {
+    "lines": [
+     "Von: der Arbeitsgruppe vorgeschlagen.",
+     "An: alle Teilnehmer.",
+     "Danke."
+    ]
+   },
+   "result": null
+  }
+ ]
+}

@@ -1,9 +1,9 @@
-# ---- Python ----
+# ---- Python (python/) ----
 __pycache__/
 *.py[cod]
 *$py.class
-build/
-dist/
+python/build/
+python/dist/
 *.egg-info/
 .eggs/
 
@@ -16,6 +16,15 @@ venv/
 .ruff_cache/
 .mypy_cache/
 .coverage
+
+# ---- TypeScript (typescript/) ----
+node_modules/
+typescript/dist/
+typescript/coverage/
+*.tsbuildinfo
+
+# ---- Rust (rust/) ----
+rust/target/
 
 # ---- Editor / OS ----
 .DS_Store

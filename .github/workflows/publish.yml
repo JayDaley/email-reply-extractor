@@ -1,8 +1,11 @@
 name: Publish to PyPI
 
-# Publishes via PyPI Trusted Publishing (OIDC) — no API token is stored
-# anywhere. Runs on every version tag push, or on demand for a version already
-# tagged (the built version always comes from the source tree's __init__.py).
+# Publishes the Python package (python/) via PyPI Trusted Publishing (OIDC) —
+# no API token is stored anywhere. Runs on every version tag push, or on demand
+# for a version already tagged (the built version always comes from the source
+# tree's python/src/email_reply_extractor/__init__.py). The npm and crates.io
+# releases of the same tag are published by publish-npm.yml and
+# publish-crates.yml.
 on:
   push:
     tags: ["v*"]
@@ -15,15 +18,18 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.14"
+      - name: Check that the ports carry the same version
+        run: python python/tools/check_sync.py
       - name: Build sdist and wheel
+        working-directory: python
         run: |
           python -m pip install --upgrade pip build
           python -m build
       - uses: actions/upload-artifact@v4
         with:
           name: dist
-          path: dist/
+          path: python/dist/
 
   publish:
     needs: build

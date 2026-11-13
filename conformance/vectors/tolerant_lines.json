@@ -1,0 +1,1144 @@
+{
+ "format": 1,
+ "function": "tolerant_lines",
+ "module": "equivalence",
+ "public": true,
+ "parameters": [
+  {
+   "name": "text",
+   "kind": "positional_or_keyword"
+  }
+ ],
+ "returns": "list[str]",
+ "vectors": [
+  {
+   "args": {
+    "text": "   Count    |      Bytes     |  Who\n------------+----------------+-------\n 12 ( 100%) | 356501 ( 100%) | Total\n  2 (16.7%) |  11728 ( 3.3%) | NomCom Chair 2026 <nomcom-chair-2026@ietf.org>\n  2 (16.7%) |   7870 ( 2.2%) | S Moonesamy <sm+ietf@elandsys.com>\n  1 ( 8.3%) | 254437 (71.4%) | Job Snijders <job@bsd.nl>\n  1 ( 8.3%) |  23845 ( 6.7%) | Mallory Knodel <mallory.knodel@nyu.edu>\n  1 ( 8.3%) |  13289 ( 3.7%) | Warren Kumari <warren@kumari.net>\n  1 ( 8.3%) |  11235 ( 3.2%) | Roman Danyliw <rdd@cert.org>\n  1 ( 8.3%) |  10521 ( 3.0%) | Nicolas Giard <nick@staff.ietf.org>\n  1 ( 8.3%) |  10460 ( 2.9%) | Brian Campbell <bcampbell@pingidentity.com>\n  1 ( 8.3%) |   9829 ( 2.8%) | Jen Linkova <furry13@gmail.com>\n  1 ( 8.3%) |   3287 ( 0.9%) | NomCom Chair 2025 <nomcom-chair-2025@ietf.org>\n"
+   },
+   "result": [
+    "Count    |      Bytes     |  Who",
+    "------------+----------------+-------",
+    "12 ( 100%) | 356501 ( 100%) | Total",
+    "2 (16.7%) |  11728 ( 3.3%) | NomCom Chair 2026 <nomcom-chair-2026@ietf.org>",
+    "2 (16.7%) |   7870 ( 2.2%) | S Moonesamy <sm+ietf@elandsys.com>",
+    "1 ( 8.3%) | 254437 (71.4%) | Job Snijders <job@bsd.nl>",
+    "1 ( 8.3%) |  23845 ( 6.7%) | Mallory Knodel <mallory.knodel@nyu.edu>",
+    "1 ( 8.3%) |  13289 ( 3.7%) | Warren Kumari <warren@kumari.net>",
+    "1 ( 8.3%) |  11235 ( 3.2%) | Roman Danyliw <rdd@cert.org>",
+    "1 ( 8.3%) |  10521 ( 3.0%) | Nicolas Giard <nick@staff.ietf.org>",
+    "1 ( 8.3%) |  10460 ( 2.9%) | Brian Campbell <bcampbell@pingidentity.com>",
+    "1 ( 8.3%) |   9829 ( 2.8%) | Jen Linkova <furry13@gmail.com>",
+    "1 ( 8.3%) |   3287 ( 0.9%) | NomCom Chair 2025 <nomcom-chair-2025@ietf.org>"
+   ]
+  },
+  {
+   "args": {
+    "text": "   Count    |      Bytes     |  Who\n\n------------+----------------+-------\n 12 ( 100%) | 356501 ( 100%) | Total\n  2 (16.7%) |  11728 ( 3.3%) | NomCom Chair 2026 <nomcom-chair-2026@ietf.org>\n  2 (16.7%) |   7870 ( 2.2%) | S Moonesamy <sm+ietf@elandsys.com>\n  1 ( 8.3%) | 254437 (71.4%) | Job Snijders <job@bsd.nl>\n  1 ( 8.3%) |  23845 ( 6.7%) | Mallory Knodel <mallory.knodel@nyu.edu>\n  1 ( 8.3%) |  13289 ( 3.7%) | Warren Kumari <warren@kumari.net>\n  1 ( 8.3%) |  11235 ( 3.2%) | Roman Danyliw <rdd@cert.org>\n  1 ( 8.3%) |  10521 ( 3.0%) | Nicolas Giard <nick@staff.ietf.org>\n  1 ( 8.3%) |  10460 ( 2.9%) | Brian Campbell <bcampbell@pingidentity.com>\n  1 ( 8.3%) |   9829 ( 2.8%) | Jen Linkova <furry13@gmail.com>\n  1 ( 8.3%) |   3287 ( 0.9%) | NomCom Chair 2025 <nomcom-chair-2025@ietf.org>"
+   },
+   "result": [
+    "Count    |      Bytes     |  Who",
+    "------------+----------------+-------",
+    "12 ( 100%) | 356501 ( 100%) | Total",
+    "2 (16.7%) |  11728 ( 3.3%) | NomCom Chair 2026 <nomcom-chair-2026@ietf.org>",
+    "2 (16.7%) |   7870 ( 2.2%) | S Moonesamy <sm+ietf@elandsys.com>",
+    "1 ( 8.3%) | 254437 (71.4%) | Job Snijders <job@bsd.nl>",
+    "1 ( 8.3%) |  23845 ( 6.7%) | Mallory Knodel <mallory.knodel@nyu.edu>",
+    "1 ( 8.3%) |  13289 ( 3.7%) | Warren Kumari <warren@kumari.net>",
+    "1 ( 8.3%) |  11235 ( 3.2%) | Roman Danyliw <rdd@cert.org>",
+    "1 ( 8.3%) |  10521 ( 3.0%) | Nicolas Giard <nick@staff.ietf.org>",
+    "1 ( 8.3%) |  10460 ( 2.9%) | Brian Campbell <bcampbell@pingidentity.com>",
+    "1 ( 8.3%) |   9829 ( 2.8%) | Jen Linkova <furry13@gmail.com>",
+    "1 ( 8.3%) |   3287 ( 0.9%) | NomCom Chair 2025 <nomcom-chair-2025@ietf.org>"
+   ]
+  },
+  {
+   "args": {
+    "text": "(..)\nThis is Ok. Note that here the term \"random bit generator\" (RBG) is used.\nOf course we wouldn't expect a RBG to give any information about other\noutputs or the state, since it is a RBG (see below), but it may as well be\nmentioned.\n\n\nObviously the mentioned reveal also applies to hybrids such as\nX25519MLKEM768 as well ( the hybrid key derivation is not a black box to\nthe recipient. )\nHere the text talks of a \"raw random number generator\" which it\nabbreviates refers\nto as PRNG (\"P\" is for pseudo.). This is not a well defined term, and I\nagree with Quynh that it is better adjusted as  “The disclosure of the\noutput(s) of an insecure random number generator (RNG) when used in TLS and\nother protocols can be used in an attack to compromise the state of the\ninsecure RNG itself as described in [DUALEC-TLS].\"\nThe term \"raw RNG\" here seems ok -- it is undefined but I guess it means\n\"insecure RNG.\"\nHere, the term PRNG makes a comeback. Perhaps change it to RNG for\nconsistency. FIPS 203 does not offer PRNG guidance, but RBG guidance. An\nRBG may or may not be deterministic.\n\n\nTo recap: RNG is an incredibly vague term as it implies no clearly defined\nsecurity properties -- but this is what the IETF has been using. As noted,\nFIPS land talks of RBGs (and defines what they are), as does a part of the\nCC land. CC also uses the AIS 20/31 terminology and classification, in\nwhich RNG is essentially a catch-all, and protection profiles impose\nadditional, more detailed requirements for entropy generation and\npost-processing.\n\n\nFIPS 203 actually asks for an RBG, which implies:\n\n- seeding from a sufficient amount of entropy, and also\n\n- cryptographically secure post-processing where any number of output bits\ndo not offer an advantage in predicting or determining unrevealed output\nbits, assuming cryptographic security of SHA2 or AES, etc.\n\n\nThe more casual mathematical term PRNG implies neither cryptographic\nsecurity nor sufficient entropy seeding — simply determinism. Often PRNGs\nare distinguished from RNGs specifically because they do not have\nsufficient seeding.\n\n\nAmerican standard terminology has a class of RBGs called DRBGs\n(Deterministic Random Bit Generators). Because DRBGs are deteministic,\ntechnically they are PRNGs, but they are also RBGs -- when instantiated,\nthe standards (and testing labs) require adequate seeding and an\nappropriate level of security in post-processing components (for example, a\nDRBG based on AES-128 is not sufficient for a 256-bit security level).\n\nThere is also the \"CRA land\" in Europe, and ECCG & ENISA is searching for a\nsuitable compromise for entropy in lower-assurance products (non-CC.). But\nat this point acceptable DRBGs are listed in the ACM (they all have\ncryptographically secure post-processing). It has been of course proposed\nthat, e.g., Linux Random would be considered ok as an entropy source for\nconsumer products, for obvious practical reasons.\n\n\nBest Regards,\n-markku\n"
+   },
+   "result": [
+    "(..)",
+    "This is Ok. Note that here the term \"random bit generator\" (RBG) is used.",
+    "Of course we wouldn't expect a RBG to give any information about other",
+    "outputs or the state, since it is a RBG (see below), but it may as well be",
+    "mentioned.",
+    "Obviously the mentioned reveal also applies to hybrids such as",
+    "X25519MLKEM768 as well ( the hybrid key derivation is not a black box to",
+    "the recipient. )",
+    "Here the text talks of a \"raw random number generator\" which it",
+    "abbreviates refers",
+    "to as PRNG (\"P\" is for pseudo.). This is not a well defined term, and I",
+    "agree with Quynh that it is better adjusted as  “The disclosure of the",
+    "output(s) of an insecure random number generator (RNG) when used in TLS and",
+    "other protocols can be used in an attack to compromise the state of the",
+    "insecure RNG itself as described in [DUALEC-TLS].\"",
+    "The term \"raw RNG\" here seems ok -- it is undefined but I guess it means",
+    "\"insecure RNG.\"",
+    "Here, the term PRNG makes a comeback. Perhaps change it to RNG for",
+    "consistency. FIPS 203 does not offer PRNG guidance, but RBG guidance. An",
+    "RBG may or may not be deterministic.",
+    "To recap: RNG is an incredibly vague term as it implies no clearly defined",
+    "security properties -- but this is what the IETF has been using. As noted,",
+    "FIPS land talks of RBGs (and defines what they are), as does a part of the",
+    "CC land. CC also uses the AIS 20/31 terminology and classification, in",
+    "which RNG is essentially a catch-all, and protection profiles impose",
+    "additional, more detailed requirements for entropy generation and",
+    "post-processing.",
+    "FIPS 203 actually asks for an RBG, which implies:",
+    "- seeding from a sufficient amount of entropy, and also",
+    "- cryptographically secure post-processing where any number of output bits",
+    "do not offer an advantage in predicting or determining unrevealed output",
+    "bits, assuming cryptographic security of SHA2 or AES, etc.",
+    "The more casual mathematical term PRNG implies neither cryptographic",
+    "security nor sufficient entropy seeding — simply determinism. Often PRNGs",
+    "are distinguished from RNGs specifically because they do not have",
+    "sufficient seeding.",
+    "American standard terminology has a class of RBGs called DRBGs",
+    "(Deterministic Random Bit Generators). Because DRBGs are deteministic,",
+    "technically they are PRNGs, but they are also RBGs -- when instantiated,",
+    "the standards (and testing labs) require adequate seeding and an",
+    "appropriate level of security in post-processing components (for example, a",
+    "DRBG based on AES-128 is not sufficient for a 256-bit security level).",
+    "There is also the \"CRA land\" in Europe, and ECCG & ENISA is searching for a",
+    "suitable compromise for entropy in lower-assurance products (non-CC.). But",
+    "at this point acceptable DRBGs are listed in the ACM (they all have",
+    "cryptographically secure post-processing). It has been of course proposed",
+    "that, e.g., Linux Random would be considered ok as an entropy source for",
+    "consumer products, for obvious practical reasons.",
+    "Best Regards,",
+    "-markku"
+   ]
+  },
+  {
+   "args": {
+    "text": "(..)\n\nThis is Ok. Note that here the term \"random bit generator\" (RBG) is used.\nOf course we wouldn't expect a RBG to give any information about other\noutputs or the state, since it is a RBG (see below), but it may as well be\nmentioned.\n\nObviously the mentioned reveal also applies to hybrids such as\nX25519MLKEM768 as well ( the hybrid key derivation is not a black box to\nthe recipient. )\n\nHere the text talks of a \"raw random number generator\" which it\nabbreviates refers\nto as PRNG (\"P\" is for pseudo.). This is not a well defined term, and I\nagree with Quynh that it is better adjusted as  “The disclosure of the\noutput(s) of an insecure random number generator (RNG) when used in TLS and\nother protocols can be used in an attack to compromise the state of the\ninsecure RNG itself as described in [DUALEC-TLS].\"\n\nThe term \"raw RNG\" here seems ok -- it is undefined but I guess it means\n\"insecure RNG.\"\n\nHere, the term PRNG makes a comeback. Perhaps change it to RNG for\nconsistency. FIPS 203 does not offer PRNG guidance, but RBG guidance. An\nRBG may or may not be deterministic.\n\nTo recap: RNG is an incredibly vague term as it implies no clearly defined\nsecurity properties -- but this is what the IETF has been using. As noted,\nFIPS land talks of RBGs (and defines what they are), as does a part of the\nCC land. CC also uses the AIS 20/31 terminology and classification, in\nwhich RNG is essentially a catch-all, and protection profiles impose\nadditional, more detailed requirements for entropy generation and\npost-processing.\n\nFIPS 203 actually asks for an RBG, which implies:\n\n- seeding from a sufficient amount of entropy, and also\n\n- cryptographically secure post-processing where any number of output bits\ndo not offer an advantage in predicting or determining unrevealed output\nbits, assuming cryptographic security of SHA2 or AES, etc.\n\nThe more casual mathematical term PRNG implies neither cryptographic\nsecurity nor sufficient entropy seeding — simply determinism. Often PRNGs\nare distinguished from RNGs specifically because they do not have\nsufficient seeding.\n\nAmerican standard terminology has a class of RBGs called DRBGs\n(Deterministic Random Bit Generators). Because DRBGs are deteministic,\ntechnically they are PRNGs, but they are also RBGs -- when instantiated,\nthe standards (and testing labs) require adequate seeding and an\nappropriate level of security in post-processing components (for example, a\nDRBG based on AES-128 is not sufficient for a 256-bit security level).\n\nThere is also the \"CRA land\" in Europe, and ECCG & ENISA is searching for a\nsuitable compromise for entropy in lower-assurance products (non-CC.). But\nat this point acceptable DRBGs are listed in the ACM (they all have\ncryptographically secure post-processing). It has been of course proposed\nthat, e.g., Linux Random would be considered ok as an entropy source for\nconsumer products, for obvious practical reasons.\n\nBest Regards,\n-markku"
+   },
+   "result": [
+    "(..)",
+    "This is Ok. Note that here the term \"random bit generator\" (RBG) is used.",
+    "Of course we wouldn't expect a RBG to give any information about other",
+    "outputs or the state, since it is a RBG (see below), but it may as well be",
+    "mentioned.",
+    "Obviously the mentioned reveal also applies to hybrids such as",
+    "X25519MLKEM768 as well ( the hybrid key derivation is not a black box to",
+    "the recipient. )",
+    "Here the text talks of a \"raw random number generator\" which it",
+    "abbreviates refers",
+    "to as PRNG (\"P\" is for pseudo.). This is not a well defined term, and I",
+    "agree with Quynh that it is better adjusted as  “The disclosure of the",
+    "output(s) of an insecure random number generator (RNG) when used in TLS and",
+    "other protocols can be used in an attack to compromise the state of the",
+    "insecure RNG itself as described in [DUALEC-TLS].\"",
+    "The term \"raw RNG\" here seems ok -- it is undefined but I guess it means",
+    "\"insecure RNG.\"",
+    "Here, the term PRNG makes a comeback. Perhaps change it to RNG for",
+    "consistency. FIPS 203 does not offer PRNG guidance, but RBG guidance. An",
+    "RBG may or may not be deterministic.",
+    "To recap: RNG is an incredibly vague term as it implies no clearly defined",
+    "security properties -- but this is what the IETF has been using. As noted,",
+    "FIPS land talks of RBGs (and defines what they are), as does a part of the",
+    "CC land. CC also uses the AIS 20/31 terminology and classification, in",
+    "which RNG is essentially a catch-all, and protection profiles impose",
+    "additional, more detailed requirements for entropy generation and",
+    "post-processing.",
+    "FIPS 203 actually asks for an RBG, which implies:",
+    "- seeding from a sufficient amount of entropy, and also",
+    "- cryptographically secure post-processing where any number of output bits",
+    "do not offer an advantage in predicting or determining unrevealed output",
+    "bits, assuming cryptographic security of SHA2 or AES, etc.",
+    "The more casual mathematical term PRNG implies neither cryptographic",
+    "security nor sufficient entropy seeding — simply determinism. Often PRNGs",
+    "are distinguished from RNGs specifically because they do not have",
+    "sufficient seeding.",
+    "American standard terminology has a class of RBGs called DRBGs",
+    "(Deterministic Random Bit Generators). Because DRBGs are deteministic,",
+    "technically they are PRNGs, but they are also RBGs -- when instantiated,",
+    "the standards (and testing labs) require adequate seeding and an",
+    "appropriate level of security in post-processing components (for example, a",
+    "DRBG based on AES-128 is not sufficient for a 256-bit security level).",
+    "There is also the \"CRA land\" in Europe, and ECCG & ENISA is searching for a",
+    "suitable compromise for entropy in lower-assurance products (non-CC.). But",
+    "at this point acceptable DRBGs are listed in the ACM (they all have",
+    "cryptographically secure post-processing). It has been of course proposed",
+    "that, e.g., Linux Random would be considered ok as an entropy source for",
+    "consumer products, for obvious practical reasons.",
+    "Best Regards,",
+    "-markku"
+   ]
+  },
+  {
+   "args": {
+    "text": "All,\n\nThree quick questions for everyone, since the thread is working through where the artifacts sit:\n\n1) How does your work function without identity? If identity was a part of something else, how would this work?\n\n2) Can this work validate external scope, or does it define its own?\n\n3) How would this work in an open market with available web traffic and development?\n\nOne note of point, this thread feels more like an application design as opposed to a standards review.\n\nChris"
+   },
+   "result": [
+    "All,",
+    "Three quick questions for everyone, since the thread is working through where the artifacts sit:",
+    "1) How does your work function without identity? If identity was a part of something else, how would this work?",
+    "2) Can this work validate external scope, or does it define its own?",
+    "3) How would this work in an open market with available web traffic and development?",
+    "One note of point, this thread feels more like an application design as opposed to a standards review.",
+    "Chris"
+   ]
+  },
+  {
+   "args": {
+    "text": "All,\n\nThree quick questions for everyone, since the thread is working through where the artifacts sit:\n\n1) How does your work function without identity? If identity was a part of something else, how would this work?\n\n2) Can this work validate external scope, or does it define its own?\n\n3) How would this work in an open market with available web traffic and development?\n\nOne note of point, this thread feels more like an application design as opposed to a standards review.\n\nChris\n"
+   },
+   "result": [
+    "All,",
+    "Three quick questions for everyone, since the thread is working through where the artifacts sit:",
+    "1) How does your work function without identity? If identity was a part of something else, how would this work?",
+    "2) Can this work validate external scope, or does it define its own?",
+    "3) How would this work in an open market with available web traffic and development?",
+    "One note of point, this thread feels more like an application design as opposed to a standards review.",
+    "Chris"
+   ]
+  },
+  {
+   "args": {
+    "text": "Apologies, copy+paste mistake on my part there. It should say \"... about\nHPKE-4 and HPKE-6 inclusion ...\""
+   },
+   "result": [
+    "Apologies, copy+paste mistake on my part there. It should say \"... about",
+    "HPKE-4 and HPKE-6 inclusion ...\""
+   ]
+  },
+  {
+   "args": {
+    "text": "Apologies, copy+paste mistake on my part there. It should say \"... about\nHPKE-4 and HPKE-6 inclusion ...\"\n"
+   },
+   "result": [
+    "Apologies, copy+paste mistake on my part there. It should say \"... about",
+    "HPKE-4 and HPKE-6 inclusion ...\""
+   ]
+  },
+  {
+   "args": {
+    "text": "Correct.\nWe believe that we understood your point of view.\n\nWe discussed the view that all profiles create non-interoperability, and\nthat none of the certificate belongs, and we respectfully disagree.\n\nWe think you are in the rough on this.\nBut, we very much appreciated the engagement."
+   },
+   "result": [
+    "Correct.",
+    "We believe that we understood your point of view.",
+    "We discussed the view that all profiles create non-interoperability, and",
+    "that none of the certificate belongs, and we respectfully disagree.",
+    "We think you are in the rough on this.",
+    "But, we very much appreciated the engagement."
+   ]
+  },
+  {
+   "args": {
+    "text": "Correct.\nWe believe that we understood your point of view.\n\nWe discussed the view that all profiles create non-interoperability, and\nthat none of the certificate belongs, and we respectfully disagree.\n\nWe think you are in the rough on this.\nBut, we very much appreciated the engagement.\n"
+   },
+   "result": [
+    "Correct.",
+    "We believe that we understood your point of view.",
+    "We discussed the view that all profiles create non-interoperability, and",
+    "that none of the certificate belongs, and we respectfully disagree.",
+    "We think you are in the rough on this.",
+    "But, we very much appreciated the engagement."
+   ]
+  },
+  {
+   "args": {
+    "text": "Events without label \"editorial\"\n\nIssues\n------\n* quicwg/qmux (+1/-0/💬1)\n  1 issues created:\n  - Revisit graceful close? (by Lukasa)\n    https://github.com/quicwg/qmux/issues/67\n\n  1 issues received 1 new comments:\n  - #67 Revisit graceful close? (1 by LPardue)\n    https://github.com/quicwg/qmux/issues/67\n\n* quicwg/receive-ts (+0/-0/💬1)\n  1 issues received 1 new comments:\n  - #9 Write Security Considerations (1 by jbeshay)\n    https://github.com/quicwg/receive-ts/issues/9\n\nPull requests\n-------------\n* quicwg/qmux (+1/-0/💬1)\n  1 pull requests submitted:\n  -  (by KernelPanic2id)\n\n  1 pull requests received 1 new comments:\n  - #66 Fix typo: PATH_REPONSE -> PATH_RESPONSE (1 by kazuho)\n    https://github.com/quicwg/qmux/pull/66\n\n* quicwg/receive-ts (+2/-0/💬0)\n  2 pull requests submitted:\n  -  (by jbeshay)\n\n  -  (by jbeshay)\n\nRepositories tracked by this digest:\n-----------------------------------\n* https://github.com/quicwg/base-drafts\n* https://github.com/quicwg/ops-drafts\n* https://github.com/quicwg/datagram\n* https://github.com/quicwg/load-balancers\n* https://github.com/quicwg/version-negotiation\n* https://github.com/quicwg/quic-bit-grease\n* https://github.com/quicwg/qlog\n* https://github.com/quicwg/quic-v2\n* https://github.com/quicwg/multipath\n* https://github.com/quicwg/ack-frequency\n* https://github.com/quicwg/reliable-stream-reset\n* https://github.com/quicwg/qmux\n* https://github.com/quicwg/receive-ts\n* https://github.com/quicwg/extended-key-update\n* https://github.com/quicwg/address-discovery\n"
+   },
+   "result": [
+    "Events without label \"editorial\"",
+    "Issues",
+    "------",
+    "* quicwg/qmux (+1/-0/💬1)",
+    "1 issues created:",
+    "- Revisit graceful close? (by Lukasa)",
+    "https://github.com/quicwg/qmux/issues/67",
+    "1 issues received 1 new comments:",
+    "- #67 Revisit graceful close? (1 by LPardue)",
+    "https://github.com/quicwg/qmux/issues/67",
+    "* quicwg/receive-ts (+0/-0/💬1)",
+    "1 issues received 1 new comments:",
+    "- #9 Write Security Considerations (1 by jbeshay)",
+    "https://github.com/quicwg/receive-ts/issues/9",
+    "Pull requests",
+    "-------------",
+    "* quicwg/qmux (+1/-0/💬1)",
+    "1 pull requests submitted:",
+    "-  (by KernelPanic2id)",
+    "1 pull requests received 1 new comments:",
+    "- #66 Fix typo: PATH_REPONSE -> PATH_RESPONSE (1 by kazuho)",
+    "https://github.com/quicwg/qmux/pull/66",
+    "* quicwg/receive-ts (+2/-0/💬0)",
+    "2 pull requests submitted:",
+    "-  (by jbeshay)",
+    "-  (by jbeshay)",
+    "Repositories tracked by this digest:",
+    "-----------------------------------",
+    "* https://github.com/quicwg/base-drafts",
+    "* https://github.com/quicwg/ops-drafts",
+    "* https://github.com/quicwg/datagram",
+    "* https://github.com/quicwg/load-balancers",
+    "* https://github.com/quicwg/version-negotiation",
+    "* https://github.com/quicwg/quic-bit-grease",
+    "* https://github.com/quicwg/qlog",
+    "* https://github.com/quicwg/quic-v2",
+    "* https://github.com/quicwg/multipath",
+    "* https://github.com/quicwg/ack-frequency",
+    "* https://github.com/quicwg/reliable-stream-reset",
+    "* https://github.com/quicwg/qmux",
+    "* https://github.com/quicwg/receive-ts",
+    "* https://github.com/quicwg/extended-key-update",
+    "* https://github.com/quicwg/address-discovery"
+   ]
+  },
+  {
+   "args": {
+    "text": "Events without label \"editorial\"\n\nIssues\n------\n* quicwg/qmux (+1/-0/💬1)\n  1 issues created:\n  - Revisit graceful close? (by Lukasa)\n    https://github.com/quicwg/qmux/issues/67\n\n  1 issues received 1 new comments:\n  - #67 Revisit graceful close? (1 by LPardue)\n    https://github.com/quicwg/qmux/issues/67\n\n* quicwg/receive-ts (+0/-0/💬1)\n  1 issues received 1 new comments:\n  - #9 Write Security Considerations (1 by jbeshay)\n    https://github.com/quicwg/receive-ts/issues/9\n\nPull requests\n\n-------------\n* quicwg/qmux (+1/-0/💬1)\n  1 pull requests submitted:\n  -  (by KernelPanic2id)\n\n  1 pull requests received 1 new comments:\n  - #66 Fix typo: PATH_REPONSE -> PATH_RESPONSE (1 by kazuho)\n    https://github.com/quicwg/qmux/pull/66\n\n* quicwg/receive-ts (+2/-0/💬0)\n  2 pull requests submitted:\n  -  (by jbeshay)\n\n  -  (by jbeshay)\n\nRepositories tracked by this digest:\n\n-----------------------------------\n* https://github.com/quicwg/base-drafts\n* https://github.com/quicwg/ops-drafts\n* https://github.com/quicwg/datagram\n* https://github.com/quicwg/load-balancers\n* https://github.com/quicwg/version-negotiation\n* https://github.com/quicwg/quic-bit-grease\n* https://github.com/quicwg/qlog\n* https://github.com/quicwg/quic-v2\n* https://github.com/quicwg/multipath\n* https://github.com/quicwg/ack-frequency\n* https://github.com/quicwg/reliable-stream-reset\n* https://github.com/quicwg/qmux\n* https://github.com/quicwg/receive-ts\n* https://github.com/quicwg/extended-key-update\n* https://github.com/quicwg/address-discovery"
+   },
+   "result": [
+    "Events without label \"editorial\"",
+    "Issues",
+    "------",
+    "* quicwg/qmux (+1/-0/💬1)",
+    "1 issues created:",
+    "- Revisit graceful close? (by Lukasa)",
+    "https://github.com/quicwg/qmux/issues/67",
+    "1 issues received 1 new comments:",
+    "- #67 Revisit graceful close? (1 by LPardue)",
+    "https://github.com/quicwg/qmux/issues/67",
+    "* quicwg/receive-ts (+0/-0/💬1)",
+    "1 issues received 1 new comments:",
+    "- #9 Write Security Considerations (1 by jbeshay)",
+    "https://github.com/quicwg/receive-ts/issues/9",
+    "Pull requests",
+    "-------------",
+    "* quicwg/qmux (+1/-0/💬1)",
+    "1 pull requests submitted:",
+    "-  (by KernelPanic2id)",
+    "1 pull requests received 1 new comments:",
+    "- #66 Fix typo: PATH_REPONSE -> PATH_RESPONSE (1 by kazuho)",
+    "https://github.com/quicwg/qmux/pull/66",
+    "* quicwg/receive-ts (+2/-0/💬0)",
+    "2 pull requests submitted:",
+    "-  (by jbeshay)",
+    "-  (by jbeshay)",
+    "Repositories tracked by this digest:",
+    "-----------------------------------",
+    "* https://github.com/quicwg/base-drafts",
+    "* https://github.com/quicwg/ops-drafts",
+    "* https://github.com/quicwg/datagram",
+    "* https://github.com/quicwg/load-balancers",
+    "* https://github.com/quicwg/version-negotiation",
+    "* https://github.com/quicwg/quic-bit-grease",
+    "* https://github.com/quicwg/qlog",
+    "* https://github.com/quicwg/quic-v2",
+    "* https://github.com/quicwg/multipath",
+    "* https://github.com/quicwg/ack-frequency",
+    "* https://github.com/quicwg/reliable-stream-reset",
+    "* https://github.com/quicwg/qmux",
+    "* https://github.com/quicwg/receive-ts",
+    "* https://github.com/quicwg/extended-key-update",
+    "* https://github.com/quicwg/address-discovery"
+   ]
+  },
+  {
+   "args": {
+    "text": "Forwarding to regext, fwiw.\n\nFeel free to share more context and your plans with this document :-)"
+   },
+   "result": [
+    "Forwarding to regext, fwiw.",
+    "Feel free to share more context and your plans with this document :-)"
+   ]
+  },
+  {
+   "args": {
+    "text": "Forwarding to regext, fwiw.\n\nFeel free to share more context and your plans with this document :-)\n"
+   },
+   "result": [
+    "Forwarding to regext, fwiw.",
+    "Feel free to share more context and your plans with this document :-)"
+   ]
+  },
+  {
+   "args": {
+    "text": "I hereby initiate a Recall Petition pursuant to § 7.1.1 of\nRFC 8713 against SEC AD Deb Cooley, regarding a significant\nbreach in confidentiality of communication.\n\nWhile her technical competence within the Security Area is\nrecognized without a doubt, the NomCom MAY consider to verify the\ntrustworthiness of the named SEC AD based on the documented\nprocedural infractions.\n\nTo safeguard the fundamental integrity of the IETF standards\nprocess, the technical evidence regarding this unauthorized\nbackchannel disclosure is provided below.\n\nTECHNICAL EVIDENCE OF SECURITY LACK\n\n1. My Private Notice to SEC AD Deb Cooley's officially in\nDatatracker regisered Mailaddress\nMessage-ID: <3c967485-b5d2-4e93-84f6-632f81bc803d@alice-dsl.net>\nDate: Tue, 12 May 2026 10:15:36 +0200\nMIME-Version: 1.0\nUser-Agent: Mozilla Thunderbird\nContent-Language: en-US, de-DE\nFrom: Timo Gerke <timo.gerke@alice-dsl.net>\nTo: \"Deb Cooley (IETF, AD Security Area)\" <debcooley1@gmail.com>\nSubject: Notice: Operational Analysis & Cluster C430 Deadlock\n(TLS/UTA)\n\n2. SEC AD Deb Cooley's response\nReferences: <3c967485-b5d2-4e93-84f6-632f81bc803d@alice-dsl.net>\nIn-Reply-To: <3c967485-b5d2-4e93-84f6-632f81bc803d@alice-dsl.net>\nFrom: Deb Cooley <debcooley1@gmail.com>\nDate: Wed, 13 May 2026 06:42:16 +0100\nSubject: Re: Notice: Operational Analysis & Cluster C430 Deadlock\n(TLS/UTA)\nTo: Timo Gerke <timo.gerke@alice-dsl.net>\nCc: Eric Rescorla <ekr@rtfm.com>, uta-chairs@ietf.org"
+   },
+   "result": [
+    "I hereby initiate a Recall Petition pursuant to § 7.1.1 of",
+    "RFC 8713 against SEC AD Deb Cooley, regarding a significant",
+    "breach in confidentiality of communication.",
+    "While her technical competence within the Security Area is",
+    "recognized without a doubt, the NomCom MAY consider to verify the",
+    "trustworthiness of the named SEC AD based on the documented",
+    "procedural infractions.",
+    "To safeguard the fundamental integrity of the IETF standards",
+    "process, the technical evidence regarding this unauthorized",
+    "backchannel disclosure is provided below.",
+    "TECHNICAL EVIDENCE OF SECURITY LACK",
+    "1. My Private Notice to SEC AD Deb Cooley's officially in",
+    "Datatracker regisered Mailaddress",
+    "Message-ID: <3c967485-b5d2-4e93-84f6-632f81bc803d@alice-dsl.net>",
+    "Date: Tue, 12 May 2026 10:15:36 +0200",
+    "MIME-Version: 1.0",
+    "User-Agent: Mozilla Thunderbird",
+    "Content-Language: en-US, de-DE",
+    "From: Timo Gerke <timo.gerke@alice-dsl.net>",
+    "To: \"Deb Cooley (IETF, AD Security Area)\" <debcooley1@gmail.com>",
+    "Subject: Notice: Operational Analysis & Cluster C430 Deadlock",
+    "(TLS/UTA)",
+    "2. SEC AD Deb Cooley's response",
+    "References: <3c967485-b5d2-4e93-84f6-632f81bc803d@alice-dsl.net>",
+    "In-Reply-To: <3c967485-b5d2-4e93-84f6-632f81bc803d@alice-dsl.net>",
+    "From: Deb Cooley <debcooley1@gmail.com>",
+    "Date: Wed, 13 May 2026 06:42:16 +0100",
+    "Subject: Re: Notice: Operational Analysis & Cluster C430 Deadlock",
+    "(TLS/UTA)",
+    "To: Timo Gerke <timo.gerke@alice-dsl.net>",
+    "Cc: Eric Rescorla <ekr@rtfm.com>, uta-chairs@ietf.org"
+   ]
+  },
+  {
+   "args": {
+    "text": "I hereby initiate a Recall Petition pursuant to § 7.1.1 of\nRFC 8713 against SEC AD Deb Cooley, regarding a significant\nbreach in confidentiality of communication.\n\nWhile her technical competence within the Security Area is\nrecognized without a doubt, the NomCom MAY consider to verify the\ntrustworthiness of the named SEC AD based on the documented\nprocedural infractions.\n\nTo safeguard the fundamental integrity of the IETF standards\nprocess, the technical evidence regarding this unauthorized\nbackchannel disclosure is provided below.\n\nTECHNICAL EVIDENCE OF SECURITY LACK\n\n1. My Private Notice to SEC AD Deb Cooley's officially in\nDatatracker regisered Mailaddress\nMessage-ID: <3c967485-b5d2-4e93-84f6-632f81bc803d@alice-dsl.net>\nDate: Tue, 12 May 2026 10:15:36 +0200\nMIME-Version: 1.0\nUser-Agent: Mozilla Thunderbird\nContent-Language: en-US, de-DE\nFrom: Timo Gerke <timo.gerke@alice-dsl.net>\nTo: \"Deb Cooley (IETF, AD Security Area)\" <debcooley1@gmail.com>\nSubject: Notice: Operational Analysis & Cluster C430 Deadlock\n(TLS/UTA)\n\n2. SEC AD Deb Cooley's response\nReferences: <3c967485-b5d2-4e93-84f6-632f81bc803d@alice-dsl.net>\nIn-Reply-To: <3c967485-b5d2-4e93-84f6-632f81bc803d@alice-dsl.net>\nFrom: Deb Cooley <debcooley1@gmail.com>\nDate: Wed, 13 May 2026 06:42:16 +0100\nSubject: Re: Notice: Operational Analysis & Cluster C430 Deadlock\n(TLS/UTA)\nTo: Timo Gerke <timo.gerke@alice-dsl.net>\nCc: Eric Rescorla <ekr@rtfm.com>, uta-chairs@ietf.org\n"
+   },
+   "result": [
+    "I hereby initiate a Recall Petition pursuant to § 7.1.1 of",
+    "RFC 8713 against SEC AD Deb Cooley, regarding a significant",
+    "breach in confidentiality of communication.",
+    "While her technical competence within the Security Area is",
+    "recognized without a doubt, the NomCom MAY consider to verify the",
+    "trustworthiness of the named SEC AD based on the documented",
+    "procedural infractions.",
+    "To safeguard the fundamental integrity of the IETF standards",
+    "process, the technical evidence regarding this unauthorized",
+    "backchannel disclosure is provided below.",
+    "TECHNICAL EVIDENCE OF SECURITY LACK",
+    "1. My Private Notice to SEC AD Deb Cooley's officially in",
+    "Datatracker regisered Mailaddress",
+    "Message-ID: <3c967485-b5d2-4e93-84f6-632f81bc803d@alice-dsl.net>",
+    "Date: Tue, 12 May 2026 10:15:36 +0200",
+    "MIME-Version: 1.0",
+    "User-Agent: Mozilla Thunderbird",
+    "Content-Language: en-US, de-DE",
+    "From: Timo Gerke <timo.gerke@alice-dsl.net>",
+    "To: \"Deb Cooley (IETF, AD Security Area)\" <debcooley1@gmail.com>",
+    "Subject: Notice: Operational Analysis & Cluster C430 Deadlock",
+    "(TLS/UTA)",
+    "2. SEC AD Deb Cooley's response",
+    "References: <3c967485-b5d2-4e93-84f6-632f81bc803d@alice-dsl.net>",
+    "In-Reply-To: <3c967485-b5d2-4e93-84f6-632f81bc803d@alice-dsl.net>",
+    "From: Deb Cooley <debcooley1@gmail.com>",
+    "Date: Wed, 13 May 2026 06:42:16 +0100",
+    "Subject: Re: Notice: Operational Analysis & Cluster C430 Deadlock",
+    "(TLS/UTA)",
+    "To: Timo Gerke <timo.gerke@alice-dsl.net>",
+    "Cc: Eric Rescorla <ekr@rtfm.com>, uta-chairs@ietf.org"
+   ]
+  },
+  {
+   "args": {
+    "text": "I hope you are doing well. I am new to the list. It is amazing to see such\ngood work going on in the AI Agent domain. A little background on where my\ncomments come from: I work on on-device threat defense and enterprise\nidentity at Samsung Research America, and previously worked on Universal\nLogout at Okta. My comments revolve around revocation and the\nhuman-in-the-loop section, and build in part on Yaron's review of the\n2026-06-01 editor's copy.\n\n1) I see a possible tension between Section 8 and Section 11 on revocation\n\nSection 8 states that short-lived credentials provide \"an alternative to\nexplicit revocation mechanisms.\"\nSection 11 states that recipients of SSF/CAEP/RISC signals \"MUST ensure\nthat revoked or downgraded authorization is enforced without undue delay,\"\nand that cached tokens \"MUST NOT continue to be used after a revocation or\nrisk notification is received.\"\n\nI may be misreading, but these seem to pull in different directions:\nSection 8 positions expiry as a substitute for revocation, while Section 11\ntreats revocation as a live, mandatory obligation. The distinction may be\nthreat-model dependent. Expiry works well for credential theft. It works\npoorly for a compromised agent - one that is correctly attested and holds\nan unexpired credential, but whose behavior has been subverted (e.g. via\nindirect prompt injection). In that case the credential remains valid and\ncorrect for its full lifetime while the agent acts outside its intended\nscope, and typical credential lifetimes exceed the time needed to act.\n\nWould it be worth either reconciling these two sections explicitly, or\nscoping Section 8's claim to the credential-exposure threat model rather\nthan compromise generally?\n\n2) Section 11 makes subscription optional but enforcement mandatory\n\nSection 11 says participants \"MAY subscribe\" to SSF with CAEP or RISC, but\nthat recipients \"MUST\" enforce on receipt. The MUST is therefore\nconditional on the MAY. A deployment that does not subscribe has no\nrevocation path at all, and silently falls back to the Section 8 expiry\nmodel without the document saying so.\n\nWould the working group consider whether subscription should be SHOULD, or\nMUST, for agents authorized to access sensitive resources? It is entirely\npossible this is deliberate deployment latitude, in which case it may still\nbe worth stating the consequence.\n\n3) Section 10.7: same-device deployments weaken the out-of-band property\n\nYaron notes in TECH-8 that CIBA assumes a push notification to a separate\ndevice, while the agent flow may already be running on a mobile device. I\nwould like to extend that from the device-security side, as it is where\nmost of my work sits.\n\nCIBA's value in Section 10.7 rests on the interaction being genuinely\nout-of-band - the approval channel is assumed to be independent of the\nrequesting client. When an on-device agent and the authenticator\napplication share a device, that independence is gone: a device compromise\ntakes both the agent and the approval channel, and the confirmation is\nin-band in all but name. This is not hypothetical - on-device agents\nrunning alongside the user's authenticator are becoming common.\n\nThis does not invalidate the CIBA guidance, but the assumption seems worth\nstating, along with what deployments can do when it does not hold (e.g.\nrelying on platform-level isolation for the approval path, or requiring a\ndistinct device for higher-risk operations).\n\n4) Section 10.7 Note: RFC 9470 as a possible input to the mid-execution case\n\nThe Note in the Human in the Loop section observes that CIBA only accounts\nfor client initiation and does not map well to User confirmation occurring\nmid-execution. Yaron's TECH-8 raises a related concern about the threat\nmodel. I do not see RFC 9470 (OAuth 2.0 Step Up Authentication Challenge)\nin Section 18, so offering it as a possible input rather than a correction:\n\n9470's model is resource-server-initiated - the RS inspects the\nauthentication context behind the presented token and returns\ninsufficient_user_authentication with acr_values / max_age. That addresses\nthe initiation direction the Note identifies, and it places the trigger at\nthe resource, where the sensitivity of the specific action is known. The\nobvious obstacle is that 9470 assumes the client can direct a user agent to\nthe AS, which an autonomous agent does not have. But 9470 is agnostic about\nthe grant used to satisfy the challenge, so a composition may be possible:\na 9470-style challenge from the resource server as the trigger, with CIBA\nas the out-of-band grant that satisfies it.\n\nOne wrinkle if this were pursued: 9470's acr and auth_time reflect the\noriginal user authentication event and do not change on token renewal,\nwhich may need thought for long-running agent sessions.\n\nWas 9470 considered for this case? If it was ruled out, I would find the\nreasoning useful, and would rather understand it than reopen settled ground.\n\n5) Section 14 and agent-specific threats\n\nSection 14 defers to the security considerations of each referenced\nspecification, plus OAuth BCP and FAPI 2.0. Given the goal in Section 1 of\nidentifying gaps to guide future standardization, is agent-specific threat\nanalysis in scope for this document - in particular the\ncompromised-but-attested agent, where posture assessment at issuance\n(Section 8) establishes what an agent is, but not what it is doing at\nrequest time? If that is in scope and useful, I would be glad to help draft\ntext.\n\nThanks for the document. The consolidation framing in Section 1 is very\nuseful, and the prior-art mapping is more complete than most work I have\nseen in this area.\n\nHappy to upload any of these as GitHub issues if the authors prefer."
+   },
+   "result": [
+    "I hope you are doing well. I am new to the list. It is amazing to see such",
+    "good work going on in the AI Agent domain. A little background on where my",
+    "comments come from: I work on on-device threat defense and enterprise",
+    "identity at Samsung Research America, and previously worked on Universal",
+    "Logout at Okta. My comments revolve around revocation and the",
+    "human-in-the-loop section, and build in part on Yaron's review of the",
+    "2026-06-01 editor's copy.",
+    "1) I see a possible tension between Section 8 and Section 11 on revocation",
+    "Section 8 states that short-lived credentials provide \"an alternative to",
+    "explicit revocation mechanisms.\"",
+    "Section 11 states that recipients of SSF/CAEP/RISC signals \"MUST ensure",
+    "that revoked or downgraded authorization is enforced without undue delay,\"",
+    "and that cached tokens \"MUST NOT continue to be used after a revocation or",
+    "risk notification is received.\"",
+    "I may be misreading, but these seem to pull in different directions:",
+    "Section 8 positions expiry as a substitute for revocation, while Section 11",
+    "treats revocation as a live, mandatory obligation. The distinction may be",
+    "threat-model dependent. Expiry works well for credential theft. It works",
+    "poorly for a compromised agent - one that is correctly attested and holds",
+    "an unexpired credential, but whose behavior has been subverted (e.g. via",
+    "indirect prompt injection). In that case the credential remains valid and",
+    "correct for its full lifetime while the agent acts outside its intended",
+    "scope, and typical credential lifetimes exceed the time needed to act.",
+    "Would it be worth either reconciling these two sections explicitly, or",
+    "scoping Section 8's claim to the credential-exposure threat model rather",
+    "than compromise generally?",
+    "2) Section 11 makes subscription optional but enforcement mandatory",
+    "Section 11 says participants \"MAY subscribe\" to SSF with CAEP or RISC, but",
+    "that recipients \"MUST\" enforce on receipt. The MUST is therefore",
+    "conditional on the MAY. A deployment that does not subscribe has no",
+    "revocation path at all, and silently falls back to the Section 8 expiry",
+    "model without the document saying so.",
+    "Would the working group consider whether subscription should be SHOULD, or",
+    "MUST, for agents authorized to access sensitive resources? It is entirely",
+    "possible this is deliberate deployment latitude, in which case it may still",
+    "be worth stating the consequence.",
+    "3) Section 10.7: same-device deployments weaken the out-of-band property",
+    "Yaron notes in TECH-8 that CIBA assumes a push notification to a separate",
+    "device, while the agent flow may already be running on a mobile device. I",
+    "would like to extend that from the device-security side, as it is where",
+    "most of my work sits.",
+    "CIBA's value in Section 10.7 rests on the interaction being genuinely",
+    "out-of-band - the approval channel is assumed to be independent of the",
+    "requesting client. When an on-device agent and the authenticator",
+    "application share a device, that independence is gone: a device compromise",
+    "takes both the agent and the approval channel, and the confirmation is",
+    "in-band in all but name. This is not hypothetical - on-device agents",
+    "running alongside the user's authenticator are becoming common.",
+    "This does not invalidate the CIBA guidance, but the assumption seems worth",
+    "stating, along with what deployments can do when it does not hold (e.g.",
+    "relying on platform-level isolation for the approval path, or requiring a",
+    "distinct device for higher-risk operations).",
+    "4) Section 10.7 Note: RFC 9470 as a possible input to the mid-execution case",
+    "The Note in the Human in the Loop section observes that CIBA only accounts",
+    "for client initiation and does not map well to User confirmation occurring",
+    "mid-execution. Yaron's TECH-8 raises a related concern about the threat",
+    "model. I do not see RFC 9470 (OAuth 2.0 Step Up Authentication Challenge)",
+    "in Section 18, so offering it as a possible input rather than a correction:",
+    "9470's model is resource-server-initiated - the RS inspects the",
+    "authentication context behind the presented token and returns",
+    "insufficient_user_authentication with acr_values / max_age. That addresses",
+    "the initiation direction the Note identifies, and it places the trigger at",
+    "the resource, where the sensitivity of the specific action is known. The",
+    "obvious obstacle is that 9470 assumes the client can direct a user agent to",
+    "the AS, which an autonomous agent does not have. But 9470 is agnostic about",
+    "the grant used to satisfy the challenge, so a composition may be possible:",
+    "a 9470-style challenge from the resource server as the trigger, with CIBA",
+    "as the out-of-band grant that satisfies it.",
+    "One wrinkle if this were pursued: 9470's acr and auth_time reflect the",
+    "original user authentication event and do not change on token renewal,",
+    "which may need thought for long-running agent sessions.",
+    "Was 9470 considered for this case? If it was ruled out, I would find the",
+    "reasoning useful, and would rather understand it than reopen settled ground.",
+    "5) Section 14 and agent-specific threats",
+    "Section 14 defers to the security considerations of each referenced",
+    "specification, plus OAuth BCP and FAPI 2.0. Given the goal in Section 1 of",
+    "identifying gaps to guide future standardization, is agent-specific threat",
+    "analysis in scope for this document - in particular the",
+    "compromised-but-attested agent, where posture assessment at issuance",
+    "(Section 8) establishes what an agent is, but not what it is doing at",
+    "request time? If that is in scope and useful, I would be glad to help draft",
+    "text.",
+    "Thanks for the document. The consolidation framing in Section 1 is very",
+    "useful, and the prior-art mapping is more complete than most work I have",
+    "seen in this area.",
+    "Happy to upload any of these as GitHub issues if the authors prefer."
+   ]
+  },
+  {
+   "args": {
+    "text": "I hope you are doing well. I am new to the list. It is amazing to see such\ngood work going on in the AI Agent domain. A little background on where my\ncomments come from: I work on on-device threat defense and enterprise\nidentity at Samsung Research America, and previously worked on Universal\nLogout at Okta. My comments revolve around revocation and the\nhuman-in-the-loop section, and build in part on Yaron's review of the\n2026-06-01 editor's copy.\n\n1) I see a possible tension between Section 8 and Section 11 on revocation\n\nSection 8 states that short-lived credentials provide \"an alternative to\nexplicit revocation mechanisms.\"\nSection 11 states that recipients of SSF/CAEP/RISC signals \"MUST ensure\nthat revoked or downgraded authorization is enforced without undue delay,\"\nand that cached tokens \"MUST NOT continue to be used after a revocation or\nrisk notification is received.\"\n\nI may be misreading, but these seem to pull in different directions:\nSection 8 positions expiry as a substitute for revocation, while Section 11\ntreats revocation as a live, mandatory obligation. The distinction may be\nthreat-model dependent. Expiry works well for credential theft. It works\npoorly for a compromised agent - one that is correctly attested and holds\nan unexpired credential, but whose behavior has been subverted (e.g. via\nindirect prompt injection). In that case the credential remains valid and\ncorrect for its full lifetime while the agent acts outside its intended\nscope, and typical credential lifetimes exceed the time needed to act.\n\nWould it be worth either reconciling these two sections explicitly, or\nscoping Section 8's claim to the credential-exposure threat model rather\nthan compromise generally?\n\n2) Section 11 makes subscription optional but enforcement mandatory\n\nSection 11 says participants \"MAY subscribe\" to SSF with CAEP or RISC, but\nthat recipients \"MUST\" enforce on receipt. The MUST is therefore\nconditional on the MAY. A deployment that does not subscribe has no\nrevocation path at all, and silently falls back to the Section 8 expiry\nmodel without the document saying so.\n\nWould the working group consider whether subscription should be SHOULD, or\nMUST, for agents authorized to access sensitive resources? It is entirely\npossible this is deliberate deployment latitude, in which case it may still\nbe worth stating the consequence.\n\n3) Section 10.7: same-device deployments weaken the out-of-band property\n\nYaron notes in TECH-8 that CIBA assumes a push notification to a separate\ndevice, while the agent flow may already be running on a mobile device. I\nwould like to extend that from the device-security side, as it is where\nmost of my work sits.\n\nCIBA's value in Section 10.7 rests on the interaction being genuinely\nout-of-band - the approval channel is assumed to be independent of the\nrequesting client. When an on-device agent and the authenticator\napplication share a device, that independence is gone: a device compromise\ntakes both the agent and the approval channel, and the confirmation is\nin-band in all but name. This is not hypothetical - on-device agents\nrunning alongside the user's authenticator are becoming common.\n\nThis does not invalidate the CIBA guidance, but the assumption seems worth\nstating, along with what deployments can do when it does not hold (e.g.\nrelying on platform-level isolation for the approval path, or requiring a\ndistinct device for higher-risk operations).\n\n4) Section 10.7 Note: RFC 9470 as a possible input to the mid-execution case\n\nThe Note in the Human in the Loop section observes that CIBA only accounts\nfor client initiation and does not map well to User confirmation occurring\nmid-execution. Yaron's TECH-8 raises a related concern about the threat\nmodel. I do not see RFC 9470 (OAuth 2.0 Step Up Authentication Challenge)\nin Section 18, so offering it as a possible input rather than a correction:\n\n9470's model is resource-server-initiated - the RS inspects the\nauthentication context behind the presented token and returns\ninsufficient_user_authentication with acr_values / max_age. That addresses\nthe initiation direction the Note identifies, and it places the trigger at\nthe resource, where the sensitivity of the specific action is known. The\nobvious obstacle is that 9470 assumes the client can direct a user agent to\nthe AS, which an autonomous agent does not have. But 9470 is agnostic about\nthe grant used to satisfy the challenge, so a composition may be possible:\na 9470-style challenge from the resource server as the trigger, with CIBA\nas the out-of-band grant that satisfies it.\n\nOne wrinkle if this were pursued: 9470's acr and auth_time reflect the\noriginal user authentication event and do not change on token renewal,\nwhich may need thought for long-running agent sessions.\n\nWas 9470 considered for this case? If it was ruled out, I would find the\nreasoning useful, and would rather understand it than reopen settled ground.\n\n5) Section 14 and agent-specific threats\n\nSection 14 defers to the security considerations of each referenced\nspecification, plus OAuth BCP and FAPI 2.0. Given the goal in Section 1 of\nidentifying gaps to guide future standardization, is agent-specific threat\nanalysis in scope for this document - in particular the\ncompromised-but-attested agent, where posture assessment at issuance\n(Section 8) establishes what an agent is, but not what it is doing at\nrequest time? If that is in scope and useful, I would be glad to help draft\ntext.\n\nThanks for the document. The consolidation framing in Section 1 is very\nuseful, and the prior-art mapping is more complete than most work I have\nseen in this area.\n\nHappy to upload any of these as GitHub issues if the authors prefer.\n"
+   },
+   "result": [
+    "I hope you are doing well. I am new to the list. It is amazing to see such",
+    "good work going on in the AI Agent domain. A little background on where my",
+    "comments come from: I work on on-device threat defense and enterprise",
+    "identity at Samsung Research America, and previously worked on Universal",
+    "Logout at Okta. My comments revolve around revocation and the",
+    "human-in-the-loop section, and build in part on Yaron's review of the",
+    "2026-06-01 editor's copy.",
+    "1) I see a possible tension between Section 8 and Section 11 on revocation",
+    "Section 8 states that short-lived credentials provide \"an alternative to",
+    "explicit revocation mechanisms.\"",
+    "Section 11 states that recipients of SSF/CAEP/RISC signals \"MUST ensure",
+    "that revoked or downgraded authorization is enforced without undue delay,\"",
+    "and that cached tokens \"MUST NOT continue to be used after a revocation or",
+    "risk notification is received.\"",
+    "I may be misreading, but these seem to pull in different directions:",
+    "Section 8 positions expiry as a substitute for revocation, while Section 11",
+    "treats revocation as a live, mandatory obligation. The distinction may be",
+    "threat-model dependent. Expiry works well for credential theft. It works",
+    "poorly for a compromised agent - one that is correctly attested and holds",
+    "an unexpired credential, but whose behavior has been subverted (e.g. via",
+    "indirect prompt injection). In that case the credential remains valid and",
+    "correct for its full lifetime while the agent acts outside its intended",
+    "scope, and typical credential lifetimes exceed the time needed to act.",
+    "Would it be worth either reconciling these two sections explicitly, or",
+    "scoping Section 8's claim to the credential-exposure threat model rather",
+    "than compromise generally?",
+    "2) Section 11 makes subscription optional but enforcement mandatory",
+    "Section 11 says participants \"MAY subscribe\" to SSF with CAEP or RISC, but",
+    "that recipients \"MUST\" enforce on receipt. The MUST is therefore",
+    "conditional on the MAY. A deployment that does not subscribe has no",
+    "revocation path at all, and silently falls back to the Section 8 expiry",
+    "model without the document saying so.",
+    "Would the working group consider whether subscription should be SHOULD, or",
+    "MUST, for agents authorized to access sensitive resources? It is entirely",
+    "possible this is deliberate deployment latitude, in which case it may still",
+    "be worth stating the consequence.",
+    "3) Section 10.7: same-device deployments weaken the out-of-band property",
+    "Yaron notes in TECH-8 that CIBA assumes a push notification to a separate",
+    "device, while the agent flow may already be running on a mobile device. I",
+    "would like to extend that from the device-security side, as it is where",
+    "most of my work sits.",
+    "CIBA's value in Section 10.7 rests on the interaction being genuinely",
+    "out-of-band - the approval channel is assumed to be independent of the",
+    "requesting client. When an on-device agent and the authenticator",
+    "application share a device, that independence is gone: a device compromise",
+    "takes both the agent and the approval channel, and the confirmation is",
+    "in-band in all but name. This is not hypothetical - on-device agents",
+    "running alongside the user's authenticator are becoming common.",
+    "This does not invalidate the CIBA guidance, but the assumption seems worth",
+    "stating, along with what deployments can do when it does not hold (e.g.",
+    "relying on platform-level isolation for the approval path, or requiring a",
+    "distinct device for higher-risk operations).",
+    "4) Section 10.7 Note: RFC 9470 as a possible input to the mid-execution case",
+    "The Note in the Human in the Loop section observes that CIBA only accounts",
+    "for client initiation and does not map well to User confirmation occurring",
+    "mid-execution. Yaron's TECH-8 raises a related concern about the threat",
+    "model. I do not see RFC 9470 (OAuth 2.0 Step Up Authentication Challenge)",
+    "in Section 18, so offering it as a possible input rather than a correction:",
+    "9470's model is resource-server-initiated - the RS inspects the",
+    "authentication context behind the presented token and returns",
+    "insufficient_user_authentication with acr_values / max_age. That addresses",
+    "the initiation direction the Note identifies, and it places the trigger at",
+    "the resource, where the sensitivity of the specific action is known. The",
+    "obvious obstacle is that 9470 assumes the client can direct a user agent to",
+    "the AS, which an autonomous agent does not have. But 9470 is agnostic about",
+    "the grant used to satisfy the challenge, so a composition may be possible:",
+    "a 9470-style challenge from the resource server as the trigger, with CIBA",
+    "as the out-of-band grant that satisfies it.",
+    "One wrinkle if this were pursued: 9470's acr and auth_time reflect the",
+    "original user authentication event and do not change on token renewal,",
+    "which may need thought for long-running agent sessions.",
+    "Was 9470 considered for this case? If it was ruled out, I would find the",
+    "reasoning useful, and would rather understand it than reopen settled ground.",
+    "5) Section 14 and agent-specific threats",
+    "Section 14 defers to the security considerations of each referenced",
+    "specification, plus OAuth BCP and FAPI 2.0. Given the goal in Section 1 of",
+    "identifying gaps to guide future standardization, is agent-specific threat",
+    "analysis in scope for this document - in particular the",
+    "compromised-but-attested agent, where posture assessment at issuance",
+    "(Section 8) establishes what an agent is, but not what it is doing at",
+    "request time? If that is in scope and useful, I would be glad to help draft",
+    "text.",
+    "Thanks for the document. The consolidation framing in Section 1 is very",
+    "useful, and the prior-art mapping is more complete than most work I have",
+    "seen in this area.",
+    "Happy to upload any of these as GitHub issues if the authors prefer."
+   ]
+  },
+  {
+   "args": {
+    "text": "Is there a thread to discuss the merits of the two PQ + T signature drafts\nin comparison? (I think the email you sent for agenda meant to reference\n[2] and [3])\n\nApologies for not being around live for that session,\n—Daniel"
+   },
+   "result": [
+    "Is there a thread to discuss the merits of the two PQ + T signature drafts",
+    "in comparison? (I think the email you sent for agenda meant to reference",
+    "[2] and [3])",
+    "Apologies for not being around live for that session,",
+    "—Daniel"
+   ]
+  },
+  {
+   "args": {
+    "text": "Is there a thread to discuss the merits of the two PQ + T signature drafts\nin comparison? (I think the email you sent for agenda meant to reference\n[2] and [3])\n\nApologies for not being around live for that session,\n—Daniel\n"
+   },
+   "result": [
+    "Is there a thread to discuss the merits of the two PQ + T signature drafts",
+    "in comparison? (I think the email you sent for agenda meant to reference",
+    "[2] and [3])",
+    "Apologies for not being around live for that session,",
+    "—Daniel"
+   ]
+  },
+  {
+   "args": {
+    "text": "Just a small correction: The slides of ANSI say \"higher confidence\"\nrather than \"high confidence\" when talking about ML-KEM which feels a\nbit different to me since \"higher\" seems to imply that it's relative to\nsomething else. Only FN-DSA seems to be classified as \"high confidence\"\nin the slides.\u00a0Just wanted to point that out for clarity. The reference\nyou provided is appreciated though!\n\nPs. I have been lurking this list since April and this is my first time\nreplying. I am still discovering a bit how everything works over here.\nPlease let me know if I do not follow proper etiquette."
+   },
+   "result": [
+    "Just a small correction: The slides of ANSI say \"higher confidence\"",
+    "rather than \"high confidence\" when talking about ML-KEM which feels a",
+    "bit different to me since \"higher\" seems to imply that it's relative to",
+    "something else. Only FN-DSA seems to be classified as \"high confidence\"",
+    "in the slides. Just wanted to point that out for clarity. The reference",
+    "you provided is appreciated though!",
+    "Ps. I have been lurking this list since April and this is my first time",
+    "replying. I am still discovering a bit how everything works over here.",
+    "Please let me know if I do not follow proper etiquette."
+   ]
+  },
+  {
+   "args": {
+    "text": "Just a small correction: The slides of ANSI say \"higher confidence\"\nrather than \"high confidence\" when talking about ML-KEM which feels a\nbit different to me since \"higher\" seems to imply that it's relative to\nsomething else. Only FN-DSA seems to be classified as \"high confidence\"\nin the slides.\u00a0Just wanted to point that out for clarity. The reference\nyou provided is appreciated though!\n\n\nPs. I have been lurking this list since April and this is my first time\nreplying. I am still discovering a bit how everything works over here.\nPlease let me know if I do not follow proper etiquette.\n"
+   },
+   "result": [
+    "Just a small correction: The slides of ANSI say \"higher confidence\"",
+    "rather than \"high confidence\" when talking about ML-KEM which feels a",
+    "bit different to me since \"higher\" seems to imply that it's relative to",
+    "something else. Only FN-DSA seems to be classified as \"high confidence\"",
+    "in the slides. Just wanted to point that out for clarity. The reference",
+    "you provided is appreciated though!",
+    "Ps. I have been lurking this list since April and this is my first time",
+    "replying. I am still discovering a bit how everything works over here.",
+    "Please let me know if I do not follow proper etiquette."
+   ]
+  },
+  {
+   "args": {
+    "text": "Minor nit:\n[...]\nWhen reading \"the Delegation Type RRsets and NSEC (or NSEC3) records can be replaced\", I was briefly confused regarding what about their RRSIGs.\n\nSuggest adding \"signed\" before \"Delegation Type RRsets\", or \"and their signatures\" after \"records\".\n"
+   },
+   "result": [
+    "Minor nit:",
+    "[...]",
+    "When reading \"the Delegation Type RRsets and NSEC (or NSEC3) records can be replaced\", I was briefly confused regarding what about their RRSIGs.",
+    "Suggest adding \"signed\" before \"Delegation Type RRsets\", or \"and their signatures\" after \"records\"."
+   ]
+  },
+  {
+   "args": {
+    "text": "Minor nit:\n[...]\n\nWhen reading \"the Delegation Type RRsets and NSEC (or NSEC3) records can be replaced\", I was briefly confused regarding what about their RRSIGs.\n\nSuggest adding \"signed\" before \"Delegation Type RRsets\", or \"and their signatures\" after \"records\"."
+   },
+   "result": [
+    "Minor nit:",
+    "[...]",
+    "When reading \"the Delegation Type RRsets and NSEC (or NSEC3) records can be replaced\", I was briefly confused regarding what about their RRSIGs.",
+    "Suggest adding \"signed\" before \"Delegation Type RRsets\", or \"and their signatures\" after \"records\"."
+   ]
+  },
+  {
+   "args": {
+    "text": "Since this draft isn't tagged for any WG, not even gen-dispatch which seems appropriate, I'll post here, on one aspect only.\n\nAn IETF process document cannot define RPC duties. That would need a draft submitted to the RSWG, or rephrasing as the IETF's _expectations_ of the RPC.\n\nAlso:\nThat is already made clear at [1], points 1 and 3. It is not unknown for the RPC to discover poor grammar that conceals a technical ambiguity or technical error, so point 3 is not academic. Such late clarifications are to everyone's benefit. (I agree that they should be public knowledge, like everything that happens during AUTH48.)\n\n[1] https://www.rfc-editor.org/rfc/rfc9920.html#name-rpc-responsibilities\n\nRegards/Ngā mihi\n    Brian Carpenter\n"
+   },
+   "result": [
+    "Since this draft isn't tagged for any WG, not even gen-dispatch which seems appropriate, I'll post here, on one aspect only.",
+    "An IETF process document cannot define RPC duties. That would need a draft submitted to the RSWG, or rephrasing as the IETF's _expectations_ of the RPC.",
+    "Also:",
+    "That is already made clear at [1], points 1 and 3. It is not unknown for the RPC to discover poor grammar that conceals a technical ambiguity or technical error, so point 3 is not academic. Such late clarifications are to everyone's benefit. (I agree that they should be public knowledge, like everything that happens during AUTH48.)",
+    "[1] https://www.rfc-editor.org/rfc/rfc9920.html#name-rpc-responsibilities",
+    "Regards/Ngā mihi",
+    "Brian Carpenter"
+   ]
+  },
+  {
+   "args": {
+    "text": "Since this draft isn't tagged for any WG, not even gen-dispatch which seems appropriate, I'll post here, on one aspect only.\n\nAn IETF process document cannot define RPC duties. That would need a draft submitted to the RSWG, or rephrasing as the IETF's _expectations_ of the RPC.\n\nAlso:\n\nThat is already made clear at [1], points 1 and 3. It is not unknown for the RPC to discover poor grammar that conceals a technical ambiguity or technical error, so point 3 is not academic. Such late clarifications are to everyone's benefit. (I agree that they should be public knowledge, like everything that happens during AUTH48.)\n\n[1] https://www.rfc-editor.org/rfc/rfc9920.html#name-rpc-responsibilities\n\nRegards/Ngā mihi\n    Brian Carpenter"
+   },
+   "result": [
+    "Since this draft isn't tagged for any WG, not even gen-dispatch which seems appropriate, I'll post here, on one aspect only.",
+    "An IETF process document cannot define RPC duties. That would need a draft submitted to the RSWG, or rephrasing as the IETF's _expectations_ of the RPC.",
+    "Also:",
+    "That is already made clear at [1], points 1 and 3. It is not unknown for the RPC to discover poor grammar that conceals a technical ambiguity or technical error, so point 3 is not academic. Such late clarifications are to everyone's benefit. (I agree that they should be public knowledge, like everything that happens during AUTH48.)",
+    "[1] https://www.rfc-editor.org/rfc/rfc9920.html#name-rpc-responsibilities",
+    "Regards/Ngā mihi",
+    "Brian Carpenter"
+   ]
+  },
+  {
+   "args": {
+    "text": "Some quick replies.\n\nThanks.\n\nThese would be different domains that don't connect to each other. You can run separate instances, especially when there are multicast group boundaries so the well-known groups stay disjoint.\n\nIf there are no group boundaries, then the packets go to all members of the well-known group but are dropped by the ones without common encryption keys.\n\nRight, a tradeoff between plug-and-play and secure communication.\n\nI thought we had something like that. I'll leave this for Mike and Stig to comment about.\n\nDino"
+   },
+   "result": [
+    "Some quick replies.",
+    "Thanks.",
+    "These would be different domains that don't connect to each other. You can run separate instances, especially when there are multicast group boundaries so the well-known groups stay disjoint.",
+    "If there are no group boundaries, then the packets go to all members of the well-known group but are dropped by the ones without common encryption keys.",
+    "Right, a tradeoff between plug-and-play and secure communication.",
+    "I thought we had something like that. I'll leave this for Mike and Stig to comment about.",
+    "Dino"
+   ]
+  },
+  {
+   "args": {
+    "text": "Some quick replies.\n\nThanks.\n\nThese would be different domains that don't connect to each other. You can run separate instances, especially when there are multicast group boundaries so the well-known groups stay disjoint.\n\nIf there are no group boundaries, then the packets go to all members of the well-known group but are dropped by the ones without common encryption keys.\n\nRight, a tradeoff between plug-and-play and secure communication.\n\nI thought we had something like that. I'll leave this for Mike and Stig to comment about.\n\nDino\n"
+   },
+   "result": [
+    "Some quick replies.",
+    "Thanks.",
+    "These would be different domains that don't connect to each other. You can run separate instances, especially when there are multicast group boundaries so the well-known groups stay disjoint.",
+    "If there are no group boundaries, then the packets go to all members of the well-known group but are dropped by the ones without common encryption keys.",
+    "Right, a tradeoff between plug-and-play and secure communication.",
+    "I thought we had something like that. I'll leave this for Mike and Stig to comment about.",
+    "Dino"
+   ]
+  },
+  {
+   "args": {
+    "text": "Stefano,\n\nThe best approach is to standardize a QUIC extension that indicates\nthat the server has several IP addresses. This would be an excellent\nuse case for\nhttps://datatracker.ietf.org/doc/html/draft-piraux-quic-additional-addresses-04\n\nOlivier"
+   },
+   "result": [
+    "Stefano,",
+    "The best approach is to standardize a QUIC extension that indicates",
+    "that the server has several IP addresses. This would be an excellent",
+    "use case for",
+    "https://datatracker.ietf.org/doc/html/draft-piraux-quic-additional-addresses-04",
+    "Olivier"
+   ]
+  },
+  {
+   "args": {
+    "text": "Stefano,\n\nThe best approach is to standardize a QUIC extension that indicates\nthat the server has several IP addresses. This would be an excellent\nuse case for\nhttps://datatracker.ietf.org/doc/html/draft-piraux-quic-additional-addresses-04\n\nOlivier\n"
+   },
+   "result": [
+    "Stefano,",
+    "The best approach is to standardize a QUIC extension that indicates",
+    "that the server has several IP addresses. This would be an excellent",
+    "use case for",
+    "https://datatracker.ietf.org/doc/html/draft-piraux-quic-additional-addresses-04",
+    "Olivier"
+   ]
+  },
+  {
+   "args": {
+    "text": "Thank you for sharing your thoughts on this.\n\nLet me remind that the reasoning for having such policy in the charter is to ensure that we are defining new mappings that are motivated by real operational needs.\n\nProcess-wise, consensus to adopt a document does not mean that the document will be necessary progressed to an RFC. Consensus to publish will typically be assessed during WGLC. Also, a WG may decide to adopt a doc, but decide later that it is better to park a spec , etc.\n\nNow back to this specific document, the information you shared below is a great info to record in the document writeup to demonstrate how it adheres to the deployment policy in the charter.\n\nFYI, we received comments during the IESG review of the QUIC draft on that same point. We managed to address it as I already had the required arguments gathered as part of my AD review (thanks to the authors)."
+   },
+   "result": [
+    "Thank you for sharing your thoughts on this.",
+    "Let me remind that the reasoning for having such policy in the charter is to ensure that we are defining new mappings that are motivated by real operational needs.",
+    "Process-wise, consensus to adopt a document does not mean that the document will be necessary progressed to an RFC. Consensus to publish will typically be assessed during WGLC. Also, a WG may decide to adopt a doc, but decide later that it is better to park a spec , etc.",
+    "Now back to this specific document, the information you shared below is a great info to record in the document writeup to demonstrate how it adheres to the deployment policy in the charter.",
+    "FYI, we received comments during the IESG review of the QUIC draft on that same point. We managed to address it as I already had the required arguments gathered as part of my AD review (thanks to the authors)."
+   ]
+  },
+  {
+   "args": {
+    "text": "Thank you for sharing your thoughts on this.\n\nLet me remind that the reasoning for having such policy in the charter is to ensure that we are defining new mappings that are motivated by real operational needs.\n\nProcess-wise, consensus to adopt a document does not mean that the document will be necessary progressed to an RFC. Consensus to publish will typically be assessed during WGLC. Also, a WG may decide to adopt a doc, but decide later that it is better to park a spec , etc.\n\nNow back to this specific document, the information you shared below is a great info to record in the document writeup to demonstrate how it adheres to the deployment policy in the charter.\n\nFYI, we received comments during the IESG review of the QUIC draft on that same point. We managed to address it as I already had the required arguments gathered as part of my AD review (thanks to the authors).\n"
+   },
+   "result": [
+    "Thank you for sharing your thoughts on this.",
+    "Let me remind that the reasoning for having such policy in the charter is to ensure that we are defining new mappings that are motivated by real operational needs.",
+    "Process-wise, consensus to adopt a document does not mean that the document will be necessary progressed to an RFC. Consensus to publish will typically be assessed during WGLC. Also, a WG may decide to adopt a doc, but decide later that it is better to park a spec , etc.",
+    "Now back to this specific document, the information you shared below is a great info to record in the document writeup to demonstrate how it adheres to the deployment policy in the charter.",
+    "FYI, we received comments during the IESG review of the QUIC draft on that same point. We managed to address it as I already had the required arguments gathered as part of my AD review (thanks to the authors)."
+   ]
+  },
+  {
+   "args": {
+    "text": "Thank you for spelling out the four possession-side rows. I agree that rows\n1-4 should remain a substrate and authorize nothing by themselves. I\nattached a short review and test-vector plan.\n\nThree corrections are important before treating the rows as a verifier\ncontract:\n\n   - Row 1 must be limited to attested inputs that are actually measured\n   and bound to the enrolled key and enrollment record. Key existence alone is\n   not evidence for every claimed input.\n   - Row 3 should enumerate the monitored conditions, detection timing, and\n   the governed key operations. Key erasure protects the next relevant key use\n   or agreement; an established connection still needs its own stated\n   management rule.\n   - Row 4 needs a re-assessment lease or expiry, delivery and clock\n   assumptions, and a grace policy. Non-delivery does not fail closed merely\n   by being called non-delivery; after the lease, the next governed key use\n   must fail because current status cannot be established.\n\nThe attached vectors cover enrollment binding, live possession, local\nfailure before and after a connection, lifecycle delivery, lease expiry,\nand replay/stale/wrong-device events. The proposed outcome labels are\nvector vocabulary only, not a request for new wire-level errors."
+   },
+   "result": [
+    "Thank you for spelling out the four possession-side rows. I agree that rows",
+    "1-4 should remain a substrate and authorize nothing by themselves. I",
+    "attached a short review and test-vector plan.",
+    "Three corrections are important before treating the rows as a verifier",
+    "contract:",
+    "- Row 1 must be limited to attested inputs that are actually measured",
+    "and bound to the enrolled key and enrollment record. Key existence alone is",
+    "not evidence for every claimed input.",
+    "- Row 3 should enumerate the monitored conditions, detection timing, and",
+    "the governed key operations. Key erasure protects the next relevant key use",
+    "or agreement; an established connection still needs its own stated",
+    "management rule.",
+    "- Row 4 needs a re-assessment lease or expiry, delivery and clock",
+    "assumptions, and a grace policy. Non-delivery does not fail closed merely",
+    "by being called non-delivery; after the lease, the next governed key use",
+    "must fail because current status cannot be established.",
+    "The attached vectors cover enrollment binding, live possession, local",
+    "failure before and after a connection, lifecycle delivery, lease expiry,",
+    "and replay/stale/wrong-device events. The proposed outcome labels are",
+    "vector vocabulary only, not a request for new wire-level errors."
+   ]
+  },
+  {
+   "args": {
+    "text": "Thank you for spelling out the four possession-side rows. I agree that rows\n1-4 should remain a substrate and authorize nothing by themselves. I\nattached a short review and test-vector plan.\n\nThree corrections are important before treating the rows as a verifier\ncontract:\n\n   - Row 1 must be limited to attested inputs that are actually measured\n   and bound to the enrolled key and enrollment record. Key existence alone is\n   not evidence for every claimed input.\n   - Row 3 should enumerate the monitored conditions, detection timing, and\n   the governed key operations. Key erasure protects the next relevant key use\n   or agreement; an established connection still needs its own stated\n   management rule.\n   - Row 4 needs a re-assessment lease or expiry, delivery and clock\n   assumptions, and a grace policy. Non-delivery does not fail closed merely\n   by being called non-delivery; after the lease, the next governed key use\n   must fail because current status cannot be established.\n\nThe attached vectors cover enrollment binding, live possession, local\nfailure before and after a connection, lifecycle delivery, lease expiry,\nand replay/stale/wrong-device events. The proposed outcome labels are\nvector vocabulary only, not a request for new wire-level errors.\n"
+   },
+   "result": [
+    "Thank you for spelling out the four possession-side rows. I agree that rows",
+    "1-4 should remain a substrate and authorize nothing by themselves. I",
+    "attached a short review and test-vector plan.",
+    "Three corrections are important before treating the rows as a verifier",
+    "contract:",
+    "- Row 1 must be limited to attested inputs that are actually measured",
+    "and bound to the enrolled key and enrollment record. Key existence alone is",
+    "not evidence for every claimed input.",
+    "- Row 3 should enumerate the monitored conditions, detection timing, and",
+    "the governed key operations. Key erasure protects the next relevant key use",
+    "or agreement; an established connection still needs its own stated",
+    "management rule.",
+    "- Row 4 needs a re-assessment lease or expiry, delivery and clock",
+    "assumptions, and a grace policy. Non-delivery does not fail closed merely",
+    "by being called non-delivery; after the lease, the next governed key use",
+    "must fail because current status cannot be established.",
+    "The attached vectors cover enrollment binding, live possession, local",
+    "failure before and after a connection, lifecycle delivery, lease expiry,",
+    "and replay/stale/wrong-device events. The proposed outcome labels are",
+    "vector vocabulary only, not a request for new wire-level errors."
+   ]
+  },
+  {
+   "args": {
+    "text": "Thanks Iman, I see. Possession proven live; authorization carried as evidence bound to the action. And \"keys pinned out of band\" is the case — raw keys registered directly with the relying party, no CA. We reached the same no-stranger model from the user side.\n\nI agree on your recommendation: signalling first, token second. A combined token can stay combined as long as the event names the row it revokes. That is deployable now, without reissuing anyone.\nBtw, your \"possession no longer proven\" event is the endpoint-presence signal I have proposed in the Shared Signals WG. So we are converging. The row-scoped signal I want is the possession row of your model.\n\nAnd, a row-scoped signal lets the relying party remove trust on the possession row. It cannot prove it. A copied bearer token still presents as valid possession, because the token cannot show it is live. So the signal handles the deployed token world — it removes the wrong. Proving the possession row right, at the moment of use, needs a key that is live and exists in only one place.\n\nNow to the idea the possession row can carry users and agents, not just workloads.\nBecause the row is not about who the actor is. It is about where the key lives. If the key is live and nowhere else, then whoever is bound to it is provably present. The actor slot is pluggable:\nWorkload: the key is the platform's. Possession means the workload is live. This is mTLS today.\n\nHuman: the human is verified into the platform. The platform's live key then stands for \"this verified human is present.\" Same row.\nAgent: the agent runs on the platform and acts for a human verified into it. Possession means the agent is live and the human it acts for is present. Two actors, one platform, one key.\n\nThere is also a place where this row meets your gravest risk directly. You name rendering faithfulness as the thing cryptography cannot prove — the human signs a hash believing it is action X when it is Y — and your mitigation is a second surface on hardware the operator does not author. That surface is the endpoint. So the possession row does not only sit beside EP; the platform that proves live possession can also be the trusted display your receipt needs. The signature proves a key signed; the endpoint can help prove the human saw the true action.\n\nWe call this LIT — Live Identity in Transaction. The key is live: it exists only while its conditions hold — the right user present, the device sound — and is gone the moment any condition fails. So its presence is its validity. If the handshake completes, the conditions are met; nothing separate to check. And the key exists in one place only, so no copy is off somewhere staying alive when the user is not.\nUnderneath is a fuller definition of identity: not one thing, proven once, but three things, proven live — who is acting, on which platform, under which conditions. The industry proves the first, at one moment. LIT proves all three, in the channel, continuously.\n\nIn WIMSE this appears as a profile, under the precise term — condition-bounded credential. LIT is the general name for the same idea.\n\nYour EP receipt sits on the authorization row; LIT sits on the possession row. Together they are your two rows, each proven on its own terms.\nYou asked why the human binds into the platform. The core is in the possession row above — the human is verified into the platform, and the platform's live key then stands for that verified human being present. The rest — how the agent case composes two actors on one platform, and how the trusted-rendering piece works — needs more room than a mail. Happy to walk the group through it. Vienna would be ideal — I may not make it in person, but I can do it remotely, or on a call whenever it suits the WG."
+   },
+   "result": [
+    "Thanks Iman, I see. Possession proven live; authorization carried as evidence bound to the action. And \"keys pinned out of band\" is the case — raw keys registered directly with the relying party, no CA. We reached the same no-stranger model from the user side.",
+    "I agree on your recommendation: signalling first, token second. A combined token can stay combined as long as the event names the row it revokes. That is deployable now, without reissuing anyone.",
+    "Btw, your \"possession no longer proven\" event is the endpoint-presence signal I have proposed in the Shared Signals WG. So we are converging. The row-scoped signal I want is the possession row of your model.",
+    "And, a row-scoped signal lets the relying party remove trust on the possession row. It cannot prove it. A copied bearer token still presents as valid possession, because the token cannot show it is live. So the signal handles the deployed token world — it removes the wrong. Proving the possession row right, at the moment of use, needs a key that is live and exists in only one place.",
+    "Now to the idea the possession row can carry users and agents, not just workloads.",
+    "Because the row is not about who the actor is. It is about where the key lives. If the key is live and nowhere else, then whoever is bound to it is provably present. The actor slot is pluggable:",
+    "Workload: the key is the platform's. Possession means the workload is live. This is mTLS today.",
+    "Human: the human is verified into the platform. The platform's live key then stands for \"this verified human is present.\" Same row.",
+    "Agent: the agent runs on the platform and acts for a human verified into it. Possession means the agent is live and the human it acts for is present. Two actors, one platform, one key.",
+    "There is also a place where this row meets your gravest risk directly. You name rendering faithfulness as the thing cryptography cannot prove — the human signs a hash believing it is action X when it is Y — and your mitigation is a second surface on hardware the operator does not author. That surface is the endpoint. So the possession row does not only sit beside EP; the platform that proves live possession can also be the trusted display your receipt needs. The signature proves a key signed; the endpoint can help prove the human saw the true action.",
+    "We call this LIT — Live Identity in Transaction. The key is live: it exists only while its conditions hold — the right user present, the device sound — and is gone the moment any condition fails. So its presence is its validity. If the handshake completes, the conditions are met; nothing separate to check. And the key exists in one place only, so no copy is off somewhere staying alive when the user is not.",
+    "Underneath is a fuller definition of identity: not one thing, proven once, but three things, proven live — who is acting, on which platform, under which conditions. The industry proves the first, at one moment. LIT proves all three, in the channel, continuously.",
+    "In WIMSE this appears as a profile, under the precise term — condition-bounded credential. LIT is the general name for the same idea.",
+    "Your EP receipt sits on the authorization row; LIT sits on the possession row. Together they are your two rows, each proven on its own terms.",
+    "You asked why the human binds into the platform. The core is in the possession row above — the human is verified into the platform, and the platform's live key then stands for that verified human being present. The rest — how the agent case composes two actors on one platform, and how the trusted-rendering piece works — needs more room than a mail. Happy to walk the group through it. Vienna would be ideal — I may not make it in person, but I can do it remotely, or on a call whenever it suits the WG."
+   ]
+  },
+  {
+   "args": {
+    "text": "Thanks Iman, I see. Possession proven live; authorization carried as evidence bound to the action. And \"keys pinned out of band\" is the case — raw keys registered directly with the relying party, no CA. We reached the same no-stranger model from the user side.\n\nI agree on your recommendation: signalling first, token second. A combined token can stay combined as long as the event names the row it revokes. That is deployable now, without reissuing anyone.\nBtw, your \"possession no longer proven\" event is the endpoint-presence signal I have proposed in the Shared Signals WG. So we are converging. The row-scoped signal I want is the possession row of your model.\n\nAnd, a row-scoped signal lets the relying party remove trust on the possession row. It cannot prove it. A copied bearer token still presents as valid possession, because the token cannot show it is live. So the signal handles the deployed token world — it removes the wrong. Proving the possession row right, at the moment of use, needs a key that is live and exists in only one place.\n\nNow to the idea the possession row can carry users and agents, not just workloads.\nBecause the row is not about who the actor is. It is about where the key lives. If the key is live and nowhere else, then whoever is bound to it is provably present. The actor slot is pluggable:\nWorkload: the key is the platform's. Possession means the workload is live. This is mTLS today.\n\nHuman: the human is verified into the platform. The platform's live key then stands for \"this verified human is present.\" Same row.\nAgent: the agent runs on the platform and acts for a human verified into it. Possession means the agent is live and the human it acts for is present. Two actors, one platform, one key.\n\nThere is also a place where this row meets your gravest risk directly. You name rendering faithfulness as the thing cryptography cannot prove — the human signs a hash believing it is action X when it is Y — and your mitigation is a second surface on hardware the operator does not author. That surface is the endpoint. So the possession row does not only sit beside EP; the platform that proves live possession can also be the trusted display your receipt needs. The signature proves a key signed; the endpoint can help prove the human saw the true action.\n\nWe call this LIT — Live Identity in Transaction. The key is live: it exists only while its conditions hold — the right user present, the device sound — and is gone the moment any condition fails. So its presence is its validity. If the handshake completes, the conditions are met; nothing separate to check. And the key exists in one place only, so no copy is off somewhere staying alive when the user is not.\nUnderneath is a fuller definition of identity: not one thing, proven once, but three things, proven live — who is acting, on which platform, under which conditions. The industry proves the first, at one moment. LIT proves all three, in the channel, continuously.\n\nIn WIMSE this appears as a profile, under the precise term — condition-bounded credential. LIT is the general name for the same idea.\n\nYour EP receipt sits on the authorization row; LIT sits on the possession row. Together they are your two rows, each proven on its own terms.\nYou asked why the human binds into the platform. The core is in the possession row above — the human is verified into the platform, and the platform's live key then stands for that verified human being present. The rest — how the agent case composes two actors on one platform, and how the trusted-rendering piece works — needs more room than a mail. Happy to walk the group through it. Vienna would be ideal — I may not make it in person, but I can do it remotely, or on a call whenever it suits the WG.\n"
+   },
+   "result": [
+    "Thanks Iman, I see. Possession proven live; authorization carried as evidence bound to the action. And \"keys pinned out of band\" is the case — raw keys registered directly with the relying party, no CA. We reached the same no-stranger model from the user side.",
+    "I agree on your recommendation: signalling first, token second. A combined token can stay combined as long as the event names the row it revokes. That is deployable now, without reissuing anyone.",
+    "Btw, your \"possession no longer proven\" event is the endpoint-presence signal I have proposed in the Shared Signals WG. So we are converging. The row-scoped signal I want is the possession row of your model.",
+    "And, a row-scoped signal lets the relying party remove trust on the possession row. It cannot prove it. A copied bearer token still presents as valid possession, because the token cannot show it is live. So the signal handles the deployed token world — it removes the wrong. Proving the possession row right, at the moment of use, needs a key that is live and exists in only one place.",
+    "Now to the idea the possession row can carry users and agents, not just workloads.",
+    "Because the row is not about who the actor is. It is about where the key lives. If the key is live and nowhere else, then whoever is bound to it is provably present. The actor slot is pluggable:",
+    "Workload: the key is the platform's. Possession means the workload is live. This is mTLS today.",
+    "Human: the human is verified into the platform. The platform's live key then stands for \"this verified human is present.\" Same row.",
+    "Agent: the agent runs on the platform and acts for a human verified into it. Possession means the agent is live and the human it acts for is present. Two actors, one platform, one key.",
+    "There is also a place where this row meets your gravest risk directly. You name rendering faithfulness as the thing cryptography cannot prove — the human signs a hash believing it is action X when it is Y — and your mitigation is a second surface on hardware the operator does not author. That surface is the endpoint. So the possession row does not only sit beside EP; the platform that proves live possession can also be the trusted display your receipt needs. The signature proves a key signed; the endpoint can help prove the human saw the true action.",
+    "We call this LIT — Live Identity in Transaction. The key is live: it exists only while its conditions hold — the right user present, the device sound — and is gone the moment any condition fails. So its presence is its validity. If the handshake completes, the conditions are met; nothing separate to check. And the key exists in one place only, so no copy is off somewhere staying alive when the user is not.",
+    "Underneath is a fuller definition of identity: not one thing, proven once, but three things, proven live — who is acting, on which platform, under which conditions. The industry proves the first, at one moment. LIT proves all three, in the channel, continuously.",
+    "In WIMSE this appears as a profile, under the precise term — condition-bounded credential. LIT is the general name for the same idea.",
+    "Your EP receipt sits on the authorization row; LIT sits on the possession row. Together they are your two rows, each proven on its own terms.",
+    "You asked why the human binds into the platform. The core is in the possession row above — the human is verified into the platform, and the platform's live key then stands for that verified human being present. The rest — how the agent case composes two actors on one platform, and how the trusted-rendering piece works — needs more room than a mail. Happy to walk the group through it. Vienna would be ideal — I may not make it in person, but I can do it remotely, or on a call whenever it suits the WG."
+   ]
+  },
+  {
+   "args": {
+    "text": "Thanks Joe,\n\nAs with most industry, I would like to see this standardized and supported by libraries so that I can potentially enable it in the future. European cybersecurity agencies such as ANSSI has a high confidence in ML-KEM [1].\n\nThe value of hybridization with quantum-vulnerable cryptography is clearly temporary, especially if one believes that nation-state attackers will have CRQCs in 2029 [2].\n\nThe campaign by Bernstein et al. against the IETF and ML-KEM is a waste of everybody's time and resources and is likely to have a significant negative impact on cybersecurity. Can the IETF please take action before we lose more brilliant researchers, such as Nadim Kobeissi, from the community? [3]\n\nCheers,\nJohn Preuß Mattsson\n\n[1] https://na.eventscloud.com/file_uploads/b635298de1c10be6d3732863e8b1beca_Day2-1600-ANSSI.pdf\n\n[2] https://cr.yp.to/talks/2023.06.15/slides-djb-20230615-pqrisk-4x3.pdf\n\n[3] https://mailarchive.ietf.org/arch/msg/tls/7HNihlgf0I8Mpe-0nqGb56dnON8/"
+   },
+   "result": [
+    "Thanks Joe,",
+    "As with most industry, I would like to see this standardized and supported by libraries so that I can potentially enable it in the future. European cybersecurity agencies such as ANSSI has a high confidence in ML-KEM [1].",
+    "The value of hybridization with quantum-vulnerable cryptography is clearly temporary, especially if one believes that nation-state attackers will have CRQCs in 2029 [2].",
+    "The campaign by Bernstein et al. against the IETF and ML-KEM is a waste of everybody's time and resources and is likely to have a significant negative impact on cybersecurity. Can the IETF please take action before we lose more brilliant researchers, such as Nadim Kobeissi, from the community? [3]",
+    "Cheers,",
+    "John Preuß Mattsson",
+    "[1] https://na.eventscloud.com/file_uploads/b635298de1c10be6d3732863e8b1beca_Day2-1600-ANSSI.pdf",
+    "[2] https://cr.yp.to/talks/2023.06.15/slides-djb-20230615-pqrisk-4x3.pdf",
+    "[3] https://mailarchive.ietf.org/arch/msg/tls/7HNihlgf0I8Mpe-0nqGb56dnON8/"
+   ]
+  },
+  {
+   "args": {
+    "text": "Thanks Joe,\n\nAs with most industry, I would like to see this standardized and supported by libraries so that I can potentially enable it in the future. European cybersecurity agencies such as ANSSI has a high confidence in ML-KEM [1].\n\nThe value of hybridization with quantum-vulnerable cryptography is clearly temporary, especially if one believes that nation-state attackers will have CRQCs in 2029 [2].\n\nThe campaign by Bernstein et al. against the IETF and ML-KEM is a waste of everybody's time and resources and is likely to have a significant negative impact on cybersecurity. Can the IETF please take action before we lose more brilliant researchers, such as Nadim Kobeissi, from the community? [3]\n\nCheers,\nJohn Preuß Mattsson\n\n[1] https://na.eventscloud.com/file_uploads/b635298de1c10be6d3732863e8b1beca_Day2-1600-ANSSI.pdf\n\n[2] https://cr.yp.to/talks/2023.06.15/slides-djb-20230615-pqrisk-4x3.pdf\n\n[3] https://mailarchive.ietf.org/arch/msg/tls/7HNihlgf0I8Mpe-0nqGb56dnON8/\n"
+   },
+   "result": [
+    "Thanks Joe,",
+    "As with most industry, I would like to see this standardized and supported by libraries so that I can potentially enable it in the future. European cybersecurity agencies such as ANSSI has a high confidence in ML-KEM [1].",
+    "The value of hybridization with quantum-vulnerable cryptography is clearly temporary, especially if one believes that nation-state attackers will have CRQCs in 2029 [2].",
+    "The campaign by Bernstein et al. against the IETF and ML-KEM is a waste of everybody's time and resources and is likely to have a significant negative impact on cybersecurity. Can the IETF please take action before we lose more brilliant researchers, such as Nadim Kobeissi, from the community? [3]",
+    "Cheers,",
+    "John Preuß Mattsson",
+    "[1] https://na.eventscloud.com/file_uploads/b635298de1c10be6d3732863e8b1beca_Day2-1600-ANSSI.pdf",
+    "[2] https://cr.yp.to/talks/2023.06.15/slides-djb-20230615-pqrisk-4x3.pdf",
+    "[3] https://mailarchive.ietf.org/arch/msg/tls/7HNihlgf0I8Mpe-0nqGb56dnON8/"
+   ]
+  },
+  {
+   "args": {
+    "text": "Thanks for your feedback, Wesley!\n\nWe have addressed everything you noted in v8 of the document."
+   },
+   "result": [
+    "Thanks for your feedback, Wesley!",
+    "We have addressed everything you noted in v8 of the document."
+   ]
+  },
+  {
+   "args": {
+    "text": "Thanks for your feedback, Wesley!\n\nWe have addressed everything you noted in v8 of the document.\n"
+   },
+   "result": [
+    "Thanks for your feedback, Wesley!",
+    "We have addressed everything you noted in v8 of the document."
+   ]
+  },
+  {
+   "args": {
+    "text": "The risk mitigation taken relies on the common sense (I know, in short supply now), and adherence to the standards. I.e., if it says “use NIST-blessed DRBG”, the implementation SHALL use it.\n\nOtherwise, if you assume that part of the standard will be ignored — why would other parts of that standard or your RFC be followed correctly?\n\nIt merely requires the implementation to abide by the letter of the standards it claims to implement. Not a rocket science/\n\nThank you (and others who’d hopefully follow your example) kindly!"
+   },
+   "result": [
+    "The risk mitigation taken relies on the common sense (I know, in short supply now), and adherence to the standards. I.e., if it says “use NIST-blessed DRBG”, the implementation SHALL use it.",
+    "Otherwise, if you assume that part of the standard will be ignored — why would other parts of that standard or your RFC be followed correctly?",
+    "It merely requires the implementation to abide by the letter of the standards it claims to implement. Not a rocket science/",
+    "Thank you (and others who’d hopefully follow your example) kindly!"
+   ]
+  },
+  {
+   "args": {
+    "text": "The risk mitigation taken relies on the common sense (I know, in short supply now), and adherence to the standards. I.e., if it says “use NIST-blessed DRBG”, the implementation SHALL use it.\n\nOtherwise, if you assume that part of the standard will be ignored — why would other parts of that standard or your RFC be followed correctly?\n\nIt merely requires the implementation to abide by the letter of the standards it claims to implement. Not a rocket science/\n\nThank you (and others who’d hopefully follow your example) kindly!\n"
+   },
+   "result": [
+    "The risk mitigation taken relies on the common sense (I know, in short supply now), and adherence to the standards. I.e., if it says “use NIST-blessed DRBG”, the implementation SHALL use it.",
+    "Otherwise, if you assume that part of the standard will be ignored — why would other parts of that standard or your RFC be followed correctly?",
+    "It merely requires the implementation to abide by the letter of the standards it claims to implement. Not a rocket science/",
+    "Thank you (and others who’d hopefully follow your example) kindly!"
+   ]
+  },
+  {
+   "args": {
+    "text": "This is definitely a bug.\nPlease create an issue on https://github.com/ietf-tools/red/issues and\ninclude the list of RFCs that have problems.\n\nFeel free to submit UI improvement suggestions there as well.\n\nNick"
+   },
+   "result": [
+    "This is definitely a bug.",
+    "Please create an issue on https://github.com/ietf-tools/red/issues and",
+    "include the list of RFCs that have problems.",
+    "Feel free to submit UI improvement suggestions there as well.",
+    "Nick"
+   ]
+  },
+  {
+   "args": {
+    "text": "This is definitely a bug.\nPlease create an issue on https://github.com/ietf-tools/red/issues and\ninclude the list of RFCs that have problems.\n\nFeel free to submit UI improvement suggestions there as well.\n\nNick\n"
+   },
+   "result": [
+    "This is definitely a bug.",
+    "Please create an issue on https://github.com/ietf-tools/red/issues and",
+    "include the list of RFCs that have problems.",
+    "Feel free to submit UI improvement suggestions there as well.",
+    "Nick"
+   ]
+  },
+  {
+   "args": {
+    "text": "We are running a project at the IETF 126 Hackathon (18-19 July, Vienna) on a minimal multicast extension for QUIC.\n\nMotivation: draft-navarre-quic-flexicast defines Flexicast QUIC, which supports multicast delivery, builds on Multipath QUIC, and requires changes across several parts of the stack. draft-jholland-quic-multicast takes a different approach, focusing on the security aspects of the extension. For the hackathon, we want to explore the lower bound of the design space: what is the smallest set of changes to QUIC that still yields working multicast delivery, and what do we give up to get there?\n\nWe expect the outcome to be multiple proof-of-concept extensions in multiple existing implementations, plus a clearer picture of which parts of Flexicast QUIC are essential and which are conveniences.\n\nProject repository:\nhttps://github.com/louisna/minimal-multicast-quic-ietf-126\n\nIf you are interested, please reach out or open an issue on the repo.\n\nRelevant drafts:\n- draft-navarre-quic-flexicast: https://datatracker.ietf.org/doc/draft-navarre-quic-flexicast/\n- draft-jholland-quic-multicast: https://datatracker.ietf.org/doc/draft-jholland-quic-multicast/\nScientific paper:\nTaking the Best of Multicast and Unicast with Flexicast QUIC: https://dl.acm.org/doi/pdf/10.1145/3750832.3750834"
+   },
+   "result": [
+    "We are running a project at the IETF 126 Hackathon (18-19 July, Vienna) on a minimal multicast extension for QUIC.",
+    "Motivation: draft-navarre-quic-flexicast defines Flexicast QUIC, which supports multicast delivery, builds on Multipath QUIC, and requires changes across several parts of the stack. draft-jholland-quic-multicast takes a different approach, focusing on the security aspects of the extension. For the hackathon, we want to explore the lower bound of the design space: what is the smallest set of changes to QUIC that still yields working multicast delivery, and what do we give up to get there?",
+    "We expect the outcome to be multiple proof-of-concept extensions in multiple existing implementations, plus a clearer picture of which parts of Flexicast QUIC are essential and which are conveniences.",
+    "Project repository:",
+    "https://github.com/louisna/minimal-multicast-quic-ietf-126",
+    "If you are interested, please reach out or open an issue on the repo.",
+    "Relevant drafts:",
+    "- draft-navarre-quic-flexicast: https://datatracker.ietf.org/doc/draft-navarre-quic-flexicast/",
+    "- draft-jholland-quic-multicast: https://datatracker.ietf.org/doc/draft-jholland-quic-multicast/",
+    "Scientific paper:",
+    "Taking the Best of Multicast and Unicast with Flexicast QUIC: https://dl.acm.org/doi/pdf/10.1145/3750832.3750834"
+   ]
+  },
+  {
+   "args": {
+    "text": "We are running a project at the IETF 126 Hackathon (18-19 July, Vienna) on a minimal multicast extension for QUIC.\n\nMotivation: draft-navarre-quic-flexicast defines Flexicast QUIC, which supports multicast delivery, builds on Multipath QUIC, and requires changes across several parts of the stack. draft-jholland-quic-multicast takes a different approach, focusing on the security aspects of the extension. For the hackathon, we want to explore the lower bound of the design space: what is the smallest set of changes to QUIC that still yields working multicast delivery, and what do we give up to get there?\n\nWe expect the outcome to be multiple proof-of-concept extensions in multiple existing implementations, plus a clearer picture of which parts of Flexicast QUIC are essential and which are conveniences.\n\nProject repository:\nhttps://github.com/louisna/minimal-multicast-quic-ietf-126\n\nIf you are interested, please reach out or open an issue on the repo.\n\nRelevant drafts:\n- draft-navarre-quic-flexicast: https://datatracker.ietf.org/doc/draft-navarre-quic-flexicast/\n- draft-jholland-quic-multicast: https://datatracker.ietf.org/doc/draft-jholland-quic-multicast/\nScientific paper:\nTaking the Best of Multicast and Unicast with Flexicast QUIC: https://dl.acm.org/doi/pdf/10.1145/3750832.3750834\n"
+   },
+   "result": [
+    "We are running a project at the IETF 126 Hackathon (18-19 July, Vienna) on a minimal multicast extension for QUIC.",
+    "Motivation: draft-navarre-quic-flexicast defines Flexicast QUIC, which supports multicast delivery, builds on Multipath QUIC, and requires changes across several parts of the stack. draft-jholland-quic-multicast takes a different approach, focusing on the security aspects of the extension. For the hackathon, we want to explore the lower bound of the design space: what is the smallest set of changes to QUIC that still yields working multicast delivery, and what do we give up to get there?",
+    "We expect the outcome to be multiple proof-of-concept extensions in multiple existing implementations, plus a clearer picture of which parts of Flexicast QUIC are essential and which are conveniences.",
+    "Project repository:",
+    "https://github.com/louisna/minimal-multicast-quic-ietf-126",
+    "If you are interested, please reach out or open an issue on the repo.",
+    "Relevant drafts:",
+    "- draft-navarre-quic-flexicast: https://datatracker.ietf.org/doc/draft-navarre-quic-flexicast/",
+    "- draft-jholland-quic-multicast: https://datatracker.ietf.org/doc/draft-jholland-quic-multicast/",
+    "Scientific paper:",
+    "Taking the Best of Multicast and Unicast with Flexicast QUIC: https://dl.acm.org/doi/pdf/10.1145/3750832.3750834"
+   ]
+  },
+  {
+   "args": {
+    "text": "You might also be interested in Marco and Marten's draft https://datatracker.ietf.org/doc/draft-munizaga-quic-alternative-server-address/"
+   },
+   "result": [
+    "You might also be interested in Marco and Marten's draft https://datatracker.ietf.org/doc/draft-munizaga-quic-alternative-server-address/"
+   ]
+  },
+  {
+   "args": {
+    "text": "You might also be interested in Marco and Marten's draft https://datatracker.ietf.org/doc/draft-munizaga-quic-alternative-server-address/\n"
+   },
+   "result": [
+    "You might also be interested in Marco and Marten's draft https://datatracker.ietf.org/doc/draft-munizaga-quic-alternative-server-address/"
+   ]
+  },
+  {
+   "args": {
+    "text": "[tried and failed to send to 125attendees@ and recentattendees@ so taking\nit to itef@ now]\n\nWhile there was certainly plenty of spirited discussion about the tradeoffs\nsurrounding the IETF 125 location (I found myself on both sides at various\ntimes), I was ultimately very grateful for the opportunity to visit two\nplaces I'd not previously been. I absolutely loved the built and natural\nenvironment and the interplay between them, and I tried to capture some of\nthe aesthetic in photographs. Thanks, as always, for indulging my\ngratuitous sharing of the results: https://flic.kr/s/aHBqjCYWby"
+   },
+   "result": [
+    "[tried and failed to send to 125attendees@ and recentattendees@ so taking",
+    "it to itef@ now]",
+    "While there was certainly plenty of spirited discussion about the tradeoffs",
+    "surrounding the IETF 125 location (I found myself on both sides at various",
+    "times), I was ultimately very grateful for the opportunity to visit two",
+    "places I'd not previously been. I absolutely loved the built and natural",
+    "environment and the interplay between them, and I tried to capture some of",
+    "the aesthetic in photographs. Thanks, as always, for indulging my",
+    "gratuitous sharing of the results: https://flic.kr/s/aHBqjCYWby"
+   ]
+  },
+  {
+   "args": {
+    "text": "[tried and failed to send to 125attendees@ and recentattendees@ so taking\nit to itef@ now]\n\nWhile there was certainly plenty of spirited discussion about the tradeoffs\nsurrounding the IETF 125 location (I found myself on both sides at various\ntimes), I was ultimately very grateful for the opportunity to visit two\nplaces I'd not previously been. I absolutely loved the built and natural\nenvironment and the interplay between them, and I tried to capture some of\nthe aesthetic in photographs. Thanks, as always, for indulging my\ngratuitous sharing of the results: https://flic.kr/s/aHBqjCYWby\n"
+   },
+   "result": [
+    "[tried and failed to send to 125attendees@ and recentattendees@ so taking",
+    "it to itef@ now]",
+    "While there was certainly plenty of spirited discussion about the tradeoffs",
+    "surrounding the IETF 125 location (I found myself on both sides at various",
+    "times), I was ultimately very grateful for the opportunity to visit two",
+    "places I'd not previously been. I absolutely loved the built and natural",
+    "environment and the interplay between them, and I tried to capture some of",
+    "the aesthetic in photographs. Thanks, as always, for indulging my",
+    "gratuitous sharing of the results: https://flic.kr/s/aHBqjCYWby"
+   ]
+  },
+  {
+   "args": {
+    "text": "a\n\n  b  \n\n\nc\n"
+   },
+   "result": [
+    "a",
+    "b",
+    "c"
+   ]
+  },
+  {
+   "args": {
+    "text": "a\u001cb\n\u0085x\u0085\n\ufeffy\ufeff\n\u2028z\n \u3000 "
+   },
+   "result": [
+    "a\u001cb",
+    "x",
+    "\ufeffy\ufeff",
+    "z"
+   ]
+  },
+  {
+   "args": {
+    "text": "a\u00a0b"
+   },
+   "result": [
+    "a b"
+   ]
+  },
+  {
+   "args": {
+    "text": "thanks for sharing. But this only reflects parts of the discussion.\n\nSince I too provide public mail listings for my users, I know, this is\na difficult issue.\n\nFrom my point of view, this IETF Web-based ML is dysfunctional because\nit is difficult to digest the important topics.\n\nSubscribers often express their oppinion not matching the topic\n(Subject). This is bad for readers and digesting.\n\nRegards.\n--eh."
+   },
+   "result": [
+    "thanks for sharing. But this only reflects parts of the discussion.",
+    "Since I too provide public mail listings for my users, I know, this is",
+    "a difficult issue.",
+    "From my point of view, this IETF Web-based ML is dysfunctional because",
+    "it is difficult to digest the important topics.",
+    "Subscribers often express their oppinion not matching the topic",
+    "(Subject). This is bad for readers and digesting.",
+    "Regards.",
+    "--eh."
+   ]
+  },
+  {
+   "args": {
+    "text": "thanks for sharing. But this only reflects parts of the discussion.\n\nSince I too provide public mail listings for my users, I know, this is\na difficult issue.\n\nFrom my point of view, this IETF Web-based ML is dysfunctional because\nit is difficult to digest the important topics.\n\nSubscribers often express their oppinion not matching the topic\n(Subject). This is bad for readers and digesting.\n\nRegards.\n--eh.\n"
+   },
+   "result": [
+    "thanks for sharing. But this only reflects parts of the discussion.",
+    "Since I too provide public mail listings for my users, I know, this is",
+    "a difficult issue.",
+    "From my point of view, this IETF Web-based ML is dysfunctional because",
+    "it is difficult to digest the important topics.",
+    "Subscribers often express their oppinion not matching the topic",
+    "(Subject). This is bad for readers and digesting.",
+    "Regards.",
+    "--eh."
+   ]
+  }
+ ]
+}

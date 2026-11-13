@@ -1,0 +1,892 @@
+{
+ "format": 1,
+ "function": "read_fragments",
+ "module": "fragments",
+ "public": false,
+ "parameters": [
+  {
+   "name": "text",
+   "kind": "positional_or_keyword"
+  }
+ ],
+ "returns": "list[Fragment]",
+ "vectors": [
+  {
+   "args": {
+    "text": "   Count    |      Bytes     |  Who\n------------+----------------+-------\n 12 ( 100%) | 356501 ( 100%) | Total\n  2 (16.7%) |  11728 ( 3.3%) | NomCom Chair 2026 <nomcom-chair-2026@ietf.org>\n  2 (16.7%) |   7870 ( 2.2%) | S Moonesamy <sm+ietf@elandsys.com>\n  1 ( 8.3%) | 254437 (71.4%) | Job Snijders <job@bsd.nl>\n  1 ( 8.3%) |  23845 ( 6.7%) | Mallory Knodel <mallory.knodel@nyu.edu>\n  1 ( 8.3%) |  13289 ( 3.7%) | Warren Kumari <warren@kumari.net>\n  1 ( 8.3%) |  11235 ( 3.2%) | Roman Danyliw <rdd@cert.org>\n  1 ( 8.3%) |  10521 ( 3.0%) | Nicolas Giard <nick@staff.ietf.org>\n  1 ( 8.3%) |  10460 ( 2.9%) | Brian Campbell <bcampbell@pingidentity.com>\n  1 ( 8.3%) |   9829 ( 2.8%) | Jen Linkova <furry13@gmail.com>\n  1 ( 8.3%) |   3287 ( 0.9%) | NomCom Chair 2025 <nomcom-chair-2025@ietf.org>\n\n"
+   },
+   "result": [
+    {
+     "content": "   Count    |      Bytes     |  Who\n",
+     "quoted": false
+    },
+    {
+     "content": "------------+----------------+-------\n 12 ( 100%) | 356501 ( 100%) | Total\n  2 (16.7%) |  11728 ( 3.3%) | NomCom Chair 2026 <nomcom-chair-2026@ietf.org>\n  2 (16.7%) |   7870 ( 2.2%) | S Moonesamy <sm+ietf@elandsys.com>\n  1 ( 8.3%) | 254437 (71.4%) | Job Snijders <job@bsd.nl>\n  1 ( 8.3%) |  23845 ( 6.7%) | Mallory Knodel <mallory.knodel@nyu.edu>\n  1 ( 8.3%) |  13289 ( 3.7%) | Warren Kumari <warren@kumari.net>\n  1 ( 8.3%) |  11235 ( 3.2%) | Roman Danyliw <rdd@cert.org>\n  1 ( 8.3%) |  10521 ( 3.0%) | Nicolas Giard <nick@staff.ietf.org>\n  1 ( 8.3%) |  10460 ( 2.9%) | Brian Campbell <bcampbell@pingidentity.com>\n  1 ( 8.3%) |   9829 ( 2.8%) | Jen Linkova <furry13@gmail.com>\n  1 ( 8.3%) |   3287 ( 0.9%) | NomCom Chair 2025 <nomcom-chair-2025@ietf.org>\n\n",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "> Given the proposal\n\nMy actual reply here."
+   },
+   "result": [
+    {
+     "content": "> Given the proposal",
+     "quoted": true
+    },
+    {
+     "content": "\nMy actual reply here.",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "> Given the proposed solution with the addendum of Joe, I like to comment\n> the following:\n>\n> * The risk mitigation taken (given the PRNG) relies on paper-work only.\n\n\nThe risk mitigation taken relies on the common sense (I know, in short supply now), and adherence to the standards. I.e., if it says “use NIST-blessed DRBG”, the implementation SHALL use it.\n\n\nOtherwise, if you assume that part of the standard will be ignored — why would other parts of that standard or your RFC be followed correctly?\n\n> * The risk mitigation does not necessarily require an implementation\n> (though possible, cheap, and easy).\n\n\nIt merely requires the implementation to abide by the letter of the standards it claims to implement. Not a rocket science/\n\n> PPS: I will shut my mouth now and go back to work (Joe).\n\nThank you (and others who’d hopefully follow your example) kindly!\n\n\n"
+   },
+   "result": [
+    {
+     "content": "> Given the proposed solution with the addendum of Joe, I like to comment\n> the following:\n>\n> * The risk mitigation taken (given the PRNG) relies on paper-work only.",
+     "quoted": true
+    },
+    {
+     "content": "\n\nThe risk mitigation taken relies on the common sense (I know, in short supply now), and adherence to the standards. I.e., if it says “use NIST-blessed DRBG”, the implementation SHALL use it.\n\n\nOtherwise, if you assume that part of the standard will be ignored — why would other parts of that standard or your RFC be followed correctly?",
+     "quoted": false
+    },
+    {
+     "content": "\n> * The risk mitigation does not necessarily require an implementation\n> (though possible, cheap, and easy).",
+     "quoted": true
+    },
+    {
+     "content": "\n\nIt merely requires the implementation to abide by the letter of the standards it claims to implement. Not a rocket science/",
+     "quoted": false
+    },
+    {
+     "content": "\n> PPS: I will shut my mouth now and go back to work (Joe).",
+     "quoted": true
+    },
+    {
+     "content": "\nThank you (and others who’d hopefully follow your example) kindly!\n\n\n",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "> just a quote\n> and more quote\n"
+   },
+   "result": [
+    {
+     "content": "> just a quote\n> and more quote",
+     "quoted": true
+    },
+    {
+     "content": "",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "> quoted line\n\nMy genuinely new reply text here today."
+   },
+   "result": [
+    {
+     "content": "> quoted line",
+     "quoted": true
+    },
+    {
+     "content": "\nMy genuinely new reply text here today.",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "> quoted line\n\nMy genuinely new reply text here."
+   },
+   "result": [
+    {
+     "content": "> quoted line",
+     "quoted": true
+    },
+    {
+     "content": "\nMy genuinely new reply text here.",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "All,Three quick questions for everyone, since the thread is working through where the artifacts sit:1) How does your work function without identity? If identity was a part of something else, how would this work?2) Can this work validate external scope, or does it define its own?3) How would this work in an open market with available web traffic and development?One note of point, this thread feels more like an application design as opposed to a standards review.\u00a0Chris\n-------- Original message --------From: Steven Mih <steven=40actionstate.ai@dmarc.ietf.org> Date: 7/14/26  1:24 AM  (GMT-08:00) To: agent2agent@ietf.org Cc: blake@truealter.com, Iman Schrock <team@emiliaprotocol.ai>, mikhailsergeev369@gmail.com Subject: [agent2agent] Re: A set of agent-identity drafts (morrison-*) for AGENTPROTO Blake, Iman, Mikhail,Blake asked where a refusal record gets its content, if not from the envelope's typed outcomes. The answer is: from two different places, because there are two different refusals — and keeping them apart is the same two-object discipline this thread keeps converging on.A human refusal (the capsule's verdict_class: denied, human-disposed) takes its semantic content from exactly where Iman put it: the durable resolution receipt, which binds the envelope digest and the typed outcome under the principal's pinned key. The capsule doesn't restate that content — it references it by digest, the same way an executed action references its grant. So yes, Blake: the envelope's answer space shapes the refusal's content, but it reaches the record through the receipt, not the transient envelope — envelope specifies the moment, receipt survives it, capsule cites it. Iman's sequence, unchanged.A constraint refusal (verdict_class: blocked) never touches an envelope. Its content comes from the effect boundary itself: the pinned digest of the constraint set in force, a result for every constraint in that set, and the reason — which is what the bilateral -01 binds as of today's freeze. And per Iman's list, expiry and transport failure stay distinct record types again — a timeout is not a veto, and the record vocabulary shouldn't let one impersonate the other.The amend/reject outcomes fall out cleanly: they terminate the envelope with no did-claim anywhere, and a revised action is a new action — new digest, new envelope, new capsule, with the chain recording the sequence rather than any record pretending continuity.Mikhail — your witnessed-execution bound is already enforced in the capsule's vocabulary rather than left to discipline: a capsule states its own observation boundary explicitly (effect status dispatched vs. confirmed; attestation mode runtime-claimed vs. gate-executed), and it cannot claim past what that boundary witnessed — dispatched-unconfirmed is precisely \"I asserted less because I saw less.\" A WEXP row alongside these objects, joined by digest, composes the same way everything else on this thread does; and when Parisa's evidence dimension lands, I agree the claim-strength boundary belongs in the model where everyone can see it.Best,Steven------------------Steven MihFounder/CEOAction State Group, Inc.408-309-6299\n\n"
+   },
+   "result": [
+    {
+     "content": "All,Three quick questions for everyone, since the thread is working through where the artifacts sit:1) How does your work function without identity? If identity was a part of something else, how would this work?2) Can this work validate external scope, or does it define its own?3) How would this work in an open market with available web traffic and development?One note of point, this thread feels more like an application design as opposed to a standards review.\u00a0Chris\n",
+     "quoted": false
+    },
+    {
+     "content": "-------- Original message --------From: Steven Mih <steven=40actionstate.ai@dmarc.ietf.org> Date: 7/14/26  1:24 AM  (GMT-08:00) To: agent2agent@ietf.org Cc: blake@truealter.com, Iman Schrock <team@emiliaprotocol.ai>, mikhailsergeev369@gmail.com Subject: [agent2agent] Re: A set of agent-identity drafts (morrison-*) for AGENTPROTO Blake, Iman, Mikhail,Blake asked where a refusal record gets its content, if not from the envelope's typed outcomes. The answer is: from two different places, because there are two different refusals — and keeping them apart is the same two-object discipline this thread keeps converging on.A human refusal (the capsule's verdict_class: denied, human-disposed) takes its semantic content from exactly where Iman put it: the durable resolution receipt, which binds the envelope digest and the typed outcome under the principal's pinned key. The capsule doesn't restate that content — it references it by digest, the same way an executed action references its grant. So yes, Blake: the envelope's answer space shapes the refusal's content, but it reaches the record through the receipt, not the transient envelope — envelope specifies the moment, receipt survives it, capsule cites it. Iman's sequence, unchanged.A constraint refusal (verdict_class: blocked) never touches an envelope. Its content comes from the effect boundary itself: the pinned digest of the constraint set in force, a result for every constraint in that set, and the reason — which is what the bilateral -01 binds as of today's freeze. And per Iman's list, expiry and transport failure stay distinct record types again — a timeout is not a veto, and the record vocabulary shouldn't let one impersonate the other.The amend/reject outcomes fall out cleanly: they terminate the envelope with no did-claim anywhere, and a revised action is a new action — new digest, new envelope, new capsule, with the chain recording the sequence rather than any record pretending continuity.Mikhail — your witnessed-execution bound is already enforced in the capsule's vocabulary rather than left to discipline: a capsule states its own observation boundary explicitly (effect status dispatched vs. confirmed; attestation mode runtime-claimed vs. gate-executed), and it cannot claim past what that boundary witnessed — dispatched-unconfirmed is precisely \"I asserted less because I saw less.\" A WEXP row alongside these objects, joined by digest, composes the same way everything else on this thread does; and when Parisa's evidence dimension lands, I agree the claim-strength boundary belongs in the model where everyone can see it.Best,Steven------------------Steven MihFounder/CEOAction State Group, Inc.408-309-6299\n\n",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "All,\n\nThree quick questions for everyone, since the thread is working through where the artifacts sit:\n\n1) How does your work function without identity? If identity was a part of something else, how would this work?\n\n2) Can this work validate external scope, or does it define its own?\n\n3) How would this work in an open market with available web traffic and development?\n\nOne note of point, this thread feels more like an application design as opposed to a standards review.\n\nChris\n\n-------- Original message --------"
+   },
+   "result": [
+    {
+     "content": "All,\n\nThree quick questions for everyone, since the thread is working through where the artifacts sit:\n\n1) How does your work function without identity? If identity was a part of something else, how would this work?\n\n2) Can this work validate external scope, or does it define its own?\n\n3) How would this work in an open market with available web traffic and development?\n\nOne note of point, this thread feels more like an application design as opposed to a standards review.\n\nChris\n",
+     "quoted": false
+    },
+    {
+     "content": "-------- Original message --------",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "Dear Community,\n\nI hereby initiate a Recall Petition pursuant to § 7.1.1 of\nRFC 8713 against SEC AD Deb Cooley, regarding a significant\nbreach in confidentiality of communication.\n\nWhile her technical competence within the Security Area is\nrecognized without a doubt, the NomCom MAY consider to verify the\ntrustworthiness of the named SEC AD based on the documented\nprocedural infractions.\n\nTo safeguard the fundamental integrity of the IETF standards\nprocess, the technical evidence regarding this unauthorized\nbackchannel disclosure is provided below.\n\nTECHNICAL EVIDENCE OF SECURITY LACK\n\n1. My Private Notice to SEC AD Deb Cooley's officially in\nDatatracker regisered Mailaddress\nMessage-ID: <3c967485-b5d2-4e93-84f6-632f81bc803d@alice-dsl.net>\nDate: Tue, 12 May 2026 10:15:36 +0200\nMIME-Version: 1.0\nUser-Agent: Mozilla Thunderbird\nContent-Language: en-US, de-DE\nFrom: Timo Gerke <timo.gerke@alice-dsl.net>\nTo: \"Deb Cooley (IETF, AD Security Area)\" <debcooley1@gmail.com>\nSubject: Notice: Operational Analysis & Cluster C430 Deadlock\n(TLS/UTA)\n\n2. SEC AD Deb Cooley's response\nReferences: <3c967485-b5d2-4e93-84f6-632f81bc803d@alice-dsl.net>\nIn-Reply-To: <3c967485-b5d2-4e93-84f6-632f81bc803d@alice-dsl.net>\nFrom: Deb Cooley <debcooley1@gmail.com>\nDate: Wed, 13 May 2026 06:42:16 +0100\nSubject: Re: Notice: Operational Analysis & Cluster C430 Deadlock\n(TLS/UTA)\nTo: Timo Gerke <timo.gerke@alice-dsl.net>\nCc: Eric Rescorla <ekr@rtfm.com>, uta-chairs@ietf.org\n\n\nBest regards,\n\nTimo Gerke\n"
+   },
+   "result": [
+    {
+     "content": "Dear Community,\n\nI hereby initiate a Recall Petition pursuant to § 7.1.1 of\nRFC 8713 against SEC AD Deb Cooley, regarding a significant\nbreach in confidentiality of communication.\n\nWhile her technical competence within the Security Area is\nrecognized without a doubt, the NomCom MAY consider to verify the\ntrustworthiness of the named SEC AD based on the documented\nprocedural infractions.\n\nTo safeguard the fundamental integrity of the IETF standards\nprocess, the technical evidence regarding this unauthorized\nbackchannel disclosure is provided below.\n\nTECHNICAL EVIDENCE OF SECURITY LACK\n\n1. My Private Notice to SEC AD Deb Cooley's officially in\nDatatracker regisered Mailaddress\nMessage-ID: <3c967485-b5d2-4e93-84f6-632f81bc803d@alice-dsl.net>\nDate: Tue, 12 May 2026 10:15:36 +0200\nMIME-Version: 1.0\nUser-Agent: Mozilla Thunderbird\nContent-Language: en-US, de-DE",
+     "quoted": false
+    },
+    {
+     "content": "From: Timo Gerke <timo.gerke@alice-dsl.net>\nTo: \"Deb Cooley (IETF, AD Security Area)\" <debcooley1@gmail.com>\nSubject: Notice: Operational Analysis & Cluster C430 Deadlock",
+     "quoted": false
+    },
+    {
+     "content": "(TLS/UTA)\n\n2. SEC AD Deb Cooley's response\nReferences: <3c967485-b5d2-4e93-84f6-632f81bc803d@alice-dsl.net>\nIn-Reply-To: <3c967485-b5d2-4e93-84f6-632f81bc803d@alice-dsl.net>",
+     "quoted": false
+    },
+    {
+     "content": "From: Deb Cooley <debcooley1@gmail.com>",
+     "quoted": false
+    },
+    {
+     "content": "Date: Wed, 13 May 2026 06:42:16 +0100",
+     "quoted": false
+    },
+    {
+     "content": "Subject: Re: Notice: Operational Analysis & Cluster C430 Deadlock",
+     "quoted": false
+    },
+    {
+     "content": "(TLS/UTA)",
+     "quoted": false
+    },
+    {
+     "content": "To: Timo Gerke <timo.gerke@alice-dsl.net>",
+     "quoted": false
+    },
+    {
+     "content": "Cc: Eric Rescorla <ekr@rtfm.com>, uta-chairs@ietf.org\n\n\nBest regards,\n\nTimo Gerke\n",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "First authored paragraph here.\n\n\nSecond authored paragraph here."
+   },
+   "result": [
+    {
+     "content": "First authored paragraph here.\n\n\nSecond authored paragraph here.",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "First point about the draft.\n\nSecond structured line here.\n\nThird structured line here.\n\nFourth structured line here."
+   },
+   "result": [
+    {
+     "content": "First point about the draft.\n\nSecond structured line here.\n\nThird structured line here.\n\nFourth structured line here.",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "First point.\n----------\nSecond point after an author-drawn rule.\nRegards,\nWei Zhang"
+   },
+   "result": [
+    {
+     "content": "First point.\n",
+     "quoted": false
+    },
+    {
+     "content": "----------\nSecond point after an author-drawn rule.\nRegards,\nWei Zhang",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "Header row of a report\n----------+----------\ndata row 0\ndata row 1\ndata row 2\ndata row 3\ndata row 4\ndata row 5\ndata row 6\ndata row 7\ndata row 8\ndata row 9"
+   },
+   "result": [
+    {
+     "content": "Header row of a report\n",
+     "quoted": false
+    },
+    {
+     "content": "----------+----------\ndata row 0\ndata row 1\ndata row 2\ndata row 3\ndata row 4\ndata row 5\ndata row 6\ndata row 7\ndata row 8\ndata row 9",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "Here is my genuinely new reply, written for the working group."
+   },
+   "result": [
+    {
+     "content": "Here is my genuinely new reply, written for the working group.",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "Hi Authors, all,\n\nI hope you are doing well. I am new to the list. It is amazing to see such\ngood work going on in the AI Agent domain. A little background on where my\ncomments come from: I work on on-device threat defense and enterprise\nidentity at Samsung Research America, and previously worked on Universal\nLogout at Okta. My comments revolve around revocation and the\nhuman-in-the-loop section, and build in part on Yaron's review of the\n2026-06-01 editor's copy.\n\n1) I see a possible tension between Section 8 and Section 11 on revocation\n\nSection 8 states that short-lived credentials provide \"an alternative to\nexplicit revocation mechanisms.\"\nSection 11 states that recipients of SSF/CAEP/RISC signals \"MUST ensure\nthat revoked or downgraded authorization is enforced without undue delay,\"\nand that cached tokens \"MUST NOT continue to be used after a revocation or\nrisk notification is received.\"\n\nI may be misreading, but these seem to pull in different directions:\nSection 8 positions expiry as a substitute for revocation, while Section 11\ntreats revocation as a live, mandatory obligation. The distinction may be\nthreat-model dependent. Expiry works well for credential theft. It works\npoorly for a compromised agent - one that is correctly attested and holds\nan unexpired credential, but whose behavior has been subverted (e.g. via\nindirect prompt injection). In that case the credential remains valid and\ncorrect for its full lifetime while the agent acts outside its intended\nscope, and typical credential lifetimes exceed the time needed to act.\n\nWould it be worth either reconciling these two sections explicitly, or\nscoping Section 8's claim to the credential-exposure threat model rather\nthan compromise generally?\n\n2) Section 11 makes subscription optional but enforcement mandatory\n\nSection 11 says participants \"MAY subscribe\" to SSF with CAEP or RISC, but\nthat recipients \"MUST\" enforce on receipt. The MUST is therefore\nconditional on the MAY. A deployment that does not subscribe has no\nrevocation path at all, and silently falls back to the Section 8 expiry\nmodel without the document saying so.\n\nWould the working group consider whether subscription should be SHOULD, or\nMUST, for agents authorized to access sensitive resources? It is entirely\npossible this is deliberate deployment latitude, in which case it may still\nbe worth stating the consequence.\n\n3) Section 10.7: same-device deployments weaken the out-of-band property\n\nYaron notes in TECH-8 that CIBA assumes a push notification to a separate\ndevice, while the agent flow may already be running on a mobile device. I\nwould like to extend that from the device-security side, as it is where\nmost of my work sits.\n\nCIBA's value in Section 10.7 rests on the interaction being genuinely\nout-of-band - the approval channel is assumed to be independent of the\nrequesting client. When an on-device agent and the authenticator\napplication share a device, that independence is gone: a device compromise\ntakes both the agent and the approval channel, and the confirmation is\nin-band in all but name. This is not hypothetical - on-device agents\nrunning alongside the user's authenticator are becoming common.\n\nThis does not invalidate the CIBA guidance, but the assumption seems worth\nstating, along with what deployments can do when it does not hold (e.g.\nrelying on platform-level isolation for the approval path, or requiring a\ndistinct device for higher-risk operations).\n\n4) Section 10.7 Note: RFC 9470 as a possible input to the mid-execution case\n\nThe Note in the Human in the Loop section observes that CIBA only accounts\nfor client initiation and does not map well to User confirmation occurring\nmid-execution. Yaron's TECH-8 raises a related concern about the threat\nmodel. I do not see RFC 9470 (OAuth 2.0 Step Up Authentication Challenge)\nin Section 18, so offering it as a possible input rather than a correction:\n\n9470's model is resource-server-initiated - the RS inspects the\nauthentication context behind the presented token and returns\ninsufficient_user_authentication with acr_values / max_age. That addresses\nthe initiation direction the Note identifies, and it places the trigger at\nthe resource, where the sensitivity of the specific action is known. The\nobvious obstacle is that 9470 assumes the client can direct a user agent to\nthe AS, which an autonomous agent does not have. But 9470 is agnostic about\nthe grant used to satisfy the challenge, so a composition may be possible:\na 9470-style challenge from the resource server as the trigger, with CIBA\nas the out-of-band grant that satisfies it.\n\nOne wrinkle if this were pursued: 9470's acr and auth_time reflect the\noriginal user authentication event and do not change on token renewal,\nwhich may need thought for long-running agent sessions.\n\nWas 9470 considered for this case? If it was ruled out, I would find the\nreasoning useful, and would rather understand it than reopen settled ground.\n\n5) Section 14 and agent-specific threats\n\nSection 14 defers to the security considerations of each referenced\nspecification, plus OAuth BCP and FAPI 2.0. Given the goal in Section 1 of\nidentifying gaps to guide future standardization, is agent-specific threat\nanalysis in scope for this document - in particular the\ncompromised-but-attested agent, where posture assessment at issuance\n(Section 8) establishes what an agent is, but not what it is doing at\nrequest time? If that is in scope and useful, I would be glad to help draft\ntext.\n\nThanks for the document. The consolidation framing in Section 1 is very\nuseful, and the prior-art mapping is more complete than most work I have\nseen in this area.\n\nHappy to upload any of these as GitHub issues if the authors prefer.\n\nRegards,\nKunal Ghosh\nORCID: 0009-0007-4602-5624\nkghoshworkid.github.io\n"
+   },
+   "result": [
+    {
+     "content": "Hi Authors, all,\n\nI hope you are doing well. I am new to the list. It is amazing to see such\ngood work going on in the AI Agent domain. A little background on where my\ncomments come from: I work on on-device threat defense and enterprise\nidentity at Samsung Research America, and previously worked on Universal\nLogout at Okta. My comments revolve around revocation and the\nhuman-in-the-loop section, and build in part on Yaron's review of the\n2026-06-01 editor's copy.\n\n1) I see a possible tension between Section 8 and Section 11 on revocation\n\nSection 8 states that short-lived credentials provide \"an alternative to\nexplicit revocation mechanisms.\"\nSection 11 states that recipients of SSF/CAEP/RISC signals \"MUST ensure\nthat revoked or downgraded authorization is enforced without undue delay,\"\nand that cached tokens \"MUST NOT continue to be used after a revocation or\nrisk notification is received.\"\n\nI may be misreading, but these seem to pull in different directions:\nSection 8 positions expiry as a substitute for revocation, while Section 11\ntreats revocation as a live, mandatory obligation. The distinction may be\nthreat-model dependent. Expiry works well for credential theft. It works\npoorly for a compromised agent - one that is correctly attested and holds\nan unexpired credential, but whose behavior has been subverted (e.g. via\nindirect prompt injection). In that case the credential remains valid and\ncorrect for its full lifetime while the agent acts outside its intended\nscope, and typical credential lifetimes exceed the time needed to act.\n\nWould it be worth either reconciling these two sections explicitly, or\nscoping Section 8's claim to the credential-exposure threat model rather\nthan compromise generally?\n\n2) Section 11 makes subscription optional but enforcement mandatory\n\nSection 11 says participants \"MAY subscribe\" to SSF with CAEP or RISC, but\nthat recipients \"MUST\" enforce on receipt. The MUST is therefore\nconditional on the MAY. A deployment that does not subscribe has no\nrevocation path at all, and silently falls back to the Section 8 expiry\nmodel without the document saying so.\n\nWould the working group consider whether subscription should be SHOULD, or\nMUST, for agents authorized to access sensitive resources? It is entirely\npossible this is deliberate deployment latitude, in which case it may still\nbe worth stating the consequence.\n\n3) Section 10.7: same-device deployments weaken the out-of-band property\n\nYaron notes in TECH-8 that CIBA assumes a push notification to a separate\ndevice, while the agent flow may already be running on a mobile device. I\nwould like to extend that from the device-security side, as it is where\nmost of my work sits.\n\nCIBA's value in Section 10.7 rests on the interaction being genuinely\nout-of-band - the approval channel is assumed to be independent of the\nrequesting client. When an on-device agent and the authenticator\napplication share a device, that independence is gone: a device compromise\ntakes both the agent and the approval channel, and the confirmation is\nin-band in all but name. This is not hypothetical - on-device agents\nrunning alongside the user's authenticator are becoming common.\n\nThis does not invalidate the CIBA guidance, but the assumption seems worth\nstating, along with what deployments can do when it does not hold (e.g.\nrelying on platform-level isolation for the approval path, or requiring a\ndistinct device for higher-risk operations).\n\n4) Section 10.7 Note: RFC 9470 as a possible input to the mid-execution case\n\nThe Note in the Human in the Loop section observes that CIBA only accounts\nfor client initiation and does not map well to User confirmation occurring\nmid-execution. Yaron's TECH-8 raises a related concern about the threat\nmodel. I do not see RFC 9470 (OAuth 2.0 Step Up Authentication Challenge)\nin Section 18, so offering it as a possible input rather than a correction:\n\n9470's model is resource-server-initiated - the RS inspects the\nauthentication context behind the presented token and returns\ninsufficient_user_authentication with acr_values / max_age. That addresses\nthe initiation direction the Note identifies, and it places the trigger at\nthe resource, where the sensitivity of the specific action is known. The\nobvious obstacle is that 9470 assumes the client can direct a user agent to\nthe AS, which an autonomous agent does not have. But 9470 is agnostic about\nthe grant used to satisfy the challenge, so a composition may be possible:\na 9470-style challenge from the resource server as the trigger, with CIBA\nas the out-of-band grant that satisfies it.\n\nOne wrinkle if this were pursued: 9470's acr and auth_time reflect the\noriginal user authentication event and do not change on token renewal,\nwhich may need thought for long-running agent sessions.\n\nWas 9470 considered for this case? If it was ruled out, I would find the\nreasoning useful, and would rather understand it than reopen settled ground.\n\n5) Section 14 and agent-specific threats\n\nSection 14 defers to the security considerations of each referenced\nspecification, plus OAuth BCP and FAPI 2.0. Given the goal in Section 1 of\nidentifying gaps to guide future standardization, is agent-specific threat\nanalysis in scope for this document - in particular the\ncompromised-but-attested agent, where posture assessment at issuance\n(Section 8) establishes what an agent is, but not what it is doing at\nrequest time? If that is in scope and useful, I would be glad to help draft\ntext.\n\nThanks for the document. The consolidation framing in Section 1 is very\nuseful, and the prior-art mapping is more complete than most work I have\nseen in this area.\n\nHappy to upload any of these as GitHub issues if the authors prefer.\n\nRegards,\nKunal Ghosh\nORCID: 0009-0007-4602-5624\nkghoshworkid.github.io\n",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "Hi Dennis,\n\nthanks for sharing. But this only reflects parts of the discussion.\n\nSince I too provide public mail listings for my users, I know, this is\na difficult issue.\n\nFrom my point of view, this IETF Web-based ML is dysfunctional because\nit is difficult to digest the important topics.\n\nSubscribers often express their oppinion not matching the topic\n(Subject). This is bad for readers and digesting.\n\nRegards.\n--eh.\n\n\nAm Montag, dem 20.07.2026 um 22:55 +0200 schrieb Dennis Jackson:\n> \u00a0\n> The TLS Mailing List Archive is public & available at the following\n> url:\u00a0\n> \u00a0\n> https://mailarchive.ietf.org/arch/browse/tls/\n> \u00a0\n> Bulk extracts can also be downloaded with rsync as described here:\u00a0\n> \u00a0\n> https://www.ietf.org/about/open-records/\n> \u00a0\n> Best,\n> \u00a0Dennis\n> \u00a0\n> On 20/07/2026 22:08, Ken Kubota wrote:\n> \u00a0\n> \u00a0\n> > \u00a0\n> > \u00a0\n> > \u00a0\n> > \u00a0\n> > \u00a0\n> > \u00a0\n> > \u00a0\n> > I am writing to clarify the statement in your email regarding the\n> > statistic \"7/10 WG participants favor advancing the document.\"\n> > \u00a0\n> > \n> > \u00a0\n> > \u00a0\n> > Transparency is a core principle of the IETF.\n> > \u00a0\n> > \n> > \u00a0\n> > \u00a0\n> > Please provide the breakdown or data that supports this figure.\n> > \u00a0\n> > \n> > \u00a0\n> > \u00a0\n> > Thank you for your assistance.\n> > \u00a0\n> > \n> > \u00a0\n> > \u00a0\n> > Kind regards,\n> > \u00a0\n> > \n> > \u00a0\n> > \u00a0\n> > Ken Kubota\n> > \u00a0\n> > \u00a0____________________________________________________\n> > \u00a0\n> > \u00a0Ken Kubota\n> > \u00a0https://doi.org/10.4444/100\n> > \u00a0\n> > \u00a0\n> > \u00a0\n> > \u00a0\n> > \u00a0\n> > \u00a0\n> > \n> > \u00a0\n> > > \u00a0\n> > > Am 20.07.2026 um 21:51 schrieb Joseph Salowey <joe@salowey.net>:\n> > > \u00a0\n> > > \u00a0\n> > > \u00a0\n> > > As others have mentioned on this thread, a consensus call is not\n> > > a\n> > > \u00a0vote. We used public responses to get a sense of where the\n> > > mailing\n> > > \u00a0list participants are leaning. In this case, we saw many\n> > > participants\n> > > \u00a0who had not participated in the previous calls or on the TLS\n> > > list in\n> > > \u00a0general. \u00a0The chairs have the remit to judge consensus based on\n> > > input\n> > > \u00a0such as taking into account the level of previous participation\n> > > of the\n> > > \u00a0sender. \u00a0There is no specific threshold which represents rough\n> > > \u00a0consensus. In this case, we judged that the responses show rough\n> > > \u00a0consensus to move forward with publishing the document and to\n> > > address\n> > > \u00a0the issues raised during the consensus call.\n> > > \u00a0\n> > > \u00a0All of the mail used as part of this process is publicly\n> > > available. We\n> > > \u00a0do not intend to release any further detailed analysis including\n> > > \u00a0\"numbers\" or \"weights/methods\".\n> > > \u00a0\n> > > \u00a0Thanks,\n> > > \u00a0\n> > > \u00a0Joe\n> > > \u00a0\n> > > \u00a0\n> > > \u00a0On Sun, Jul 19, 2026 at 6:55\u202fAM DA PIEVE Fabiana\n> > > \u00a0<Fabiana.DA-PIEVE@ec.europa.eu> wrote:\n> > > \u00a0\n> > > > \n> > > > \u00a0Can I kindly ask if there is evidence that can be provided for\n> > > > your statements about the numbers, and more info on the weights\n> > > > / method you apply to weigh answers, from both sides ?\n> > > > \u00a0\n> > > > \u00a0I imagine you have a table/a scheme/something, with\n> > > > participants, an established method for the weights, weights\n> > > > associated to each person on both sides, other elements you may\n> > > > have considered relevant ....\n> > > > \u00a0\n> > > > \u00a0Thank you for your kind attention\n> > > > \u00a0\n> > > > \u00a0Fabiana Da Pieve\n> > > > \u00a0Team Leader Post-Quantum Cryptography\n> > > > \u00a0\n> > > > \u00a0European Commission\n> > > > \u00a0DG Communications Networks, Content and Technology\n> > > > \u00a0Unit C4 – Emerging & Disruptive Technologies\n> > > > \u00a0\n> > > > \u00a0\n> > > > \u00a0\n> > > > \u00a0\n> > > > \u00a0-----Original Message-----\n> > > > \u00a0From: Joseph Salowey <joe@salowey.net>\n> > > > \u00a0Sent: Sunday, July 19, 2026 1:31 PM\n> > > > \u00a0To: <tls@ietf.org> <tls@ietf.org>\n> > > > \u00a0Cc: draft-ietf-tls-mlkem@ietf.org; tls-chairs\n> > > > <tls-chairs@ietf.org>\n> > > > \u00a0Subject: [TLS] MLKEM Consensus Call (was WG Last Call: draft-\n> > > > ietf-tls-mlkem-08 (Ends 2026-07-08))\n> > > > \u00a0\n> > > > \u00a0During this last call we received responses from a large\n> > > > number of people on both sides of the issue, many were from\n> > > > first time participants, which was probably due to the\n> > > > extensive social media coverage. The primary objection\n> > > > discussed extensively during the call concerned the relative\n> > > > strength of pure versus hybrid approaches.\n> > > > \u00a0Fundamentally, this is a judgement call people have to make\n> > > > for themselves, and the chair’s role is not to just decide for\n> > > > the WG b=t rather to take the sense of the WG. The chairs\n> > > > ultimately bear the burden of how to weigh those responses\n> > > > against those of long-time WG participants with demonstrated\n> > > > expertise. By pure numbers, more people want to progress the\n> > > > document than not, but this alone does not constitute rough\n> > > > consensus. However, if we look at pre-existing WG participants\n> > > > or people with demonstrated expertise, roughly 7/10 WG\n> > > > participants favor advancing the document, which shows rough\n> > > > consensus to move the document forward.\n> > > > \u00a0\n> > > > \u00a0Even though there is rough consensus to move forward we feel\n> > > > several issues raised during the last call need to be\n> > > > addressed. Some of the issues below have text proposals that we\n> > > > think are appropriate given the list discussions, we will\n> > > > accept feedback on them, but we do not intend to make\n> > > > significant changes since these issues have already had a fair\n> > > > amount of discussion\n> > > > \u00a0\n> > > > \u00a01. Emphasize the status of the document\n> > > > \u00a0\n> > > > \u00a0Currently the pure ML-KEM algorithm is recommended “N” in t=e\n> > > > IANA registry and is a non-standards-track informational\n> > > > document while\n> > > > \u00a0X25519MLKEM768 is marked as recommended “Y” and is defined =n\n> > > > a standards-track document. \u00a0While this indicates the\n> > > > preference for the hybrid approach, it was pointed out that the\n> > > > meaning of the “N =80 \u00a0value may not be obvious to readers\n> > > > unfamiliar with the IETF process.\n> > > > \u00a0\n> > > > \u00a0Based on the discussion the following will be added to the\n> > > > IANA considerations section, which the IESG approved for pure\n> > > > ML-DSA, to save readers following existing links in the\n> > > > document to understand the meaning on N and to further\n> > > > addresses some hybrid/pure approach\n> > > > \u00a0concerns:\n> > > > \u00a0\n> > > > \u00a0As defined in Section 3 of [RFC9847], the value N indicates\n> > > > \u00a0\n> > > > \u00a0\u00a0\u00a0\u00a0\u00a0\u00a0That the item has not been evaluated by the IETF and that\n> > > > the IETF\n> > > > \u00a0\u00a0\u00a0\u00a0\u00a0\u00a0has made no statement about the suitability of the\n> > > > associated\n> > > > \u00a0\u00a0\u00a0\u00a0\u00a0\u00a0mechanism. \u00a0This does not necessarily mean that the\n> > > > mechanism is\n> > > > \u00a0\u00a0\u00a0\u00a0\u00a0\u00a0flawed, only that no consensus exists. \u00a0The IETF might\n> > > > have\n> > > > \u00a0\u00a0\u00a0\u00a0\u00a0\u00a0consensus to leave an item marked as \"N\" on the basis of\n> > > > the item\n> > > > \u00a0\u00a0\u00a0\u00a0\u00a0\u00a0having limited applicability or usage constraints\n> > > > \u00a0\n> > > > \u00a02. Randomness requirements\n> > > > \u00a0\n> > > > \u00a0Jacob Appelbaum raised the issue that m random input value is\n> > > > provided directly to the ML-KEM.Encaps() and encrypted and sent\n> > > > to the TLS Client. This means that an attacker who can use raw\n> > > > random output to determine the PRNG state can use a connection\n> > > > with the server to attempt to derive the server's PRNG state\n> > > > and attack other connections.\n> > > > \u00a0\n> > > > \u00a0This issue pertains to the ML-KEM algorithm itself and is not\n> > > > unique to TLS. The NIST document currently does require a\n> > > > secure PRNG defined in NIST SP 800-90A-C and RFC 9846 discusses\n> > > > PRNGs in Appendix C. Any text added to address this point would\n> > > > need to be included both in this document and the ECDHE-MLKEM\n> > > > document.\n> > > > \u00a0\n> > > > \u00a0Text to go into Section 4.2, after the existing \"MUST NOT\n> > > > reuse randomness\" line:\n> > > > \u00a0\n> > > > \u00a0“During encapsulation, ML-KEM encrypts m, drawn from a random\n> > > > bit generator, so the peer holding the decapsulation key\n> > > > recovers m exactly. Any information that m provides about other\n> > > > outputs of the generator is therefore available to that peer.”\n> > > > \u00a0\n> > > > \u00a0And the following text for Section 5 (security\n> > > > considerations):\n> > > > \u00a0\n> > > > \u00a0“The disclosure of raw random number generator (PRNG) output\n> > > > in TLS and other protocols can be used in an attack to\n> > > > compromise the state of an insecure RNG as described in\n> > > > [DUALEC-TLS]. The m value in ML-KEM is an additional place\n> > > > where raw RNG output is disclosed to an active attacker.\n> > > > \u00a0Because the m value in ML-KEM is randomly generated and\n> > > > transmitted to the client, it is important to follow the PRNG\n> > > > guidance in [FIPS203] and [RFC9846]. Implementers MAY choose to\n> > > > implement mechanisms from [RFC8937] for additional protection\n> > > > across sessions.\"\n> > > > \u00a0\n> > > > \u00a0[DUALECTLS] -\n> > > > https://www.usenix.org/system/files/conference/usenixsecurity=4\n> > > > /sec14-paper-checkoway.pdf\n> > > > \u00a0\n> > > > \u00a0Similar text will also go into the ECDHE-MLKEM document.\n> > > > \u00a0\n> > > > \u00a03. Document Track & Stream\n> > > > \u00a0\n> > > > \u00a0The document is currently in the RFC stream on the non-\n> > > > standards Informational track. Some have argued for the ISE\n> > > > stream so that the document does not reflect IETF consensus or\n> > > > the document be included on the experimental track. \u00a0Both of\n> > > > these approaches will result in the publication of an RFC which\n> > > > is the same result as the current path to the average RFC\n> > > > consumer. We believe we have consensus to publish this as an\n> > > > informational working group document\n> > > > \u00a0\n> > > > \u00a0Joe\n> > > > \u00a0\n> > > > \u00a0\n> > > > \u00a0On Wed, Jun 24, 2026 at 8:00\u202fAM Joseph Salowey via Datatracker\n> > > > <noreply@ietf.org> wrote:\n> > > > \u00a0\n> > > > > \n> > > > > \u00a0This message initiates a new Working Group Last Call for\n> > > > > draft-ietf-tls-m=kem[1], which defines standalone ML-KEM key\n> > > > > establishment for TLS 1.3. The=main question before the\n> > > > > working group is: \"Should the working group publi=h a\n> > > > > document specifying stand alone ML-KEM?\". If there is rough\n> > > > > consensus =hen we will push to refine and publish the\n> > > > > document; otherwise, we will st=p discussing the draft and\n> > > > > not progress it. Please respond to this call in=icating\n> > > > > whether you support publishing a document specifying a stand\n> > > > > alone=ML-KEM. Please refrain from further discussion on this\n> > > > > topic as most argum=nts have been discussed multiple times.\n> > > > > \u00a0\n> > > > > \u00a0Why are we holding this consensus call now?\n> > > > > \u00a0\n> > > > > \u00a0Significant developments have occurred both within this\n> > > > > document and in t=e broader TLS ecosystem to address the\n> > > > > concerns raised in the last WGLC. T=erefore, the third\n> > > > > consensus call is warranted. We ask the working group t=\n> > > > > consider document publication in light of these recent\n> > > > > changes:\n> > > > > \u00a0\n> > > > > \u00a0- Promotion of Hybrids in draft-ietf-tls-ecdhe-mlkem:\n> > > > > Following a separat= consensus call, the WG agreed to promote\n> > > > > the X25519MLKEM768 hybrid group =o Recommended: Y in the IANA\n> > > > > registry. Consequently, the IANA registry wil= reflect a\n> > > > > clear community preference for a hybrid because Recommended:\n> > > > > Y =learly indicates this while the standalone ML-KEM groups\n> > > > > defined in this d=aft remain Recommended: N. The updated\n> > > > > security considerations in [1] refe=ence the IANA registry to\n> > > > > emphasize this preference.\n> > > > > \u00a0\n> > > > > \u00a0- Key Share Reuse Prohibited in draft-ietf-tls-rfc8446bis:\n> > > > > The WG recentl= reached consensus to explicitly prohibit key\n> > > > > share reuse across connectio=s in TLS 1.3. The new text\n> > > > > changes the guidance from SHOULD NOT to a stric= MUST NOT.\n> > > > > This resolves the concerns regarding static key reuse and its\n> > > > > a=sociated privacy and forward-secrecy risks for ML-KEM.\n> > > > > \u00a0\n> > > > > \u00a0- Nadim updated the ProVerif model of TLS 1.3 to evaluate\n> > > > > KEM and hybrid =EM groups in TLS 1.3. This supports other\n> > > > > results which show that KEMs are=secure when used in TLS 1.3\n> > > > > and that hybrid groups are secure even if one =f the\n> > > > > components is compromised.\n> > > > > \u00a0\n> > > > > \u00a0- Liaisons: We received liaison statements from multiple\n> > > > > SDOs including \u00a0=-RAN[2], IEEE 802.11[4] and from 3GPP[3]\n> > > > > \u00a0expressing support for the publi=ation of draft-ietf-tls-\n> > > > > mlkem as an RFC as they rely on the IETF to provid= a stable\n> > > > > normative reference.\n> > > > > \u00a0\n> > > > > \u00a0Please note that a third-party IPR disclosure exists [5]\n> > > > > against this doc=ment regarding patents related to the\n> > > > > underlying ML-KEM algorithm. This IP= declaration has not\n> > > > > changed since the last WGLC. As a reminder, per BCP 7=, the\n> > > > > IETF takes no stance on the validity of patent claims, and\n> > > > > the worki=g group may decide to proceed with a technology\n> > > > > despite IPR disclosures if=it decides that such use is\n> > > > > warranted.\n> > > > > \u00a0\n> > > > > \u00a0Conduct Reminder: Given the heated nature of previous\n> > > > > discussions on this=topic, participants are strongly reminded\n> > > > > to adhere to the IETF Code of Co=duct (BCP 54) and the TLS\n> > > > > WG's Mail List Procedures. Keep feedback profess=onal,\n> > > > > technical, and focused on the document's text.\n> > > > > \u00a0\n> > > > > \u00a0This working group last call will end on 2026-07-08.\n> > > > > \u00a0\n> > > > > \u00a0Joe and Sean\n> > > > > \u00a0\n> > > > > \u00a0[1] https://datatracker.ietf.org/doc/draft-ietf-tls-mlkem/\n> > > > > \u00a0[2] https://datatracker.ietf.org/liaison/2198/\n> > > > > \u00a0[3] https://datatracker.ietf.org/liaison/2151/\n> > > > > \u00a0[4] https://datatracker.ietf.org/liaison/2148/\n> > > > > \u00a0[5]\n> > > > > https://datatracker.ietf.org/ipr/search/?submit=draft&id=draft-ie=f-tl\n> > > > > \u00a0s-mlkem\n> > > > > \u00a0\n> > > > \u00a0\n> > > > \u00a0\n> > > \u00a0\n> > > \u00a0_______________________________________________\n> > > \u00a0TLS mailing list -- tls@ietf.org\n> > > \u00a0To unsubscribe send an email to tls-leave@ietf.org\n> > > \u00a0\n> > > \u00a0\n> > > \u00a0\n> > \u00a0\n> > \u00a0\n> > \u00a0\n> > \u00a0\n> > \u00a0\n> > \u00a0\n> > \u00a0\u00a0\n> > _______________________________________________\n> > TLS mailing list -- tls@ietf.org\n> > To unsubscribe send an email to tls-leave@ietf.org\n> > \u00a0\n> \u00a0\n> _______________________________________________\n> TLS mailing list -- tls@ietf.org\n> To unsubscribe send an email to tls-leave@ietf.org\n\n-- \nDr. Erwin Hoffmann | www.fehcom.de\nPGP key-id: 36553F7F9C58D1CC\nPGP key-fingerprint:  950B 5555 0B08 5A2A 1C00 9594 3655 3F7F 9C58 D1CC\n"
+   },
+   "result": [
+    {
+     "content": "Hi Dennis,\n\nthanks for sharing. But this only reflects parts of the discussion.\n\nSince I too provide public mail listings for my users, I know, this is\na difficult issue.\n\nFrom my point of view, this IETF Web-based ML is dysfunctional because\nit is difficult to digest the important topics.\n\nSubscribers often express their oppinion not matching the topic\n(Subject). This is bad for readers and digesting.\n\nRegards.\n--eh.\n\n\nAm Montag, dem 20.07.2026 um 22:55 +0200 schrieb Dennis Jackson:",
+     "quoted": false
+    },
+    {
+     "content": "> \u00a0\n> The TLS Mailing List Archive is public & available at the following\n> url:\u00a0\n> \u00a0\n> https://mailarchive.ietf.org/arch/browse/tls/\n> \u00a0\n> Bulk extracts can also be downloaded with rsync as described here:\u00a0\n> \u00a0\n> https://www.ietf.org/about/open-records/\n> \u00a0\n> Best,\n> \u00a0Dennis\n> \u00a0\n> On 20/07/2026 22:08, Ken Kubota wrote:\n> \u00a0\n> \u00a0\n> > \u00a0\n> > \u00a0\n> > \u00a0\n> > \u00a0\n> > \u00a0\n> > \u00a0\n> > \u00a0\n> > I am writing to clarify the statement in your email regarding the\n> > statistic \"7/10 WG participants favor advancing the document.\"\n> > \u00a0\n> > \n> > \u00a0\n> > \u00a0\n> > Transparency is a core principle of the IETF.\n> > \u00a0\n> > \n> > \u00a0\n> > \u00a0\n> > Please provide the breakdown or data that supports this figure.\n> > \u00a0\n> > \n> > \u00a0\n> > \u00a0\n> > Thank you for your assistance.\n> > \u00a0\n> > \n> > \u00a0\n> > \u00a0\n> > Kind regards,\n> > \u00a0\n> > \n> > \u00a0\n> > \u00a0\n> > Ken Kubota\n> > \u00a0\n> > \u00a0____________________________________________________\n> > \u00a0\n> > \u00a0Ken Kubota\n> > \u00a0https://doi.org/10.4444/100\n> > \u00a0\n> > \u00a0\n> > \u00a0\n> > \u00a0\n> > \u00a0\n> > \u00a0\n> > \n> > \u00a0\n> > > \u00a0\n> > > Am 20.07.2026 um 21:51 schrieb Joseph Salowey <joe@salowey.net>:\n> > > \u00a0\n> > > \u00a0\n> > > \u00a0\n> > > As others have mentioned on this thread, a consensus call is not\n> > > a\n> > > \u00a0vote. We used public responses to get a sense of where the\n> > > mailing\n> > > \u00a0list participants are leaning. In this case, we saw many\n> > > participants\n> > > \u00a0who had not participated in the previous calls or on the TLS\n> > > list in\n> > > \u00a0general. \u00a0The chairs have the remit to judge consensus based on\n> > > input\n> > > \u00a0such as taking into account the level of previous participation\n> > > of the\n> > > \u00a0sender. \u00a0There is no specific threshold which represents rough\n> > > \u00a0consensus. In this case, we judged that the responses show rough\n> > > \u00a0consensus to move forward with publishing the document and to\n> > > address\n> > > \u00a0the issues raised during the consensus call.\n> > > \u00a0\n> > > \u00a0All of the mail used as part of this process is publicly\n> > > available. We\n> > > \u00a0do not intend to release any further detailed analysis including\n> > > \u00a0\"numbers\" or \"weights/methods\".\n> > > \u00a0\n> > > \u00a0Thanks,\n> > > \u00a0\n> > > \u00a0Joe\n> > > \u00a0\n> > > \u00a0\n> > > \u00a0On Sun, Jul 19, 2026 at 6:55\u202fAM DA PIEVE Fabiana\n> > > \u00a0<Fabiana.DA-PIEVE@ec.europa.eu> wrote:\n> > > \u00a0\n> > > > \n> > > > \u00a0Can I kindly ask if there is evidence that can be provided for\n> > > > your statements about the numbers, and more info on the weights\n> > > > / method you apply to weigh answers, from both sides ?\n> > > > \u00a0\n> > > > \u00a0I imagine you have a table/a scheme/something, with\n> > > > participants, an established method for the weights, weights\n> > > > associated to each person on both sides, other elements you may\n> > > > have considered relevant ....\n> > > > \u00a0\n> > > > \u00a0Thank you for your kind attention\n> > > > \u00a0\n> > > > \u00a0Fabiana Da Pieve\n> > > > \u00a0Team Leader Post-Quantum Cryptography\n> > > > \u00a0\n> > > > \u00a0European Commission\n> > > > \u00a0DG Communications Networks, Content and Technology\n> > > > \u00a0Unit C4 – Emerging & Disruptive Technologies\n> > > > \u00a0\n> > > > \u00a0\n> > > > \u00a0\n> > > > \u00a0\n> > > > \u00a0-----Original Message-----\n> > > > \u00a0From: Joseph Salowey <joe@salowey.net>\n> > > > \u00a0Sent: Sunday, July 19, 2026 1:31 PM\n> > > > \u00a0To: <tls@ietf.org> <tls@ietf.org>\n> > > > \u00a0Cc: draft-ietf-tls-mlkem@ietf.org; tls-chairs\n> > > > <tls-chairs@ietf.org>\n> > > > \u00a0Subject: [TLS] MLKEM Consensus Call (was WG Last Call: draft-\n> > > > ietf-tls-mlkem-08 (Ends 2026-07-08))\n> > > > \u00a0\n> > > > \u00a0During this last call we received responses from a large\n> > > > number of people on both sides of the issue, many were from\n> > > > first time participants, which was probably due to the\n> > > > extensive social media coverage. The primary objection\n> > > > discussed extensively during the call concerned the relative\n> > > > strength of pure versus hybrid approaches.\n> > > > \u00a0Fundamentally, this is a judgement call people have to make\n> > > > for themselves, and the chair’s role is not to just decide for\n> > > > the WG b=t rather to take the sense of the WG. The chairs\n> > > > ultimately bear the burden of how to weigh those responses\n> > > > against those of long-time WG participants with demonstrated\n> > > > expertise. By pure numbers, more people want to progress the\n> > > > document than not, but this alone does not constitute rough\n> > > > consensus. However, if we look at pre-existing WG participants\n> > > > or people with demonstrated expertise, roughly 7/10 WG\n> > > > participants favor advancing the document, which shows rough\n> > > > consensus to move the document forward.\n> > > > \u00a0\n> > > > \u00a0Even though there is rough consensus to move forward we feel\n> > > > several issues raised during the last call need to be\n> > > > addressed. Some of the issues below have text proposals that we\n> > > > think are appropriate given the list discussions, we will\n> > > > accept feedback on them, but we do not intend to make\n> > > > significant changes since these issues have already had a fair\n> > > > amount of discussion\n> > > > \u00a0\n> > > > \u00a01. Emphasize the status of the document\n> > > > \u00a0\n> > > > \u00a0Currently the pure ML-KEM algorithm is recommended “N” in t=e\n> > > > IANA registry and is a non-standards-track informational\n> > > > document while\n> > > > \u00a0X25519MLKEM768 is marked as recommended “Y” and is defined =n\n> > > > a standards-track document. \u00a0While this indicates the\n> > > > preference for the hybrid approach, it was pointed out that the\n> > > > meaning of the “N =80 \u00a0value may not be obvious to readers\n> > > > unfamiliar with the IETF process.\n> > > > \u00a0\n> > > > \u00a0Based on the discussion the following will be added to the\n> > > > IANA considerations section, which the IESG approved for pure\n> > > > ML-DSA, to save readers following existing links in the\n> > > > document to understand the meaning on N and to further\n> > > > addresses some hybrid/pure approach\n> > > > \u00a0concerns:\n> > > > \u00a0\n> > > > \u00a0As defined in Section 3 of [RFC9847], the value N indicates\n> > > > \u00a0\n> > > > \u00a0\u00a0\u00a0\u00a0\u00a0\u00a0That the item has not been evaluated by the IETF and that\n> > > > the IETF\n> > > > \u00a0\u00a0\u00a0\u00a0\u00a0\u00a0has made no statement about the suitability of the\n> > > > associated\n> > > > \u00a0\u00a0\u00a0\u00a0\u00a0\u00a0mechanism. \u00a0This does not necessarily mean that the\n> > > > mechanism is\n> > > > \u00a0\u00a0\u00a0\u00a0\u00a0\u00a0flawed, only that no consensus exists. \u00a0The IETF might\n> > > > have\n> > > > \u00a0\u00a0\u00a0\u00a0\u00a0\u00a0consensus to leave an item marked as \"N\" on the basis of\n> > > > the item\n> > > > \u00a0\u00a0\u00a0\u00a0\u00a0\u00a0having limited applicability or usage constraints\n> > > > \u00a0\n> > > > \u00a02. Randomness requirements\n> > > > \u00a0\n> > > > \u00a0Jacob Appelbaum raised the issue that m random input value is\n> > > > provided directly to the ML-KEM.Encaps() and encrypted and sent\n> > > > to the TLS Client. This means that an attacker who can use raw\n> > > > random output to determine the PRNG state can use a connection\n> > > > with the server to attempt to derive the server's PRNG state\n> > > > and attack other connections.\n> > > > \u00a0\n> > > > \u00a0This issue pertains to the ML-KEM algorithm itself and is not\n> > > > unique to TLS. The NIST document currently does require a\n> > > > secure PRNG defined in NIST SP 800-90A-C and RFC 9846 discusses\n> > > > PRNGs in Appendix C. Any text added to address this point would\n> > > > need to be included both in this document and the ECDHE-MLKEM\n> > > > document.\n> > > > \u00a0\n> > > > \u00a0Text to go into Section 4.2, after the existing \"MUST NOT\n> > > > reuse randomness\" line:\n> > > > \u00a0\n> > > > \u00a0“During encapsulation, ML-KEM encrypts m, drawn from a random\n> > > > bit generator, so the peer holding the decapsulation key\n> > > > recovers m exactly. Any information that m provides about other\n> > > > outputs of the generator is therefore available to that peer.”\n> > > > \u00a0\n> > > > \u00a0And the following text for Section 5 (security\n> > > > considerations):\n> > > > \u00a0\n> > > > \u00a0“The disclosure of raw random number generator (PRNG) output\n> > > > in TLS and other protocols can be used in an attack to\n> > > > compromise the state of an insecure RNG as described in\n> > > > [DUALEC-TLS]. The m value in ML-KEM is an additional place\n> > > > where raw RNG output is disclosed to an active attacker.\n> > > > \u00a0Because the m value in ML-KEM is randomly generated and\n> > > > transmitted to the client, it is important to follow the PRNG\n> > > > guidance in [FIPS203] and [RFC9846]. Implementers MAY choose to\n> > > > implement mechanisms from [RFC8937] for additional protection\n> > > > across sessions.\"\n> > > > \u00a0\n> > > > \u00a0[DUALECTLS] -\n> > > > https://www.usenix.org/system/files/conference/usenixsecurity=4\n> > > > /sec14-paper-checkoway.pdf\n> > > > \u00a0\n> > > > \u00a0Similar text will also go into the ECDHE-MLKEM document.\n> > > > \u00a0\n> > > > \u00a03. Document Track & Stream\n> > > > \u00a0\n> > > > \u00a0The document is currently in the RFC stream on the non-\n> > > > standards Informational track. Some have argued for the ISE\n> > > > stream so that the document does not reflect IETF consensus or\n> > > > the document be included on the experimental track. \u00a0Both of\n> > > > these approaches will result in the publication of an RFC which\n> > > > is the same result as the current path to the average RFC\n> > > > consumer. We believe we have consensus to publish this as an\n> > > > informational working group document\n> > > > \u00a0\n> > > > \u00a0Joe\n> > > > \u00a0\n> > > > \u00a0\n> > > > \u00a0On Wed, Jun 24, 2026 at 8:00\u202fAM Joseph Salowey via Datatracker> > > > <noreply@ietf.org> wrote:\n> > > > \u00a0\n> > > > > \n> > > > > \u00a0This message initiates a new Working Group Last Call for\n> > > > > draft-ietf-tls-m=kem[1], which defines standalone ML-KEM key\n> > > > > establishment for TLS 1.3. The=main question before the\n> > > > > working group is: \"Should the working group publi=h a\n> > > > > document specifying stand alone ML-KEM?\". If there is rough\n> > > > > consensus =hen we will push to refine and publish the\n> > > > > document; otherwise, we will st=p discussing the draft and\n> > > > > not progress it. Please respond to this call in=icating\n> > > > > whether you support publishing a document specifying a stand\n> > > > > alone=ML-KEM. Please refrain from further discussion on this\n> > > > > topic as most argum=nts have been discussed multiple times.\n> > > > > \u00a0\n> > > > > \u00a0Why are we holding this consensus call now?\n> > > > > \u00a0\n> > > > > \u00a0Significant developments have occurred both within this\n> > > > > document and in t=e broader TLS ecosystem to address the\n> > > > > concerns raised in the last WGLC. T=erefore, the third\n> > > > > consensus call is warranted. We ask the working group t=\n> > > > > consider document publication in light of these recent\n> > > > > changes:\n> > > > > \u00a0\n> > > > > \u00a0- Promotion of Hybrids in draft-ietf-tls-ecdhe-mlkem:\n> > > > > Following a separat= consensus call, the WG agreed to promote\n> > > > > the X25519MLKEM768 hybrid group =o Recommended: Y in the IANA\n> > > > > registry. Consequently, the IANA registry wil= reflect a\n> > > > > clear community preference for a hybrid because Recommended:\n> > > > > Y =learly indicates this while the standalone ML-KEM groups\n> > > > > defined in this d=aft remain Recommended: N. The updated\n> > > > > security considerations in [1] refe=ence the IANA registry to\n> > > > > emphasize this preference.\n> > > > > \u00a0\n> > > > > \u00a0- Key Share Reuse Prohibited in draft-ietf-tls-rfc8446bis:\n> > > > > The WG recentl= reached consensus to explicitly prohibit key\n> > > > > share reuse across connectio=s in TLS 1.3. The new text\n> > > > > changes the guidance from SHOULD NOT to a stric= MUST NOT.\n> > > > > This resolves the concerns regarding static key reuse and its\n> > > > > a=sociated privacy and forward-secrecy risks for ML-KEM.\n> > > > > \u00a0\n> > > > > \u00a0- Nadim updated the ProVerif model of TLS 1.3 to evaluate\n> > > > > KEM and hybrid =EM groups in TLS 1.3. This supports other\n> > > > > results which show that KEMs are=secure when used in TLS 1.3\n> > > > > and that hybrid groups are secure even if one =f the\n> > > > > components is compromised.\n> > > > > \u00a0\n> > > > > \u00a0- Liaisons: We received liaison statements from multiple\n> > > > > SDOs including \u00a0=-RAN[2], IEEE 802.11[4] and from 3GPP[3]\n> > > > > \u00a0expressing support for the publi=ation of draft-ietf-tls-\n> > > > > mlkem as an RFC as they rely on the IETF to provid= a stable\n> > > > > normative reference.\n> > > > > \u00a0\n> > > > > \u00a0Please note that a third-party IPR disclosure exists [5]\n> > > > > against this doc=ment regarding patents related to the\n> > > > > underlying ML-KEM algorithm. This IP= declaration has not\n> > > > > changed since the last WGLC. As a reminder, per BCP 7=, the\n> > > > > IETF takes no stance on the validity of patent claims, and\n> > > > > the worki=g group may decide to proceed with a technology\n> > > > > despite IPR disclosures if=it decides that such use is\n> > > > > warranted.\n> > > > > \u00a0\n> > > > > \u00a0Conduct Reminder: Given the heated nature of previous\n> > > > > discussions on this=topic, participants are strongly reminded\n> > > > > to adhere to the IETF Code of Co=duct (BCP 54) and the TLS\n> > > > > WG's Mail List Procedures. Keep feedback profess=onal,\n> > > > > technical, and focused on the document's text.\n> > > > > \u00a0\n> > > > > \u00a0This working group last call will end on 2026-07-08.\n> > > > > \u00a0\n> > > > > \u00a0Joe and Sean\n> > > > > \u00a0\n> > > > > \u00a0[1] https://datatracker.ietf.org/doc/draft-ietf-tls-mlkem/\n> > > > > \u00a0[2] https://datatracker.ietf.org/liaison/2198/\n> > > > > \u00a0[3] https://datatracker.ietf.org/liaison/2151/\n> > > > > \u00a0[4] https://datatracker.ietf.org/liaison/2148/\n> > > > > \u00a0[5]\n> > > > > https://datatracker.ietf.org/ipr/search/?submit=draft&id=draft-ie=f-tl\n> > > > > \u00a0s-mlkem\n> > > > > \u00a0\n> > > > \u00a0\n> > > > \u00a0\n> > > \u00a0\n> > > \u00a0_______________________________________________\n> > > \u00a0TLS mailing list -- tls@ietf.org\n> > > \u00a0To unsubscribe send an email to tls-leave@ietf.org\n> > > \u00a0\n> > > \u00a0\n> > > \u00a0\n> > \u00a0\n> > \u00a0\n> > \u00a0\n> > \u00a0\n> > \u00a0\n> > \u00a0\n> > \u00a0\u00a0\n> > _______________________________________________\n> > TLS mailing list -- tls@ietf.org\n> > To unsubscribe send an email to tls-leave@ietf.org\n> > \u00a0\n> \u00a0\n> _______________________________________________\n> TLS mailing list -- tls@ietf.org\n> To unsubscribe send an email to tls-leave@ietf.org",
+     "quoted": true
+    },
+    {
+     "content": "",
+     "quoted": false
+    },
+    {
+     "content": "-- \nDr. Erwin Hoffmann | www.fehcom.de\nPGP key-id: 36553F7F9C58D1CC\nPGP key-fingerprint:  950B 5555 0B08 5A2A 1C00 9594 3655 3F7F 9C58 D1CC\n",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "Hi Haisheng,\n\nForwarding to regext, fwiw.\n\nFeel free to share more context and your plans with this document :-)\n\nCheers,\nMed\n\n-----Message d'origine-----"
+   },
+   "result": [
+    {
+     "content": "Hi Haisheng,\n\nForwarding to regext, fwiw.\n\nFeel free to share more context and your plans with this document :-)\n\nCheers,\nMed\n",
+     "quoted": false
+    },
+    {
+     "content": "-----Message d'origine-----",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "Hi Job,\n\nThis is definitely a bug.\nPlease create an issue on https://github.com/ietf-tools/red/issues and\ninclude the list of RFCs that have problems.\n\nFeel free to submit UI improvement suggestions there as well.\n\nNick\n\nOn Fri, Jul 17, 2026 at 3:55\u202fAM Job Snijders <job=40bsd.nl@dmarc.ietf.org>\nwrote:\n\n> Hi,\n>\n> If I’m not mistaken, it used to be the case that RFC document HTML content\n> properly flowed, as in, you could always read specifications on narrow\n> screens (like your phone) without constantly scrolling right to left and\n> back.\n>\n> Nowadays for _some_ RFCs it’s harder to quickly read the spec on your\n> phone, text disappears beyond the right border, see attached screenshot.\n> Tried 2 browsers on iPhone: Safari and DuckDuckGo. Some tables also render\n> poorly with sideways scrolling inside sideways scrolling. Also, IMHO having\n> the title persist at the bottom wastes valuable screen real estate.\n>\n> The current content presentation puts me at a disadvantage when trying to\n> settle arguments in the hallway track ;-)\n>\n> What’s the process to improve the presentation?\n>\n> Kind regards,\n>\n> Job\n>\n> Ps. Only seems an issue with some RFCs\n>\n>\n>\n"
+   },
+   "result": [
+    {
+     "content": "Hi Job,\n\nThis is definitely a bug.\nPlease create an issue on https://github.com/ietf-tools/red/issues and\ninclude the list of RFCs that have problems.\n\nFeel free to submit UI improvement suggestions there as well.\n\nNick",
+     "quoted": false
+    },
+    {
+     "content": "\nOn Fri, Jul 17, 2026 at 3:55\u202fAM Job Snijders <job=40bsd.nl@dmarc.ietf.org>wrote:\n\n> Hi,\n>\n> If I’m not mistaken, it used to be the case that RFC document HTML content\n> properly flowed, as in, you could always read specifications on narrow\n> screens (like your phone) without constantly scrolling right to left and\n> back.\n>\n> Nowadays for _some_ RFCs it’s harder to quickly read the spec on your\n> phone, text disappears beyond the right border, see attached screenshot.\n> Tried 2 browsers on iPhone: Safari and DuckDuckGo. Some tables also render\n> poorly with sideways scrolling inside sideways scrolling. Also, IMHO having\n> the title persist at the bottom wastes valuable screen real estate.\n>\n> The current content presentation puts me at a disadvantage when trying to\n> settle arguments in the hallway track ;-)\n>\n> What’s the process to improve the presentation?\n>\n> Kind regards,\n>\n> Job\n>\n> Ps. Only seems an issue with some RFCs\n>\n>\n>",
+     "quoted": true
+    },
+    {
+     "content": "",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "Hi John,\n\nJust a small correction: The slides of ANSI say \"higher confidence\" \nrather than \"high confidence\" when talking about ML-KEM which feels a \nbit different to me since \"higher\" seems to imply that it's relative to \nsomething else. Only FN-DSA seems to be classified as \"high confidence\" \nin the slides.\u00a0Just wanted to point that out for clarity. The reference \nyou provided is appreciated though!\n\n~ Christian Veenman (NCSC-NL)\n\nPs. I have been lurking this list since April and this is my first time \nreplying. I am still discovering a bit how everything works over here. \nPlease let me know if I do not follow proper etiquette.\n\nOn 7/20/2026 6:36 AM, John Mattsson wrote:\n>\n> \t\n> Caution: This mail has been sent from an external source outside of \n> NCSC. Do not reply to it, or open any links/attachments unless you are \n> sure of the sender's identity.\n>\n>\n> Thanks Joe,\n>\n> As with most industry, I would like to see this standardized and \n> supported by libraries so that I can potentially enable it in the \n> future. European cybersecurity agencies such as ANSSI has a high \n> confidence in ML-KEM [1].\n>\n> The value of hybridization with quantum-vulnerable cryptography is \n> clearly temporary, especially if one believes that nation-state \n> attackers will have CRQCs in 2029 [2].\n>\n> The campaign by Bernstein et al. against the IETF and ML-KEM is a \n> waste of everybody's time and resources and is likely to have a \n> significant negative impact on cybersecurity. Can the IETF please take \n> action before we lose more brilliant researchers, such as Nadim \n> Kobeissi, from the community? [3]\n>\n> Cheers,\n> John Preuß Mattsson\n>\n> [1] \n> https://na.eventscloud.com/file_uploads/b635298de1c10be6d3732863e8b1beca_Day2-1600-ANSSI.pdf\n>\n> [2] https://cr.yp.to/talks/2023.06.15/slides-djb-20230615-pqrisk-4x3.pdf\n>\n> [3] https://mailarchive.ietf.org/arch/msg/tls/7HNihlgf0I8Mpe-0nqGb56dnON8/\n>\n> _______________________________________________\n> TLS mailing list --tls@ietf.org\n> To unsubscribe send an email totls-leave@ietf.org"
+   },
+   "result": [
+    {
+     "content": "Hi John,\n\nJust a small correction: The slides of ANSI say \"higher confidence\" \nrather than \"high confidence\" when talking about ML-KEM which feels a \nbit different to me since \"higher\" seems to imply that it's relative to \nsomething else. Only FN-DSA seems to be classified as \"high confidence\" \nin the slides.\u00a0Just wanted to point that out for clarity. The reference \nyou provided is appreciated though!\n\n~ Christian Veenman (NCSC-NL)\n\nPs. I have been lurking this list since April and this is my first time \nreplying. I am still discovering a bit how everything works over here. \nPlease let me know if I do not follow proper etiquette.",
+     "quoted": false
+    },
+    {
+     "content": "\nOn 7/20/2026 6:36 AM, John Mattsson wrote:\n>\n> \t\n> Caution: This mail has been sent from an external source outside of \n> NCSC. Do not reply to it, or open any links/attachments unless you are \n> sure of the sender's identity.\n>\n>\n> Thanks Joe,\n>\n> As with most industry, I would like to see this standardized and \n> supported by libraries so that I can potentially enable it in the \n> future. European cybersecurity agencies such as ANSSI has a high \n> confidence in ML-KEM [1].\n>\n> The value of hybridization with quantum-vulnerable cryptography is \n> clearly temporary, especially if one believes that nation-state \n> attackers will have CRQCs in 2029 [2].\n>\n> The campaign by Bernstein et al. against the IETF and ML-KEM is a \n> waste of everybody's time and resources and is likely to have a \n> significant negative impact on cybersecurity. Can the IETF please take \n> action before we lose more brilliant researchers, such as Nadim \n> Kobeissi, from the community? [3]\n>\n> Cheers,\n> John Preuß Mattsson\n>\n> [1] \n> https://na.eventscloud.com/file_uploads/b635298de1c10be6d3732863e8b1beca_Day2-1600-ANSSI.pdf\n>\n> [2] https://cr.yp.to/talks/2023.06.15/slides-djb-20230615-pqrisk-4x3.pdf\n>\n> [3] https://mailarchive.ietf.org/arch/msg/tls/7HNihlgf0I8Mpe-0nqGb56dnON8/\n>\n> _______________________________________________\n> TLS mailing list --tls@ietf.org\n> To unsubscribe send an email totls-leave@ietf.org",
+     "quoted": true
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "Hi Mario,\n\nThank you for sharing your thoughts on this.\n\nCheers,\nMed"
+   },
+   "result": [
+    {
+     "content": "Hi Mario,\n\nThank you for sharing your thoughts on this.\n\nCheers,\nMed",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "Hi Mario/Jim,\n\nThank you for sharing your thoughts on this.\n\nLet me remind that the reasoning for having such policy in the charter is to ensure that we are defining new mappings that are motivated by real operational needs.\n\nProcess-wise, consensus to adopt a document does not mean that the document will be necessary progressed to an RFC. Consensus to publish will typically be assessed during WGLC. Also, a WG may decide to adopt a doc, but decide later that it is better to park a spec , etc.\n\nNow back to this specific document, the information you shared below is a great info to record in the document writeup to demonstrate how it adheres to the deployment policy in the charter.\n\nFYI, we received comments during the IESG review of the QUIC draft on that same point. We managed to address it as I already had the required arguments gathered as part of my AD review (thanks to the authors).\n\nThank you.\n\nCheers,\nMed"
+   },
+   "result": [
+    {
+     "content": "Hi Mario/Jim,\n\nThank you for sharing your thoughts on this.\n\nLet me remind that the reasoning for having such policy in the charter is to ensure that we are defining new mappings that are motivated by real operational needs.\n\nProcess-wise, consensus to adopt a document does not mean that the document will be necessary progressed to an RFC. Consensus to publish will typically be assessed during WGLC. Also, a WG may decide to adopt a doc, but decide later that it is better to park a spec , etc.\n\nNow back to this specific document, the information you shared below is a great info to record in the document writeup to demonstrate how it adheres to the deployment policy in the charter.\n\nFYI, we received comments during the IESG review of the QUIC draft on that same point. We managed to address it as I already had the required arguments gathered as part of my AD review (thanks to the authors).\n\nThank you.\n\nCheers,\nMed",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "Hi Nat,\n\nThank you for the follow-up. Please see inline.\n\nCheers,\nMed"
+   },
+   "result": [
+    {
+     "content": "Hi Nat,\n\nThank you for the follow-up. Please see inline.\n\nCheers,\nMed",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "Hi Nat,\n\nThank you for the follow-up. Please see inline.\n\nCheers,\nMed\n\nDe : Nat Kao <nat@example.org>\nEnvoyé : vendredi 3 juillet 2026 04:16\nÀ : BOUCADAIR Mohamed <med@example.org>\nObjet : Re: review of draft-ietf-wg-example\n\nHi Med,\n\nMany thanks for the review. Please see our responses below.\n\n# Consider adding a pointer to the registry cited here in the introduction\n\nUpdated as suggested, with a pointer to the IANA registry group.\n[Med] ACK\n\n# Early allocation is mentioned but the policy text is outdated now\n\nUpdated. We have added a reference to the policy document as well.\n[Med] I think this can be simplified further by citing the policy document alone.\n\nRegards,\nNat\n"
+   },
+   "result": [
+    {
+     "content": "Hi Nat,\n\nThank you for the follow-up. Please see inline.\n\nCheers,\nMed\n\nDe : Nat Kao <nat@example.org>\nEnvoyé : vendredi 3 juillet 2026 04:16\nÀ : BOUCADAIR Mohamed <med@example.org>\nObjet : Re: review of draft-ietf-wg-example\n\nHi Med,\n\nMany thanks for the review. Please see our responses below.\n\n# Consider adding a pointer to the registry cited here in the introduction\n\nUpdated as suggested, with a pointer to the IANA registry group.\n[Med] ACK\n\n# Early allocation is mentioned but the policy text is outdated now\n\nUpdated. We have added a reference to the policy document as well.\n[Med] I think this can be simplified further by citing the policy document alone.\n\nRegards,\nNat\n",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "Hi Roy,\n\nMinor nit:\n\nOn 7/20/26 16:28, Roy Arends wrote:\n>> 3)\n>> \"To avoid a downgrade attack, where the Delegation Type RRsets and NSEC (or\n>> NSEC3) records can be replaced by unsigned NS records, causing the resolver to\n>> use unencrypted transport\"\n[...]\n> \n> I will remove \", causing the resolver to use unencrypted transport” and add a reference to paragraph 8.2.1\n\nWhen reading \"the Delegation Type RRsets and NSEC (or NSEC3) records can be replaced\", I was briefly confused regarding what about their RRSIGs.\n\nSuggest adding \"signed\" before \"Delegation Type RRsets\", or \"and their signatures\" after \"records\".\n\nCheers,\nPeter\n\n"
+   },
+   "result": [
+    {
+     "content": "Hi Roy,\n\nMinor nit:",
+     "quoted": false
+    },
+    {
+     "content": "\nOn 7/20/26 16:28, Roy Arends wrote:\n>> 3)\n>> \"To avoid a downgrade attack, where the Delegation Type RRsets and NSEC (or\n>> NSEC3) records can be replaced by unsigned NS records, causing the resolver to\n>> use unencrypted transport\"",
+     "quoted": true
+    },
+    {
+     "content": "[...]",
+     "quoted": false
+    },
+    {
+     "content": "> \n> I will remove \", causing the resolver to use unencrypted transport” and add a reference to paragraph 8.2.1",
+     "quoted": true
+    },
+    {
+     "content": "\nWhen reading \"the Delegation Type RRsets and NSEC (or NSEC3) records can be replaced\", I was briefly confused regarding what about their RRSIGs.\n\nSuggest adding \"signed\" before \"Delegation Type RRsets\", or \"and their signatures\" after \"records\".\n\nCheers,\nPeter\n\n",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "Hi Thi, Karthik, all,\n\nThank you for spelling out the four possession-side rows. I agree that rows\n1-4 should remain a substrate and authorize nothing by themselves. I\nattached a short review and test-vector plan.\n\nThree corrections are important before treating the rows as a verifier\ncontract:\n\n   - Row 1 must be limited to attested inputs that are actually measured\n   and bound to the enrolled key and enrollment record. Key existence alone is\n   not evidence for every claimed input.\n   - Row 3 should enumerate the monitored conditions, detection timing, and\n   the governed key operations. Key erasure protects the next relevant key use\n   or agreement; an established connection still needs its own stated\n   management rule.\n   - Row 4 needs a re-assessment lease or expiry, delivery and clock\n   assumptions, and a grace policy. Non-delivery does not fail closed merely\n   by being called non-delivery; after the lease, the next governed key use\n   must fail because current status cannot be established.\n\nThe attached vectors cover enrollment binding, live possession, local\nfailure before and after a connection, lifecycle delivery, lease expiry,\nand replay/stale/wrong-device events. The proposed outcome labels are\nvector vocabulary only, not a request for new wire-level errors.\n\nBest,\nSongbo\n\nOn Tue, 14 Jul 2026 18:45:07 +0000, Thi Nguyen-Huu thi.nh@winmagic.com\nwrote:\n\nKarthik, Songbo, all,\n\nTo Morgan on the weekend I said I would state the possession-side rows in\nSongbo’s template, and here they are.\n\nThe possession row is one of four that belong together. Possession is what\na verifier checks, but it is not self-supporting: Row 1 says why the key\nmeans anything; Row 3 says\nwhy its continued existence is an assertion and not an assumption; Row 4\nsays what happens when the condition is decided somewhere the endpoint\ncannot see. Together they are one substrate — they establish who is present\nand sound, and they authorize nothing.\nRows five through seven authorize, join on the action digest per Songbo’s\nframing, and no row inherits another’s guarantees.\n\nRow 2 is stated below for continuity with the three that surround it. Where\nit differs from the reconciled text you have already recorded, yours stands.\n\nRow 1 — Enrollment binding (key, actor, workload, environment).\n\nClaim: this key was built inside this hardware anchor, for this actor and\nworkload, with the required conditions as inputs to the build — the key\nexists, therefore the inputs existed at mint.\n\nCarrier: attestation evidence at enrollment; the platform key endorsed, the\npublic key registered with the verifier — as a raw public key (RFC 7250) or\nin a certificate where one is wanted.\n\nVerifier and rule: the credential service appraises the attestation at\nissuance and pins the key. The binding is proven by attestation, not\nasserted by the workload.\n\nBinding and freshness: established at mint; re-appraisal per policy.\nAttestation proves construction and custody at mint — it does not prove\nfuture soundness. That is Rows 2–4.\n\nFailure behavior: failed appraisal, no enrollment; nothing exists to\npresent later.\n\nDependency: the hardware anchor (TPM, secure element, vTPM) and its\nendorsement chain.\n\nEvidence: the attestation record at enrollment.\n\nRow 2 — Live key possession at connection.\n\nClaim: the presenter on this connection holds and can use the enrolled key\nnow. The key exists in exactly one place; validity is the successful use.\n\nCarrier: the mTLS handshake itself. No new wire format.\n\nVerifier and rule: standard TLS client authentication against the enrolled\nkey.\n\nBinding and freshness: fresh per handshake, channel-bound; nothing bearer,\nnothing replayable.\n\nFailure behavior: key absent or unusable, the handshake fails. Fails closed\nwith no signal.\n\nDependency: Row 1 for what the key means. Nothing else — this row leans on\nno other row.\n\nEvidence: the connection itself; none retained, by design. Durable evidence\nof a decision is Row 7’s job, not this row’s.\n\nRow 3 — Local condition failure / key unavailability.\n\nClaim: the key’s continued existence is itself the assertion that the mint\nconditions still hold. When a locally visible condition fails — the user\ndeparts, posture drops, protection is disabled in place, the workload ends\n— the platform erases the key in real\ntime.\n\nCarrier: none. Absence is the carrier; no message is sent.\n\nVerifier and rule: the verifier observes nothing except that Row 2 stops\nsucceeding. There is nothing to fetch and no list to distribute.\n\nBinding and freshness: real-time at the endpoint; enforcement lands at the\nkey’s next use. An established connection can outlive a mid-session failure\n— bounding connection lifetime is the fix, and it is the same fix rotation\nneeds for the same gap.\n\nFailure behavior: fail-stop by absence. Zero-message revocation for the\nlocally visible class.\n\nDependency: Row 1’s anchor, and the property that the key is available\nnowhere else — hardware holds that property for the key’s life; software\nholds it only briefly.\n\nEvidence: none, by design; the diagnostic is possession ceasing. The\ncondition inputs are software-observed posture readings feeding\nhardware-held keys — deterministic cryptography on sensor-grade inputs,\nstated here so the cell is honest.\n\nRow 4 — External lifecycle events.\n\nClaim: conditions decided where the endpoint cannot see them — a role\nremoved, a workload no longer trusted, quarantine, retirement — are carried\nas an event to the platform, which erases the key. An external decision\nbecomes Row 3’s local absence: one event\nper device, and the fan-out to relying parties happens by absence rather\nthan by notification.\n\nCarrier: a continuous-evaluation event (CAEP / Shared Signals); one event\ntype, aligned with the naming in Iman’s drafts.\n\nVerifier and rule: the relying party’s check remains Row 2; nothing is\ndistributed per relying party.\n\nBinding and freshness: bound at delivery. Where the device is unreachable,\nthe key’s liveness requirement fails closed — no re-assessment within the\nwindow, no key.\n\nFailure behavior: fail closed on non-delivery.\n\nDependency: a signals channel to the platform, and Row 3’s erasure\nmechanism.\n\nEvidence: the event record at the transmitter.\n\nTwo seams to the authorizing rows, offered rather than claimed: Row 2 is\nthe possession dependency the mapping’s R4 names, and the endpoint platform\nis a candidate for the\ntrusted display surface Row 7’s rendering residual asks for. Test vectors\nfor Rows 2 and 3 to follow to the list.\n\nCheers\n\nThi"
+   },
+   "result": [
+    {
+     "content": "Hi Thi, Karthik, all,\n\nThank you for spelling out the four possession-side rows. I agree that rows\n1-4 should remain a substrate and authorize nothing by themselves. I\nattached a short review and test-vector plan.\n\nThree corrections are important before treating the rows as a verifier\ncontract:\n\n   - Row 1 must be limited to attested inputs that are actually measured\n   and bound to the enrolled key and enrollment record. Key existence alone is\n   not evidence for every claimed input.\n   - Row 3 should enumerate the monitored conditions, detection timing, and\n   the governed key operations. Key erasure protects the next relevant key use\n   or agreement; an established connection still needs its own stated\n   management rule.\n   - Row 4 needs a re-assessment lease or expiry, delivery and clock\n   assumptions, and a grace policy. Non-delivery does not fail closed merely\n   by being called non-delivery; after the lease, the next governed key use\n   must fail because current status cannot be established.\n\nThe attached vectors cover enrollment binding, live possession, local\nfailure before and after a connection, lifecycle delivery, lease expiry,\nand replay/stale/wrong-device events. The proposed outcome labels are\nvector vocabulary only, not a request for new wire-level errors.\n\nBest,\nSongbo\n",
+     "quoted": false
+    },
+    {
+     "content": "On Tue, 14 Jul 2026 18:45:07 +0000, Thi Nguyen-Huu thi.nh@winmagic.comwrote:",
+     "quoted": false
+    },
+    {
+     "content": "\nKarthik, Songbo, all,\n\nTo Morgan on the weekend I said I would state the possession-side rows in\nSongbo’s template, and here they are.\n\nThe possession row is one of four that belong together. Possession is what\na verifier checks, but it is not self-supporting: Row 1 says why the key\nmeans anything; Row 3 says\nwhy its continued existence is an assertion and not an assumption; Row 4\nsays what happens when the condition is decided somewhere the endpoint\ncannot see. Together they are one substrate — they establish who is present\nand sound, and they authorize nothing.\nRows five through seven authorize, join on the action digest per Songbo’s\nframing, and no row inherits another’s guarantees.\n\nRow 2 is stated below for continuity with the three that surround it. Where\nit differs from the reconciled text you have already recorded, yours stands.\n\nRow 1 — Enrollment binding (key, actor, workload, environment).\n\nClaim: this key was built inside this hardware anchor, for this actor and\nworkload, with the required conditions as inputs to the build — the key\nexists, therefore the inputs existed at mint.\n\nCarrier: attestation evidence at enrollment; the platform key endorsed, the\npublic key registered with the verifier — as a raw public key (RFC 7250) or\nin a certificate where one is wanted.\n\nVerifier and rule: the credential service appraises the attestation at\nissuance and pins the key. The binding is proven by attestation, not\nasserted by the workload.\n\nBinding and freshness: established at mint; re-appraisal per policy.\nAttestation proves construction and custody at mint — it does not prove\nfuture soundness. That is Rows 2–4.\n\nFailure behavior: failed appraisal, no enrollment; nothing exists to\npresent later.\n\nDependency: the hardware anchor (TPM, secure element, vTPM) and its\nendorsement chain.\n\nEvidence: the attestation record at enrollment.\n\nRow 2 — Live key possession at connection.\n\nClaim: the presenter on this connection holds and can use the enrolled key\nnow. The key exists in exactly one place; validity is the successful use.\n\nCarrier: the mTLS handshake itself. No new wire format.\n\nVerifier and rule: standard TLS client authentication against the enrolled\nkey.\n\nBinding and freshness: fresh per handshake, channel-bound; nothing bearer,\nnothing replayable.\n\nFailure behavior: key absent or unusable, the handshake fails. Fails closed\nwith no signal.\n\nDependency: Row 1 for what the key means. Nothing else — this row leans on\nno other row.\n\nEvidence: the connection itself; none retained, by design. Durable evidence\nof a decision is Row 7’s job, not this row’s.\n\nRow 3 — Local condition failure / key unavailability.\n\nClaim: the key’s continued existence is itself the assertion that the mint\nconditions still hold. When a locally visible condition fails — the user\ndeparts, posture drops, protection is disabled in place, the workload ends\n— the platform erases the key in real\ntime.\n\nCarrier: none. Absence is the carrier; no message is sent.\n\nVerifier and rule: the verifier observes nothing except that Row 2 stops\nsucceeding. There is nothing to fetch and no list to distribute.\n\nBinding and freshness: real-time at the endpoint; enforcement lands at the\nkey’s next use. An established connection can outlive a mid-session failure\n— bounding connection lifetime is the fix, and it is the same fix rotation\nneeds for the same gap.\n\nFailure behavior: fail-stop by absence. Zero-message revocation for the\nlocally visible class.\n\nDependency: Row 1’s anchor, and the property that the key is available\nnowhere else — hardware holds that property for the key’s life; software\nholds it only briefly.\n\nEvidence: none, by design; the diagnostic is possession ceasing. The\ncondition inputs are software-observed posture readings feeding\nhardware-held keys — deterministic cryptography on sensor-grade inputs,\nstated here so the cell is honest.\n\nRow 4 — External lifecycle events.\n\nClaim: conditions decided where the endpoint cannot see them — a role\nremoved, a workload no longer trusted, quarantine, retirement — are carried\nas an event to the platform, which erases the key. An external decision\nbecomes Row 3’s local absence: one event\nper device, and the fan-out to relying parties happens by absence rather\nthan by notification.\n\nCarrier: a continuous-evaluation event (CAEP / Shared Signals); one event\ntype, aligned with the naming in Iman’s drafts.\n\nVerifier and rule: the relying party’s check remains Row 2; nothing is\ndistributed per relying party.\n\nBinding and freshness: bound at delivery. Where the device is unreachable,\nthe key’s liveness requirement fails closed — no re-assessment within the\nwindow, no key.\n\nFailure behavior: fail closed on non-delivery.\n\nDependency: a signals channel to the platform, and Row 3’s erasure\nmechanism.\n\nEvidence: the event record at the transmitter.\n\nTwo seams to the authorizing rows, offered rather than claimed: Row 2 is\nthe possession dependency the mapping’s R4 names, and the endpoint platform\nis a candidate for the\ntrusted display surface Row 7’s rendering residual asks for. Test vectors\nfor Rows 2 and 3 to follow to the list.\n\nCheers\n\nThi",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "Hi all,\n\nWe are running a project at the IETF 126 Hackathon (18-19 July, Vienna) on a minimal multicast extension for QUIC.\n\nMotivation: draft-navarre-quic-flexicast defines Flexicast QUIC, which supports multicast delivery, builds on Multipath QUIC, and requires changes across several parts of the stack. draft-jholland-quic-multicast takes a different approach, focusing on the security aspects of the extension. For the hackathon, we want to explore the lower bound of the design space: what is the smallest set of changes to QUIC that still yields working multicast delivery, and what do we give up to get there?\n\nWe expect the outcome to be multiple proof-of-concept extensions in multiple existing implementations, plus a clearer picture of which parts of Flexicast QUIC are essential and which are conveniences.\n\nProject repository:\nhttps://github.com/louisna/minimal-multicast-quic-ietf-126\n\nIf you are interested, please reach out or open an issue on the repo.\n\nRelevant drafts:\n- draft-navarre-quic-flexicast: https://datatracker.ietf.org/doc/draft-navarre-quic-flexicast/\n- draft-jholland-quic-multicast: https://datatracker.ietf.org/doc/draft-jholland-quic-multicast/\nScientific paper:\nTaking the Best of Multicast and Unicast with Flexicast QUIC: https://dl.acm.org/doi/pdf/10.1145/3750832.3750834\n\nBest regards,\nLouis Navarre, UCLouvain\n"
+   },
+   "result": [
+    {
+     "content": "Hi all,\n\nWe are running a project at the IETF 126 Hackathon (18-19 July, Vienna) on a minimal multicast extension for QUIC.\n\nMotivation: draft-navarre-quic-flexicast defines Flexicast QUIC, which supports multicast delivery, builds on Multipath QUIC, and requires changes across several parts of the stack. draft-jholland-quic-multicast takes a different approach, focusing on the security aspects of the extension. For the hackathon, we want to explore the lower bound of the design space: what is the smallest set of changes to QUIC that still yields working multicast delivery, and what do we give up to get there?\n\nWe expect the outcome to be multiple proof-of-concept extensions in multiple existing implementations, plus a clearer picture of which parts of Flexicast QUIC are essential and which are conveniences.\n\nProject repository:\nhttps://github.com/louisna/minimal-multicast-quic-ietf-126\n\nIf you are interested, please reach out or open an issue on the repo.\n\nRelevant drafts:\n- draft-navarre-quic-flexicast: https://datatracker.ietf.org/doc/draft-navarre-quic-flexicast/\n- draft-jholland-quic-multicast: https://datatracker.ietf.org/doc/draft-jholland-quic-multicast/\nScientific paper:\nTaking the Best of Multicast and Unicast with Flexicast QUIC: https://dl.acm.org/doi/pdf/10.1145/3750832.3750834\n\nBest regards,\nLouis Navarre, UCLouvain\n",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "Hi,\n\nIs there a thread to discuss the merits of the two PQ + T signature drafts\nin comparison? (I think the email you sent for agenda meant to reference\n[2] and [3])\n\nApologies for not being around live for that session,\n—Daniel\n\nOn Monday, July 20, 2026, Stephen Farrell <stephen.farrell@cs.tcd.ie> wrote:\n\n>\n> Hiya,\n>\n> On 20/07/2026 14:09, Sean Turner wrote:\n>\n>> Hi! We have (finally) posted the agenda. It is available here:\n>> https://datatracker.ietf.org/meeting/126/materials/agenda-126-tls\n>>\n>> Note we took ekr’s suggestion [1] to allocate some time on the\n>> agenda to discuss PQ + T signature for TLS drafts, see [1] and [2];\n>> we worked with authors to ensure they would be ready for our Friday\n>> session.\n>>\n>\n> Likely doesn't affect too many people, but it does affect me, so\n> just in case there's a pile of others in a similar situation:\n>\n> I'll be gone already on Friday so won't be able to be there for\n> that PQ + T signature slot, which is a pity for me. Were that on\n> Thursday, that'd be great.\n>\n> I don't expect you to switch the slot just for me.\n>\n> Cheers,\n> S.\n>\n>\n>> spt\n>>\n>> [1] https://mailarchive.ietf.org/arch/msg/tls/H20gwrTeJVe1-\n>> qFmI_uBDtYBVnc/ [2] https://datatracker.ietf.org/doc/draft-reddy-tls-\n>> composite-mldsa/ [3] https://datatracker.ietf.org/doc/draft-yusef-\n>> tls-pqt-dual-certs/\n>>\n>> _______________________________________________ TLS mailing list --\n>> tls@ietf.org To unsubscribe send an email to tls-leave@ietf.org\n>>\n>\n>\n"
+   },
+   "result": [
+    {
+     "content": "Hi,\n\nIs there a thread to discuss the merits of the two PQ + T signature drafts\nin comparison? (I think the email you sent for agenda meant to reference\n[2] and [3])\n\nApologies for not being around live for that session,\n—Daniel",
+     "quoted": false
+    },
+    {
+     "content": "\nOn Monday, July 20, 2026, Stephen Farrell <stephen.farrell@cs.tcd.ie> wrote:\n\n>\n> Hiya,\n>\n> On 20/07/2026 14:09, Sean Turner wrote:\n>\n>> Hi! We have (finally) posted the agenda. It is available here:\n>> https://datatracker.ietf.org/meeting/126/materials/agenda-126-tls\n>>\n>> Note we took ekr’s suggestion [1] to allocate some time on the\n>> agenda to discuss PQ + T signature for TLS drafts, see [1] and [2];\n>> we worked with authors to ensure they would be ready for our Friday\n>> session.\n>>\n>\n> Likely doesn't affect too many people, but it does affect me, so\n> just in case there's a pile of others in a similar situation:\n>\n> I'll be gone already on Friday so won't be able to be there for\n> that PQ + T signature slot, which is a pity for me. Were that on\n> Thursday, that'd be great.\n>\n> I don't expect you to switch the slot just for me.\n>\n> Cheers,\n> S.\n>\n>\n>> spt\n>>\n>> [1] https://mailarchive.ietf.org/arch/msg/tls/H20gwrTeJVe1-\n>> qFmI_uBDtYBVnc/ [2] https://datatracker.ietf.org/doc/draft-reddy-tls-\n>> composite-mldsa/ [3] https://datatracker.ietf.org/doc/draft-yusef-\n>> tls-pqt-dual-certs/\n>>\n>> _______________________________________________ TLS mailing list --\n>> tls@ietf.org To unsubscribe send an email to tls-leave@ietf.org\n>>\n>\n>",
+     "quoted": true
+    },
+    {
+     "content": "",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "Hi,\n\nSince this draft isn't tagged for any WG, not even gen-dispatch which seems appropriate, I'll post here, on one aspect only.\n\n> 5.3. Permissions and duties of the RPC\n...> The RPC's duty is strictly confined to editorial refinement and SHALL NOT alter the technical meaning of the text.\n\nAn IETF process document cannot define RPC duties. That would need a draft submitted to the RSWG, or rephrasing as the IETF's _expectations_ of the RPC.\n\nAlso:\n\n> The RPC's duty is strictly confined to editorial refinement and SHALL NOT alter the technical meaning of the text.\n\nThat is already made clear at [1], points 1 and 3. It is not unknown for the RPC to discover poor grammar that conceals a technical ambiguity or technical error, so point 3 is not academic. Such late clarifications are to everyone's benefit. (I agree that they should be public knowledge, like everything that happens during AUTH48.)\n\n[1] https://www.rfc-editor.org/rfc/rfc9920.html#name-rpc-responsibilities\n\nRegards/Ngā mihi\n    Brian Carpenter\n\nOn 19-Jul-26 21:58, internet-drafts@ietf.org wrote:\n> Internet-Draft draft-gerke-publication-process-reform-00.txt is now available.\n> \n>     Title:   Publication Process Reform to prevent misuse of AUTH48 or equivalent states\n>     Author:  Timo Gerke\n>     Name:    draft-gerke-publication-process-reform-00.txt\n>     Pages:   12\n>     Dates:   2026-07-19\n> \n> Abstract:\n> \n>     This document updates the AUTH48 or equivalent process by introducing\n>     deterministic state-integrity constraints within the IETF Datatracker\n>     architecture.  It establishes automated validation milestones and\n>     explicit access controls to prevent late technical modifications\n>     after the Working Group Last Call, thereby safeguarding the Rough\n>     Consensus.\n> \n> The IETF datatracker status page for this Internet-Draft is:\n> https://datatracker.ietf.org/doc/draft-gerke-publication-process-reform/\n> \n> There is also an HTML version available at:\n> https://www.ietf.org/archive/id/draft-gerke-publication-process-reform-00.html\n> \n> Internet-Drafts are also available by rsync at:\n> rsync.ietf.org::internet-drafts\n> \n> \n> _______________________________________________\n> I-D-Announce mailing list -- i-d-announce@ietf.org\n> To unsubscribe send an email to i-d-announce-leave@ietf.org\n"
+   },
+   "result": [
+    {
+     "content": "Hi,\n\nSince this draft isn't tagged for any WG, not even gen-dispatch which seems appropriate, I'll post here, on one aspect only.",
+     "quoted": false
+    },
+    {
+     "content": "\n> 5.3. Permissions and duties of the RPC",
+     "quoted": true
+    },
+    {
+     "content": "...> The RPC's duty is strictly confined to editorial refinement and SHALL NOT alter the technical meaning of the text.\n\nAn IETF process document cannot define RPC duties. That would need a draft submitted to the RSWG, or rephrasing as the IETF's _expectations_ of the RPC.\n\nAlso:",
+     "quoted": false
+    },
+    {
+     "content": "\n> The RPC's duty is strictly confined to editorial refinement and SHALL NOT alter the technical meaning of the text.",
+     "quoted": true
+    },
+    {
+     "content": "\nThat is already made clear at [1], points 1 and 3. It is not unknown for the RPC to discover poor grammar that conceals a technical ambiguity or technical error, so point 3 is not academic. Such late clarifications are to everyone's benefit. (I agree that they should be public knowledge, like everything that happens during AUTH48.)\n\n[1] https://www.rfc-editor.org/rfc/rfc9920.html#name-rpc-responsibilities\n\nRegards/Ngā mihi\n    Brian Carpenter",
+     "quoted": false
+    },
+    {
+     "content": "\nOn 19-Jul-26 21:58, internet-drafts@ietf.org wrote:\n> Internet-Draft draft-gerke-publication-process-reform-00.txt is now available.\n> \n>     Title:   Publication Process Reform to prevent misuse of AUTH48 or equivalent states\n>     Author:  Timo Gerke\n>     Name:    draft-gerke-publication-process-reform-00.txt\n>     Pages:   12\n>     Dates:   2026-07-19\n> \n> Abstract:\n> \n>     This document updates the AUTH48 or equivalent process by introducing\n>     deterministic state-integrity constraints within the IETF Datatracker\n>     architecture.  It establishes automated validation milestones and\n>     explicit access controls to prevent late technical modifications\n>     after the Working Group Last Call, thereby safeguarding the Rough\n>     Consensus.\n> \n> The IETF datatracker status page for this Internet-Draft is:\n> https://datatracker.ietf.org/doc/draft-gerke-publication-process-reform/\n> \n> There is also an HTML version available at:\n> https://www.ietf.org/archive/id/draft-gerke-publication-process-reform-00.html\n> \n> Internet-Drafts are also available by rsync at:\n> rsync.ietf.org::internet-drafts\n> \n> \n> _______________________________________________\n> I-D-Announce mailing list -- i-d-announce@ietf.org\n> To unsubscribe send an email to i-d-announce-leave@ietf.org",
+     "quoted": true
+    },
+    {
+     "content": "",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "Hi,\n\n\n> 19.07.2026 Joseph Salowey <joe@salowey.net>:\n\n(..)\n\n> Text to go into Section 4.2, after the existing \"MUST NOT reuse\n\n> randomness\" line:\n\n>\n\n> “During encapsulation, ML-KEM encrypts m, drawn from a random bit\n\n> generator, so the peer holding the decapsulation key recovers m\n\n> exactly. Any information that m provides about other outputs of the\n\n> generator is therefore available to that peer.”\n\n\nThis is Ok. Note that here the term \"random bit generator\" (RBG) is used.\nOf course we wouldn't expect a RBG to give any information about other\noutputs or the state, since it is a RBG (see below), but it may as well be\nmentioned.\n\n\nObviously the mentioned reveal also applies to hybrids such as\nX25519MLKEM768 as well ( the hybrid key derivation is not a black box to\nthe recipient. )\n\n\n>\n\n> And the following text for Section 5 (security considerations):\n\n>\n\n> “The disclosure of raw random number generator (PRNG) output in TLS\n\n> and other protocols can be used in an attack to compromise the state\n\n> of an insecure RNG as described in [DUALEC-TLS]. The m value in ML-KEM\n\n\nHere the text talks of a \"raw random number generator\" which it\nabbreviates refers\nto as PRNG (\"P\" is for pseudo.). This is not a well defined term, and I\nagree with Quynh that it is better adjusted as  “The disclosure of the\noutput(s) of an insecure random number generator (RNG) when used in TLS and\nother protocols can be used in an attack to compromise the state of the\ninsecure RNG itself as described in [DUALEC-TLS].\"\n\n\n> is an additional place where raw RNG output is disclosed to an active\n\n> attacker.  Because the m value in ML-KEM is randomly generated and\n\n\nThe term \"raw RNG\" here seems ok -- it is undefined but I guess it means\n\"insecure RNG.\"\n\n\n> transmitted to the client, it is important to follow the PRNG guidance\n\n> in [FIPS203] and [RFC9846]. Implementers MAY choose to implement\n\n> mechanisms from [RFC8937] for additional protection across sessions.\"\n\n\nHere, the term PRNG makes a comeback. Perhaps change it to RNG for\nconsistency. FIPS 203 does not offer PRNG guidance, but RBG guidance. An\nRBG may or may not be deterministic.\n\n\nTo recap: RNG is an incredibly vague term as it implies no clearly defined\nsecurity properties -- but this is what the IETF has been using. As noted,\nFIPS land talks of RBGs (and defines what they are), as does a part of the\nCC land. CC also uses the AIS 20/31 terminology and classification, in\nwhich RNG is essentially a catch-all, and protection profiles impose\nadditional, more detailed requirements for entropy generation and\npost-processing.\n\n\nFIPS 203 actually asks for an RBG, which implies:\n\n- seeding from a sufficient amount of entropy, and also\n\n- cryptographically secure post-processing where any number of output bits\ndo not offer an advantage in predicting or determining unrevealed output\nbits, assuming cryptographic security of SHA2 or AES, etc.\n\n\nThe more casual mathematical term PRNG implies neither cryptographic\nsecurity nor sufficient entropy seeding — simply determinism. Often PRNGs\nare distinguished from RNGs specifically because they do not have\nsufficient seeding.\n\n\nAmerican standard terminology has a class of RBGs called DRBGs\n(Deterministic Random Bit Generators). Because DRBGs are deteministic,\ntechnically they are PRNGs, but they are also RBGs -- when instantiated,\nthe standards (and testing labs) require adequate seeding and an\nappropriate level of security in post-processing components (for example, a\nDRBG based on AES-128 is not sufficient for a 256-bit security level).\n\nThere is also the \"CRA land\" in Europe, and ECCG & ENISA is searching for a\nsuitable compromise for entropy in lower-assurance products (non-CC.). But\nat this point acceptable DRBGs are listed in the ACM (they all have\ncryptographically secure post-processing). It has been of course proposed\nthat, e.g., Linux Random would be considered ok as an entropy source for\nconsumer products, for obvious practical reasons.\n\n\nBest Regards,\n-markku\n\nDr. Markku-Juhani O. Saarinen <mjos@iki.fi>\n\n\nOn Sun, Jul 19, 2026 at 3:58\u202fPM Quynh Dang <quynh97@gmail.com> wrote:\n\n> Hi Joe and Sean,\n>\n> This sentence: “The disclosure of raw random number generator (PRNG)\n> output in TLS\n> and other protocols can be used in an attack to compromise the state\n> of an insecure RNG as described in [DUALEC-TLS]. \" would need to be\n> edited as below to make it clear to the readers.\n>\n> “The disclosure of the output(s) of an insecure random number generator\n> (RNG) when used in TLS\n> and other protocols can be used in an attack to compromise the state\n> of the insecure RNG itself as described in [DUALEC-TLS].\"\n>\n> Regards,\n> Quynh.\n>\n> On Sun, Jul 19, 2026 at 8:21\u202fAM Ken Kubota <ietf@kenkubota.de> wrote:\n>\n>> It is notable that, while this text draws a clear distinction between\n>> pre-existing WG participants and others (ignoring the substance of the\n>> debate since then), the presence of a double-digit number of identified\n>> intelligence agency operatives from the NSA, GCHQ, and CSE [1], the\n>> resulting conflict of interest, and their uniform voting behavior remain\n>> completely unaddressed.\n>>\n>> Kind regards,\n>>\n>> Ken Kubota\n>>\n>> ____________________________________________________\n>>\n>> Ken Kubota\n>> https://doi.org/10.4444/100\n>>\n>>\n>>\n>> [1]\n>> https://mailarchive.ietf.org/arch/msg/tls/lnSPh3Wr6vgdjivHGj1mxCun3Rs/\n>>\n>>\n>>\n>> > Am 19.07.2026 um 13:31 schrieb Joseph Salowey <joe@salowey.net>:\n>> >\n>> > During this last call we received responses from a large number of\n>> > people on both sides of the issue, many were from first time\n>> > participants, which was probably due to the extensive social media\n>> > coverage. The primary objection discussed extensively during the call\n>> > concerned the relative strength of pure versus hybrid approaches.\n>> > Fundamentally, this is a judgement call people have to make for\n>> > themselves, and the chair’s role is not to just decide for the WG but\n>> > rather to take the sense of the WG. The chairs ultimately bear the\n>> > burden of how to weigh those responses against those of long-time WG\n>> > participants with demonstrated expertise. By pure numbers, more people\n>> > want to progress the document than not, but this alone does not\n>> > constitute rough consensus. However, if we look at pre-existing WG\n>> > participants or people with demonstrated expertise, roughly 7/10 WG\n>> > participants favor advancing the document, which shows rough consensus\n>> > to move the document forward.\n>> >\n>> > Even though there is rough consensus to move forward we feel several\n>> > issues raised during the last call need to be addressed. Some of the\n>> > issues below have text proposals that we think are appropriate given\n>> > the list discussions, we will accept feedback on them, but we do not\n>> > intend to make significant changes since these issues have already had\n>> > a fair amount of discussion\n>> >\n>> > 1. Emphasize the status of the document\n>> >\n>> > Currently the pure ML-KEM algorithm is recommended “N” in the IANA\n>> > registry and is a non-standards-track informational document while\n>> > X25519MLKEM768 is marked as recommended “Y” and is defined in a\n>> > standards-track document.  While this indicates the preference for the\n>> > hybrid approach, it was pointed out that the meaning of the “N” value\n>> > may not be obvious to readers unfamiliar with the IETF process.\n>> >\n>> > Based on the discussion the following will be added to the IANA\n>> > considerations section, which the IESG approved for pure ML-DSA, to\n>> > save readers following existing links in the document to understand\n>> > the meaning on N and to further addresses some hybrid/pure approach\n>> > concerns:\n>> >\n>> > As defined in Section 3 of [RFC9847], the value N indicates\n>> >\n>> >      That the item has not been evaluated by the IETF and that the IETF\n>> >      has made no statement about the suitability of the associated\n>> >      mechanism.  This does not necessarily mean that the mechanism is\n>> >      flawed, only that no consensus exists.  The IETF might have\n>> >      consensus to leave an item marked as \"N\" on the basis of the item\n>> >      having limited applicability or usage constraints\n>> >\n>> > 2. Randomness requirements\n>> >\n>> > Jacob Appelbaum raised the issue that m random input value is provided\n>> > directly to the ML-KEM.Encaps() and encrypted and sent to the TLS\n>> > Client. This means that an attacker who can use raw random output to\n>> > determine the PRNG state can use a connection with the server to\n>> > attempt to derive the server's PRNG state and attack other\n>> > connections.\n>> >\n>> > This issue pertains to the ML-KEM algorithm itself and is not unique\n>> > to TLS. The NIST document currently does require a secure PRNG defined\n>> > in NIST SP 800-90A-C and RFC 9846 discusses PRNGs in Appendix C. Any\n>> > text added to address this point would need to be included both in\n>> > this document and the ECDHE-MLKEM document.\n>> >\n>> > Text to go into Section 4.2, after the existing \"MUST NOT reuse\n>> > randomness\" line:\n>> >\n>> > “During encapsulation, ML-KEM encrypts m, drawn from a random bit\n>> > generator, so the peer holding the decapsulation key recovers m\n>> > exactly. Any information that m provides about other outputs of the\n>> > generator is therefore available to that peer.”\n>> >\n>> > And the following text for Section 5 (security considerations):\n>> >\n>> > “The disclosure of raw random number generator (PRNG) output in TLS\n>> > and other protocols can be used in an attack to compromise the state\n>> > of an insecure RNG as described in [DUALEC-TLS]. The m value in ML-KEM\n>> > is an additional place where raw RNG output is disclosed to an active\n>> > attacker.  Because the m value in ML-KEM is randomly generated and\n>> > transmitted to the client, it is important to follow the PRNG guidance\n>> > in [FIPS203] and [RFC9846]. Implementers MAY choose to implement\n>> > mechanisms from [RFC8937] for additional protection across sessions.\"\n>> >\n>> > [DUALECTLS] -\n>> https://www.usenix.org/system/files/conference/usenixsecurity14/sec14-paper-checkoway.pdf\n>> >\n>> > Similar text will also go into the ECDHE-MLKEM document.\n>> >\n>> > 3. Document Track & Stream\n>> >\n>> > The document is currently in the RFC stream on the non-standards\n>> > Informational track. Some have argued for the ISE stream so that the\n>> > document does not reflect IETF consensus or the document be included\n>> > on the experimental track.  Both of these approaches will result in\n>> > the publication of an RFC which is the same result as the current path\n>> > to the average RFC consumer. We believe we have consensus to publish\n>> > this as an informational working group document\n>> >\n>> > Joe\n>> >\n>> >\n>> > On Wed, Jun 24, 2026 at 8:00\u202fAM Joseph Salowey via Datatracker\n>> > <noreply@ietf.org> wrote:\n>> >>\n>> >> This message initiates a new Working Group Last Call for\n>> draft-ietf-tls-mlkem[1], which defines standalone ML-KEM key establishment\n>> for TLS 1.3. The main question before the working group is: \"Should the\n>> working group publish a document specifying stand alone ML-KEM?\". If there\n>> is rough consensus then we will push to refine and publish the document;\n>> otherwise, we will stop discussing the draft and not progress it. Please\n>> respond to this call indicating whether you support publishing a document\n>> specifying a stand alone ML-KEM. Please refrain from further discussion on\n>> this topic as most arguments have been discussed multiple times.\n>> >>\n>> >> Why are we holding this consensus call now?\n>> >>\n>> >> Significant developments have occurred both within this document and\n>> in the broader TLS ecosystem to address the concerns raised in the last\n>> WGLC. Therefore, the third consensus call is warranted. We ask the working\n>> group to consider document publication in light of these recent changes:\n>> >>\n>> >> - Promotion of Hybrids in draft-ietf-tls-ecdhe-mlkem: Following a\n>> separate consensus call, the WG agreed to promote the X25519MLKEM768 hybrid\n>> group to Recommended: Y in the IANA registry. Consequently, the IANA\n>> registry will reflect a clear community preference for a hybrid because\n>> Recommended: Y clearly indicates this while the standalone ML-KEM groups\n>> defined in this draft remain Recommended: N. The updated security\n>> considerations in [1] reference the IANA registry to emphasize this\n>> preference.\n>> >>\n>> >> - Key Share Reuse Prohibited in draft-ietf-tls-rfc8446bis: The WG\n>> recently reached consensus to explicitly prohibit key share reuse across\n>> connections in TLS 1.3. The new text changes the guidance from SHOULD NOT\n>> to a strict MUST NOT. This resolves the concerns regarding static key reuse\n>> and its associated privacy and forward-secrecy risks for ML-KEM.\n>> >>\n>> >> - Nadim updated the ProVerif model of TLS 1.3 to evaluate KEM and\n>> hybrid KEM groups in TLS 1.3. This supports other results which show that\n>> KEMs are secure when used in TLS 1.3 and that hybrid groups are secure even\n>> if one of the components is compromised.\n>> >>\n>> >> - Liaisons: We received liaison statements from multiple SDOs\n>> including  O-RAN[2], IEEE 802.11[4] and from 3GPP[3]  expressing support\n>> for the publication of draft-ietf-tls-mlkem as an RFC as they rely on the\n>> IETF to provide a stable normative reference.\n>> >>\n>> >> Please note that a third-party IPR disclosure exists [5] against this\n>> document regarding patents related to the underlying ML-KEM algorithm. This\n>> IPR declaration has not changed since the last WGLC. As a reminder, per BCP\n>> 79, the IETF takes no stance on the validity of patent claims, and the\n>> working group may decide to proceed with a technology despite IPR\n>> disclosures if it decides that such use is warranted.\n>> >>\n>> >> Conduct Reminder: Given the heated nature of previous discussions on\n>> this topic, participants are strongly reminded to adhere to the IETF Code\n>> of Conduct (BCP 54) and the TLS WG's Mail List Procedures. Keep feedback\n>> professional, technical, and focused on the document's text.\n>> >>\n>> >> This working group last call will end on 2026-07-08.\n>> >>\n>> >> Joe and Sean\n>> >>\n>> >> [1] https://datatracker.ietf.org/doc/draft-ietf-tls-mlkem/\n>> >> [2] https://datatracker.ietf.org/liaison/2198/\n>> >> [3] https://datatracker.ietf.org/liaison/2151/\n>> >> [4] https://datatracker.ietf.org/liaison/2148/\n>> >> [5]\n>> https://datatracker.ietf.org/ipr/search/?submit=draft&id=draft-ietf-tls-mlkem\n>> >\n>> > _______________________________________________\n>> > TLS mailing list -- tls@ietf.org\n>> > To unsubscribe send an email to tls-leave@ietf.org\n>>\n>> _______________________________________________\n>> TLS mailing list -- tls@ietf.org\n>> To unsubscribe send an email to tls-leave@ietf.org\n>>\n> _______________________________________________\n> TLS mailing list -- tls@ietf.org\n> To unsubscribe send an email to tls-leave@ietf.org\n>\n"
+   },
+   "result": [
+    {
+     "content": "Hi,",
+     "quoted": false
+    },
+    {
+     "content": "\n\n> 19.07.2026 Joseph Salowey <joe@salowey.net>:",
+     "quoted": true
+    },
+    {
+     "content": "\n(..)",
+     "quoted": false
+    },
+    {
+     "content": "\n> Text to go into Section 4.2, after the existing \"MUST NOT reuse\n\n> randomness\" line:\n\n>\n\n> “During encapsulation, ML-KEM encrypts m, drawn from a random bit\n\n> generator, so the peer holding the decapsulation key recovers m\n\n> exactly. Any information that m provides about other outputs of the\n\n> generator is therefore available to that peer.”",
+     "quoted": true
+    },
+    {
+     "content": "\n\nThis is Ok. Note that here the term \"random bit generator\" (RBG) is used.\nOf course we wouldn't expect a RBG to give any information about other\noutputs or the state, since it is a RBG (see below), but it may as well be\nmentioned.\n\n\nObviously the mentioned reveal also applies to hybrids such as\nX25519MLKEM768 as well ( the hybrid key derivation is not a black box to\nthe recipient. )",
+     "quoted": false
+    },
+    {
+     "content": "\n\n>\n\n> And the following text for Section 5 (security considerations):\n\n>\n\n> “The disclosure of raw random number generator (PRNG) output in TLS\n\n> and other protocols can be used in an attack to compromise the state\n\n> of an insecure RNG as described in [DUALEC-TLS]. The m value in ML-KEM",
+     "quoted": true
+    },
+    {
+     "content": "\n\nHere the text talks of a \"raw random number generator\" which it\nabbreviates refers\nto as PRNG (\"P\" is for pseudo.). This is not a well defined term, and I\nagree with Quynh that it is better adjusted as  “The disclosure of the\noutput(s) of an insecure random number generator (RNG) when used in TLS and\nother protocols can be used in an attack to compromise the state of the\ninsecure RNG itself as described in [DUALEC-TLS].\"",
+     "quoted": false
+    },
+    {
+     "content": "\n\n> is an additional place where raw RNG output is disclosed to an active\n\n> attacker.  Because the m value in ML-KEM is randomly generated and",
+     "quoted": true
+    },
+    {
+     "content": "\n\nThe term \"raw RNG\" here seems ok -- it is undefined but I guess it means\n\"insecure RNG.\"",
+     "quoted": false
+    },
+    {
+     "content": "\n\n> transmitted to the client, it is important to follow the PRNG guidance\n\n> in [FIPS203] and [RFC9846]. Implementers MAY choose to implement\n\n> mechanisms from [RFC8937] for additional protection across sessions.\"",
+     "quoted": true
+    },
+    {
+     "content": "\n\nHere, the term PRNG makes a comeback. Perhaps change it to RNG for\nconsistency. FIPS 203 does not offer PRNG guidance, but RBG guidance. An\nRBG may or may not be deterministic.\n\n\nTo recap: RNG is an incredibly vague term as it implies no clearly defined\nsecurity properties -- but this is what the IETF has been using. As noted,\nFIPS land talks of RBGs (and defines what they are), as does a part of the\nCC land. CC also uses the AIS 20/31 terminology and classification, in\nwhich RNG is essentially a catch-all, and protection profiles impose\nadditional, more detailed requirements for entropy generation and\npost-processing.\n\n\nFIPS 203 actually asks for an RBG, which implies:\n\n- seeding from a sufficient amount of entropy, and also\n\n- cryptographically secure post-processing where any number of output bits\ndo not offer an advantage in predicting or determining unrevealed output\nbits, assuming cryptographic security of SHA2 or AES, etc.\n\n\nThe more casual mathematical term PRNG implies neither cryptographic\nsecurity nor sufficient entropy seeding — simply determinism. Often PRNGs\nare distinguished from RNGs specifically because they do not have\nsufficient seeding.\n\n\nAmerican standard terminology has a class of RBGs called DRBGs\n(Deterministic Random Bit Generators). Because DRBGs are deteministic,\ntechnically they are PRNGs, but they are also RBGs -- when instantiated,\nthe standards (and testing labs) require adequate seeding and an\nappropriate level of security in post-processing components (for example, a\nDRBG based on AES-128 is not sufficient for a 256-bit security level).\n\nThere is also the \"CRA land\" in Europe, and ECCG & ENISA is searching for a\nsuitable compromise for entropy in lower-assurance products (non-CC.). But\nat this point acceptable DRBGs are listed in the ACM (they all have\ncryptographically secure post-processing). It has been of course proposed\nthat, e.g., Linux Random would be considered ok as an entropy source for\nconsumer products, for obvious practical reasons.\n\n\nBest Regards,\n-markku\n\nDr. Markku-Juhani O. Saarinen <mjos@iki.fi>",
+     "quoted": false
+    },
+    {
+     "content": "\n\nOn Sun, Jul 19, 2026 at 3:58\u202fPM Quynh Dang <quynh97@gmail.com> wrote:\n\n> Hi Joe and Sean,\n>\n> This sentence: “The disclosure of raw random number generator (PRNG)\n> output in TLS\n> and other protocols can be used in an attack to compromise the state\n> of an insecure RNG as described in [DUALEC-TLS]. \" would need to be\n> edited as below to make it clear to the readers.\n>\n> “The disclosure of the output(s) of an insecure random number generator\n> (RNG) when used in TLS\n> and other protocols can be used in an attack to compromise the state\n> of the insecure RNG itself as described in [DUALEC-TLS].\"\n>\n> Regards,\n> Quynh.\n>\n> On Sun, Jul 19, 2026 at 8:21\u202fAM Ken Kubota <ietf@kenkubota.de> wrote:\n>\n>> It is notable that, while this text draws a clear distinction between\n>> pre-existing WG participants and others (ignoring the substance of the\n>> debate since then), the presence of a double-digit number of identified\n>> intelligence agency operatives from the NSA, GCHQ, and CSE [1], the\n>> resulting conflict of interest, and their uniform voting behavior remain\n>> completely unaddressed.\n>>\n>> Kind regards,\n>>\n>> Ken Kubota\n>>\n>> ____________________________________________________\n>>\n>> Ken Kubota\n>> https://doi.org/10.4444/100\n>>\n>>\n>>\n>> [1]\n>> https://mailarchive.ietf.org/arch/msg/tls/lnSPh3Wr6vgdjivHGj1mxCun3Rs/\n>>\n>>\n>>\n>> > Am 19.07.2026 um 13:31 schrieb Joseph Salowey <joe@salowey.net>:\n>> >\n>> > During this last call we received responses from a large number of\n>> > people on both sides of the issue, many were from first time\n>> > participants, which was probably due to the extensive social media\n>> > coverage. The primary objection discussed extensively during the call\n>> > concerned the relative strength of pure versus hybrid approaches.\n>> > Fundamentally, this is a judgement call people have to make for\n>> > themselves, and the chair’s role is not to just decide for the WG but\n>> > rather to take the sense of the WG. The chairs ultimately bear the\n>> > burden of how to weigh those responses against those of long-time WG\n>> > participants with demonstrated expertise. By pure numbers, more people\n>> > want to progress the document than not, but this alone does not\n>> > constitute rough consensus. However, if we look at pre-existing WG\n>> > participants or people with demonstrated expertise, roughly 7/10 WG\n>> > participants favor advancing the document, which shows rough consensus\n>> > to move the document forward.\n>> >\n>> > Even though there is rough consensus to move forward we feel several\n>> > issues raised during the last call need to be addressed. Some of the\n>> > issues below have text proposals that we think are appropriate given\n>> > the list discussions, we will accept feedback on them, but we do not\n>> > intend to make significant changes since these issues have already had\n>> > a fair amount of discussion\n>> >\n>> > 1. Emphasize the status of the document\n>> >\n>> > Currently the pure ML-KEM algorithm is recommended “N” in the IANA\n>> > registry and is a non-standards-track informational document while\n>> > X25519MLKEM768 is marked as recommended “Y” and is defined in a\n>> > standards-track document.  While this indicates the preference for the\n>> > hybrid approach, it was pointed out that the meaning of the “N” value\n>> > may not be obvious to readers unfamiliar with the IETF process.\n>> >\n>> > Based on the discussion the following will be added to the IANA\n>> > considerations section, which the IESG approved for pure ML-DSA, to\n>> > save readers following existing links in the document to understand\n>> > the meaning on N and to further addresses some hybrid/pure approach\n>> > concerns:\n>> >\n>> > As defined in Section 3 of [RFC9847], the value N indicates\n>> >\n>> >      That the item has not been evaluated by the IETF and that the IETF\n>> >      has made no statement about the suitability of the associated\n>> >      mechanism.  This does not necessarily mean that the mechanism is\n>> >      flawed, only that no consensus exists.  The IETF might have\n>> >      consensus to leave an item marked as \"N\" on the basis of the item\n>> >      having limited applicability or usage constraints\n>> >\n>> > 2. Randomness requirements\n>> >\n>> > Jacob Appelbaum raised the issue that m random input value is provided\n>> > directly to the ML-KEM.Encaps() and encrypted and sent to the TLS\n>> > Client. This means that an attacker who can use raw random output to\n>> > determine the PRNG state can use a connection with the server to\n>> > attempt to derive the server's PRNG state and attack other\n>> > connections.\n>> >\n>> > This issue pertains to the ML-KEM algorithm itself and is not unique\n>> > to TLS. The NIST document currently does require a secure PRNG defined\n>> > in NIST SP 800-90A-C and RFC 9846 discusses PRNGs in Appendix C. Any\n>> > text added to address this point would need to be included both in\n>> > this document and the ECDHE-MLKEM document.\n>> >\n>> > Text to go into Section 4.2, after the existing \"MUST NOT reuse\n>> > randomness\" line:\n>> >\n>> > “During encapsulation, ML-KEM encrypts m, drawn from a random bit\n>> > generator, so the peer holding the decapsulation key recovers m\n>> > exactly. Any information that m provides about other outputs of the\n>> > generator is therefore available to that peer.”\n>> >\n>> > And the following text for Section 5 (security considerations):\n>> >\n>> > “The disclosure of raw random number generator (PRNG) output in TLS\n>> > and other protocols can be used in an attack to compromise the state\n>> > of an insecure RNG as described in [DUALEC-TLS]. The m value in ML-KEM\n>> > is an additional place where raw RNG output is disclosed to an active\n>> > attacker.  Because the m value in ML-KEM is randomly generated and\n>> > transmitted to the client, it is important to follow the PRNG guidance\n>> > in [FIPS203] and [RFC9846]. Implementers MAY choose to implement\n>> > mechanisms from [RFC8937] for additional protection across sessions.\"\n>> >\n>> > [DUALECTLS] -\n>> https://www.usenix.org/system/files/conference/usenixsecurity14/sec14-paper-checkoway.pdf\n>> >\n>> > Similar text will also go into the ECDHE-MLKEM document.\n>> >\n>> > 3. Document Track & Stream\n>> >\n>> > The document is currently in the RFC stream on the non-standards\n>> > Informational track. Some have argued for the ISE stream so that the\n>> > document does not reflect IETF consensus or the document be included\n>> > on the experimental track.  Both of these approaches will result in\n>> > the publication of an RFC which is the same result as the current path\n>> > to the average RFC consumer. We believe we have consensus to publish\n>> > this as an informational working group document\n>> >\n>> > Joe\n>> >\n>> >\n>> > On Wed, Jun 24, 2026 at 8:00\u202fAM Joseph Salowey via Datatracker>> > <noreply@ietf.org> wrote:\n>> >>\n>> >> This message initiates a new Working Group Last Call for\n>> draft-ietf-tls-mlkem[1], which defines standalone ML-KEM key establishment\n>> for TLS 1.3. The main question before the working group is: \"Should the\n>> working group publish a document specifying stand alone ML-KEM?\". If there\n>> is rough consensus then we will push to refine and publish the document;\n>> otherwise, we will stop discussing the draft and not progress it. Please\n>> respond to this call indicating whether you support publishing a document\n>> specifying a stand alone ML-KEM. Please refrain from further discussion on\n>> this topic as most arguments have been discussed multiple times.\n>> >>\n>> >> Why are we holding this consensus call now?\n>> >>\n>> >> Significant developments have occurred both within this document and\n>> in the broader TLS ecosystem to address the concerns raised in the last\n>> WGLC. Therefore, the third consensus call is warranted. We ask the working\n>> group to consider document publication in light of these recent changes:\n>> >>\n>> >> - Promotion of Hybrids in draft-ietf-tls-ecdhe-mlkem: Following a\n>> separate consensus call, the WG agreed to promote the X25519MLKEM768 hybrid\n>> group to Recommended: Y in the IANA registry. Consequently, the IANA\n>> registry will reflect a clear community preference for a hybrid because\n>> Recommended: Y clearly indicates this while the standalone ML-KEM groups\n>> defined in this draft remain Recommended: N. The updated security\n>> considerations in [1] reference the IANA registry to emphasize this\n>> preference.\n>> >>\n>> >> - Key Share Reuse Prohibited in draft-ietf-tls-rfc8446bis: The WG\n>> recently reached consensus to explicitly prohibit key share reuse across\n>> connections in TLS 1.3. The new text changes the guidance from SHOULD NOT\n>> to a strict MUST NOT. This resolves the concerns regarding static key reuse\n>> and its associated privacy and forward-secrecy risks for ML-KEM.\n>> >>\n>> >> - Nadim updated the ProVerif model of TLS 1.3 to evaluate KEM and\n>> hybrid KEM groups in TLS 1.3. This supports other results which show that\n>> KEMs are secure when used in TLS 1.3 and that hybrid groups are secure even\n>> if one of the components is compromised.\n>> >>\n>> >> - Liaisons: We received liaison statements from multiple SDOs\n>> including  O-RAN[2], IEEE 802.11[4] and from 3GPP[3]  expressing support\n>> for the publication of draft-ietf-tls-mlkem as an RFC as they rely on the\n>> IETF to provide a stable normative reference.\n>> >>\n>> >> Please note that a third-party IPR disclosure exists [5] against this\n>> document regarding patents related to the underlying ML-KEM algorithm. This\n>> IPR declaration has not changed since the last WGLC. As a reminder, per BCP\n>> 79, the IETF takes no stance on the validity of patent claims, and the\n>> working group may decide to proceed with a technology despite IPR\n>> disclosures if it decides that such use is warranted.\n>> >>\n>> >> Conduct Reminder: Given the heated nature of previous discussions on\n>> this topic, participants are strongly reminded to adhere to the IETF Code\n>> of Conduct (BCP 54) and the TLS WG's Mail List Procedures. Keep feedback\n>> professional, technical, and focused on the document's text.\n>> >>\n>> >> This working group last call will end on 2026-07-08.\n>> >>\n>> >> Joe and Sean\n>> >>\n>> >> [1] https://datatracker.ietf.org/doc/draft-ietf-tls-mlkem/\n>> >> [2] https://datatracker.ietf.org/liaison/2198/\n>> >> [3] https://datatracker.ietf.org/liaison/2151/\n>> >> [4] https://datatracker.ietf.org/liaison/2148/\n>> >> [5]\n>> https://datatracker.ietf.org/ipr/search/?submit=draft&id=draft-ietf-tls-mlkem\n>> >\n>> > _______________________________________________\n>> > TLS mailing list -- tls@ietf.org\n>> > To unsubscribe send an email to tls-leave@ietf.org\n>>\n>> _______________________________________________\n>> TLS mailing list -- tls@ietf.org\n>> To unsubscribe send an email to tls-leave@ietf.org\n>>\n> _______________________________________________\n> TLS mailing list -- tls@ietf.org\n> To unsubscribe send an email to tls-leave@ietf.org\n>",
+     "quoted": true
+    },
+    {
+     "content": "",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "Hi\n\nOn Tue, Jul 7, 2026, at 03:25, Dan Wing wrote:\n> It seems this should mimic what we would do for TCP, and may well be purview of the Happy WG (https://datatracker.ietf.org/group/happy/about/).\n> \n> I would lean heavily towards your solution (2), but using SVCB and HTTPS resource records (rather than solely AAAA), as those have more robust semantics.  Somewhat related to your question, see also Erik's recent post about draft-nygren-dnsop-ipv6only-indicator sent to several working groups, https://mailarchive.ietf.org/arch/msg/v6ops/VaaERK1-riWFauEqbuoZzPZx_x4.\n> \n> -d\n> \n> \n> > On Jul 6, 2026, at 6:23\u202fAM, Stefano Duo <stefanoduo=40google.com@dmarc.ietf.org> wrote:\n> > \n> > Hi all,\n> > \n> > I'm trying to solve the following common scenario: a client has a QUIC connection to a server's IPv6 address and has to migrate the connection to an IPv4-only network.\n> > \n> > Currently, our implementation will attempt to connect to the server's IPv6 address via the IPv4-only network and will (expectedly) fail.\n> > \n> > I can think of two main solutions, the client could instead migrate to the IPv4:\n> >     • Provided in the preferred_address extension, during the initial TLS handshake\n> >     • Returned by the A query, that was sent alongside the AAAA query that contained the IPv6 address currently being used by the client\n> > \n> > From past discussions in the archive, I understand that preferred_address's main intent is to support a one-time only, server-initiated migration for anycast deployments that do not support connection ID-based routing. It's not clear to me whether #1 would be an abuse of preferred_address.\n> > \n> > As per #2, there are no technical guarantees that the A result will lead us to a machine that has the necessary state to migrate successfully. It is also explicitly not covered by section 9 of RFC 9000.\n> > \n> > Has this scenario been discussed before? Is there any guidance on how to handle this correctly?\nYou might also be interested in Marco and Marten's draft https://datatracker.ietf.org/doc/draft-munizaga-quic-alternative-server-address/\n\n> > \n> > Thank you,\n> > Stefano\n> \n> \n"
+   },
+   "result": [
+    {
+     "content": "Hi",
+     "quoted": false
+    },
+    {
+     "content": "\nOn Tue, Jul 7, 2026, at 03:25, Dan Wing wrote:\n> It seems this should mimic what we would do for TCP, and may well be purview of the Happy WG (https://datatracker.ietf.org/group/happy/about/).\n> \n> I would lean heavily towards your solution (2), but using SVCB and HTTPS resource records (rather than solely AAAA), as those have more robust semantics.  Somewhat related to your question, see also Erik's recent post about draft-nygren-dnsop-ipv6only-indicator sent to several working groups, https://mailarchive.ietf.org/arch/msg/v6ops/VaaERK1-riWFauEqbuoZzPZx_x4.\n> \n> -d\n> \n> \n> > On Jul 6, 2026, at 6:23\u202fAM, Stefano Duo <stefanoduo=40google.com@dmarc.ietf.org> wrote:\n> > \n> > Hi all,\n> > \n> > I'm trying to solve the following common scenario: a client has a QUIC connection to a server's IPv6 address and has to migrate the connection to an IPv4-only network.\n> > \n> > Currently, our implementation will attempt to connect to the server's IPv6 address via the IPv4-only network and will (expectedly) fail.\n> > \n> > I can think of two main solutions, the client could instead migrate to the IPv4:\n> >     • Provided in the preferred_address extension, during the initial TLS handshake\n> >     • Returned by the A query, that was sent alongside the AAAA query that contained the IPv6 address currently being used by the client\n> > \n> > From past discussions in the archive, I understand that preferred_address's main intent is to support a one-time only, server-initiated migration for anycast deployments that do not support connection ID-based routing. It's not clear to me whether #1 would be an abuse of preferred_address.\n> > \n> > As per #2, there are no technical guarantees that the A result will lead us to a machine that has the necessary state to migrate successfully. It is also explicitly not covered by section 9 of RFC 9000.\n> > \n> > Has this scenario been discussed before? Is there any guidance on how to handle this correctly?",
+     "quoted": true
+    },
+    {
+     "content": "You might also be interested in Marco and Marten's draft https://datatracker.ietf.org/doc/draft-munizaga-quic-alternative-server-address/",
+     "quoted": false
+    },
+    {
+     "content": "\n> > \n> > Thank you,\n> > Stefano\n> \n> ",
+     "quoted": true
+    },
+    {
+     "content": "",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "I have revised the entire draft to address every one of your review points.\n\nThe registry should remain open for new entries at all times going forward.\nEach entry must include a stable reference and a short human readable summary.\nReviewers should be given at least two full weeks to raise any late concerns.\n"
+   },
+   "result": [
+    {
+     "content": "I have revised the entire draft to address every one of your review points.\n\nThe registry should remain open for new entries at all times going forward.\nEach entry must include a stable reference and a short human readable summary.\nReviewers should be given at least two full weeks to raise any late concerns.\n",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "I have revised the entire draft to incorporate all of your suggestions.\nEvery reviewer concern is now tracked in the updated issue list online.\n\nThanks for the detailed proposal about the new key rotation scheme.\nI think the possession side needs a clearer failure mode when the status\ncannot be established within the negotiated window between the two peers.\n"
+   },
+   "result": [
+    {
+     "content": "I have revised the entire draft to incorporate all of your suggestions.\nEvery reviewer concern is now tracked in the updated issue list online.\n\nThanks for the detailed proposal about the new key rotation scheme.\nI think the possession side needs a clearer failure mode when the status\ncannot be established within the negotiated window between the two peers.\n",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "I strongly agree with the summary you posted to the list earlier today\n\nthe registry should remain open for new entries but each entry\nmust include a stable reference and a short human readable description\n"
+   },
+   "result": [
+    {
+     "content": "I strongly agree with the summary you posted to the list earlier today\n\nthe registry should remain open for new entries but each entry\nmust include a stable reference and a short human readable description\n",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "I strongly agree with your point that follows below in the quoted thread.\nEach entry must include a stable reference and a short human readable summary.\n"
+   },
+   "result": [
+    {
+     "content": "I strongly agree with your point that follows below in the quoted thread.\nEach entry must include a stable reference and a short human readable summary.\n",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "Line one of my reply.\nLine two of my reply.\nLine three.\nLine four here."
+   },
+   "result": [
+    {
+     "content": "Line one of my reply.\nLine two of my reply.\nLine three.\nLine four here.",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "My reply."
+   },
+   "result": [
+    {
+     "content": "My reply.",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "My reply.\n\nOn Mon, Jan 1, 2026 at 10:00 $1 $& wrote:\n> quoted\n"
+   },
+   "result": [
+    {
+     "content": "My reply.",
+     "quoted": false
+    },
+    {
+     "content": "\nOn Mon, Jan 1, 2026 at 10:00 $1 $& wrote:\n> quoted",
+     "quoted": true
+    },
+    {
+     "content": "",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "My reply.\n\nOn Mon, Jan 1, 2026 at 10:00 A\\nB wrote:\n> quoted\n"
+   },
+   "result": [
+    {
+     "content": "My reply.\n\nOn Mon, Jan 1, 2026 at 10:00 A\nB wrote:",
+     "quoted": false
+    },
+    {
+     "content": "> quoted",
+     "quoted": true
+    },
+    {
+     "content": "",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "My reply.\n\nOn Mon, Jan 1, 2026 at 10:00 C:\\Users\\x wrote:\n> quoted\n"
+   },
+   "error": "PatternError"
+  },
+  {
+   "args": {
+    "text": "On Tue, Jul 21, 2026 at 12:45\u202fPM Brian Campbell <bcampbell=\n40pingidentity.com@dmarc.ietf.org> wrote:\n\n> Again, the capacity to participate gets exhausted. But even then and in DE\n> review there were questions about HPKE-4-KE and HPKE-6 inclusion that were\n> unanswered other than deeming the question itself inappropriate due to\n> timing.\n>\n\nApologies, copy+paste mistake on my part there. It should say \"... about\nHPKE-4 and HPKE-6 inclusion ...\"\n\n-- \n_CONFIDENTIALITY NOTICE: This email may contain confidential and privileged \nmaterial for the sole use of the intended recipient(s). Any review, use, \ndistribution or disclosure by others is strictly prohibited.\u00a0 If you have \nreceived this communication in error, please notify the sender immediately \nby e-mail and delete the message and any file attachments from your \ncomputer. Thank you._\n"
+   },
+   "result": [
+    {
+     "content": "On Tue, Jul 21, 2026 at 12:45\u202fPM Brian Campbell <bcampbell=40pingidentity.com@dmarc.ietf.org> wrote:\n\n> Again, the capacity to participate gets exhausted. But even then and in DE\n> review there were questions about HPKE-4-KE and HPKE-6 inclusion that were\n> unanswered other than deeming the question itself inappropriate due to\n> timing.\n>",
+     "quoted": true
+    },
+    {
+     "content": "\nApologies, copy+paste mistake on my part there. It should say \"... about\nHPKE-4 and HPKE-6 inclusion ...\"\n",
+     "quoted": false
+    },
+    {
+     "content": "-- \n_CONFIDENTIALITY NOTICE: This email may contain confidential and privileged \nmaterial for the sole use of the intended recipient(s). Any review, use, \ndistribution or disclosure by others is strictly prohibited.\u00a0 If you have \nreceived this communication in error, please notify the sender immediately \nby e-mail and delete the message and any file attachments from your \ncomputer. Thank you._\n",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "Some quick replies.\n\n> On Jul 17, 2026, at 9:20\u202fAM, Nico Cvitak <ncvitak@apple.com> wrote:\n> \n> Hi,\n> \n> I think this draft is a great step forward for multicast address allocation, but I have some comments regarding section 8.\n\nThanks.\n\n> How are collisions meant to be resolved across GAAP nodes with different encryption configurations, or lack\n\nThese would be different domains that don't connect to each other. You can run separate instances, especially when there are multicast group boundaries so the well-known groups stay disjoint.\n\n> thereof? It sounds like they'd just be allowed to collide given the text in section 8, which doesn’t seem ideal?\n\nIf there are no group boundaries, then the packets go to all members of the well-known group but are dropped by the ones without common encryption keys.\n\n> I'd imagine that applications wanting to use GAAP as a zero configuration multicast address allocation protocol as highlighted in [I-D.ietf-pim-zeroconf-mcast-addr-alloc-ps] would just not use encryption for \"zero configuration”?\n\nRight, a tradeoff between plug-and-play and secure communication.\n\n> Perhaps section 8 should be amended to only suggest encryption when deployed in a coordinated administrative domain where all GAAP nodes share the same encryption configuration?\n\nI thought we had something like that. I'll leave this for Mike and Stig to comment about.\n\nDino\n\n> \n> Thanks,\n> Nico\n> \n>> On Jul 13, 2026, at 11:54\u202fAM, The IESG <iesg-secretary@ietf.org> wrote:\n>> \n>> \n>> The IESG has received a request from the Protocols for IP Multicast WG (pim)\n>> to consider the following document: - 'Group Address Allocation Protocol\n>> (GAAP)'\n>>  <draft-ietf-pim-gaap-18.txt> as Experimental RFC\n>> \n>> The IESG plans to make a decision in the next few weeks, and solicits final\n>> comments on this action. Please send substantive comments to the\n>> last-call@ietf.org mailing lists by 2026-08-03. Exceptionally, comments may\n>> be sent to iesg@ietf.org instead. In either case, please retain the beginning\n>> of the Subject line to allow automated sorting.\n>> \n>> Abstract\n>> \n>> \n>>   This document describes a design for a lightweight decentralized\n>>   multicast group address allocation protocol (named GAAP and\n>>   pronounced \"gap\" as in \"mind the gap\").  The base allocation protocol\n>>   requires no centralized service and minimal configuration, although\n>>   deployments using encryption or administrative scoping may require\n>>   configuration.  The protocol runs among group participants which need\n>>   a unique group address to send and receive multicast packets.\n>>   Tailored for IPv4 and IPv6 networks, this design offers a simple,\n>>   lightweight option rather than extending an existing protocol.\n>> \n>> \n>> \n>> \n>> The file can be obtained via\n>> https://datatracker.ietf.org/doc/draft-ietf-pim-gaap/\n>> \n>> \n>> \n>> No IPR declarations have been submitted directly on this I-D.\n>> \n>> \n>> \n>> \n>> \n>> _______________________________________________\n>> pim mailing list -- pim@ietf.org\n>> To unsubscribe send an email to pim-leave@ietf.org\n> \n\n"
+   },
+   "result": [
+    {
+     "content": "Some quick replies.",
+     "quoted": false
+    },
+    {
+     "content": "\n> On Jul 17, 2026, at 9:20\u202fAM, Nico Cvitak <ncvitak@apple.com> wrote:\n> \n> Hi,\n> \n> I think this draft is a great step forward for multicast address allocation, but I have some comments regarding section 8.",
+     "quoted": true
+    },
+    {
+     "content": "\nThanks.",
+     "quoted": false
+    },
+    {
+     "content": "\n> How are collisions meant to be resolved across GAAP nodes with different encryption configurations, or lack",
+     "quoted": true
+    },
+    {
+     "content": "\nThese would be different domains that don't connect to each other. You can run separate instances, especially when there are multicast group boundaries so the well-known groups stay disjoint.",
+     "quoted": false
+    },
+    {
+     "content": "\n> thereof? It sounds like they'd just be allowed to collide given the text in section 8, which doesn’t seem ideal?",
+     "quoted": true
+    },
+    {
+     "content": "\nIf there are no group boundaries, then the packets go to all members of the well-known group but are dropped by the ones without common encryption keys.",
+     "quoted": false
+    },
+    {
+     "content": "\n> I'd imagine that applications wanting to use GAAP as a zero configuration multicast address allocation protocol as highlighted in [I-D.ietf-pim-zeroconf-mcast-addr-alloc-ps] would just not use encryption for \"zero configuration”?",
+     "quoted": true
+    },
+    {
+     "content": "\nRight, a tradeoff between plug-and-play and secure communication.",
+     "quoted": false
+    },
+    {
+     "content": "\n> Perhaps section 8 should be amended to only suggest encryption when deployed in a coordinated administrative domain where all GAAP nodes share the same encryption configuration?",
+     "quoted": true
+    },
+    {
+     "content": "\nI thought we had something like that. I'll leave this for Mike and Stig to comment about.\n\nDino",
+     "quoted": false
+    },
+    {
+     "content": "\n> \n> Thanks,\n> Nico\n> \n>> On Jul 13, 2026, at 11:54\u202fAM, The IESG <iesg-secretary@ietf.org> wrote:\n>> \n>> \n>> The IESG has received a request from the Protocols for IP Multicast WG (pim)\n>> to consider the following document: - 'Group Address Allocation Protocol\n>> (GAAP)'\n>>  <draft-ietf-pim-gaap-18.txt> as Experimental RFC\n>> \n>> The IESG plans to make a decision in the next few weeks, and solicits final\n>> comments on this action. Please send substantive comments to the\n>> last-call@ietf.org mailing lists by 2026-08-03. Exceptionally, comments may\n>> be sent to iesg@ietf.org instead. In either case, please retain the beginning\n>> of the Subject line to allow automated sorting.\n>> \n>> Abstract\n>> \n>> \n>>   This document describes a design for a lightweight decentralized\n>>   multicast group address allocation protocol (named GAAP and\n>>   pronounced \"gap\" as in \"mind the gap\").  The base allocation protocol\n>>   requires no centralized service and minimal configuration, although\n>>   deployments using encryption or administrative scoping may require\n>>   configuration.  The protocol runs among group participants which need\n>>   a unique group address to send and receive multicast packets.\n>>   Tailored for IPv4 and IPv6 networks, this design offers a simple,\n>>   lightweight option rather than extending an existing protocol.\n>> \n>> \n>> \n>> \n>> The file can be obtained via\n>> https://datatracker.ietf.org/doc/draft-ietf-pim-gaap/\n>> \n>> \n>> \n>> No IPR declarations have been submitted directly on this I-D.\n>> \n>> \n>> \n>> \n>> \n>> _______________________________________________\n>> pim mailing list -- pim@ietf.org\n>> To unsubscribe send an email to pim-leave@ietf.org\n> ",
+     "quoted": true
+    },
+    {
+     "content": "\n",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "Stefano,\n\n\n> Subject: QUIC connection migration to an IPv4-only network when connected to a server's IPv6 address\n>\n> Hi all,\n>\n>\n> I'm trying to solve the following common scenario: a client has a QUIC connection to a server's IPv6 address and has to migrate the connection to an IPv4-only network.\n>\n>\n> Currently, our implementation will attempt to connect to the server's IPv6 address via the IPv4-only network and will (expectedly) fail.\n>\n>\n> I can think of two main solutions, the client could instead migrate to the IPv4:\n>\n> Provided in the preferred_address extension, during the initial TLS handshake\n>\n> Returned by the A query, that was sent alongside the AAAA query that contained the IPv6 address currently being used by the client\n>\n\n\nThe best approach is to standardize a QUIC extension that indicates\nthat the server has several IP addresses. This would be an excellent\nuse case for\nhttps://datatracker.ietf.org/doc/html/draft-piraux-quic-additional-addresses-04\n\n\nOlivier\n\n"
+   },
+   "result": [
+    {
+     "content": "Stefano,",
+     "quoted": false
+    },
+    {
+     "content": "\n\n> Subject: QUIC connection migration to an IPv4-only network when connected to a server's IPv6 address\n>\n> Hi all,\n>\n>\n> I'm trying to solve the following common scenario: a client has a QUIC connection to a server's IPv6 address and has to migrate the connection to an IPv4-only network.\n>\n>\n> Currently, our implementation will attempt to connect to the server's IPv6 address via the IPv4-only network and will (expectedly) fail.\n>\n>\n> I can think of two main solutions, the client could instead migrate to the IPv4:\n>\n> Provided in the preferred_address extension, during the initial TLS handshake\n>\n> Returned by the A query, that was sent alongside the AAAA query that contained the IPv6 address currently being used by the client\n>",
+     "quoted": true
+    },
+    {
+     "content": "\n\nThe best approach is to standardize a QUIC extension that indicates\nthat the server has several IP addresses. This would be an excellent\nuse case for\nhttps://datatracker.ietf.org/doc/html/draft-piraux-quic-additional-addresses-04\n\n\nOlivier\n\n",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "Thanks Iman, I see. Possession proven live; authorization carried as evidence bound to the action. And \"keys pinned out of band\" is the case — raw keys registered directly with the relying party, no CA. We reached the same no-stranger model from the user side.\n\nI agree on your recommendation: signalling first, token second. A combined token can stay combined as long as the event names the row it revokes. That is deployable now, without reissuing anyone.\nBtw, your \"possession no longer proven\" event is the endpoint-presence signal I have proposed in the Shared Signals WG. So we are converging. The row-scoped signal I want is the possession row of your model.\n\nAnd, a row-scoped signal lets the relying party remove trust on the possession row. It cannot prove it. A copied bearer token still presents as valid possession, because the token cannot show it is live. So the signal handles the deployed token world — it removes the wrong. Proving the possession row right, at the moment of use, needs a key that is live and exists in only one place.\n\nNow to the idea the possession row can carry users and agents, not just workloads.\nBecause the row is not about who the actor is. It is about where the key lives. If the key is live and nowhere else, then whoever is bound to it is provably present. The actor slot is pluggable:\nWorkload: the key is the platform's. Possession means the workload is live. This is mTLS today.\n\nHuman: the human is verified into the platform. The platform's live key then stands for \"this verified human is present.\" Same row.\nAgent: the agent runs on the platform and acts for a human verified into it. Possession means the agent is live and the human it acts for is present. Two actors, one platform, one key.\n\nThere is also a place where this row meets your gravest risk directly. You name rendering faithfulness as the thing cryptography cannot prove — the human signs a hash believing it is action X when it is Y — and your mitigation is a second surface on hardware the operator does not author. That surface is the endpoint. So the possession row does not only sit beside EP; the platform that proves live possession can also be the trusted display your receipt needs. The signature proves a key signed; the endpoint can help prove the human saw the true action.\n\nWe call this LIT — Live Identity in Transaction. The key is live: it exists only while its conditions hold — the right user present, the device sound — and is gone the moment any condition fails. So its presence is its validity. If the handshake completes, the conditions are met; nothing separate to check. And the key exists in one place only, so no copy is off somewhere staying alive when the user is not.\nUnderneath is a fuller definition of identity: not one thing, proven once, but three things, proven live — who is acting, on which platform, under which conditions. The industry proves the first, at one moment. LIT proves all three, in the channel, continuously.\n\nIn WIMSE this appears as a profile, under the precise term — condition-bounded credential. LIT is the general name for the same idea.\n\nYour EP receipt sits on the authorization row; LIT sits on the possession row. Together they are your two rows, each proven on its own terms.\nYou asked why the human binds into the platform. The core is in the possession row above — the human is verified into the platform, and the platform's live key then stands for that verified human being present. The rest — how the agent case composes two actors on one platform, and how the trusted-rendering piece works — needs more room than a mail. Happy to walk the group through it. Vienna would be ideal — I may not make it in person, but I can do it remotely, or on a call whenever it suits the WG.\n\nCheers\n\nThi Nguyen-Huu | CEO\n\nTel: +1 905.502.7000 x 3288  |  Toll Free: 888.879.5879\nthi.nh@winmagic.com<mailto:thi.nh@winmagic.com> |  www.winmagic.com<http://www.winmagic.com/>\n\nWinMagic Corp. | 11-80 Galaxy Blvd.\nToronto, ON  |  M9W 4Y8 |  Canada | www.winmagic.com<http://www.winmagic.com/>"
+   },
+   "result": [
+    {
+     "content": "Thanks Iman, I see. Possession proven live; authorization carried as evidence bound to the action. And \"keys pinned out of band\" is the case — raw keys registered directly with the relying party, no CA. We reached the same no-stranger model from the user side.\n\nI agree on your recommendation: signalling first, token second. A combined token can stay combined as long as the event names the row it revokes. That is deployable now, without reissuing anyone.\nBtw, your \"possession no longer proven\" event is the endpoint-presence signal I have proposed in the Shared Signals WG. So we are converging. The row-scoped signal I want is the possession row of your model.\n\nAnd, a row-scoped signal lets the relying party remove trust on the possession row. It cannot prove it. A copied bearer token still presents as valid possession, because the token cannot show it is live. So the signal handles the deployed token world — it removes the wrong. Proving the possession row right, at the moment of use, needs a key that is live and exists in only one place.\n\nNow to the idea the possession row can carry users and agents, not just workloads.\nBecause the row is not about who the actor is. It is about where the key lives. If the key is live and nowhere else, then whoever is bound to it is provably present. The actor slot is pluggable:\nWorkload: the key is the platform's. Possession means the workload is live. This is mTLS today.\n\nHuman: the human is verified into the platform. The platform's live key then stands for \"this verified human is present.\" Same row.\nAgent: the agent runs on the platform and acts for a human verified into it. Possession means the agent is live and the human it acts for is present. Two actors, one platform, one key.\n\nThere is also a place where this row meets your gravest risk directly. You name rendering faithfulness as the thing cryptography cannot prove — the human signs a hash believing it is action X when it is Y — and your mitigation is a second surface on hardware the operator does not author. That surface is the endpoint. So the possession row does not only sit beside EP; the platform that proves live possession can also be the trusted display your receipt needs. The signature proves a key signed; the endpoint can help prove the human saw the true action.\n\nWe call this LIT — Live Identity in Transaction. The key is live: it exists only while its conditions hold — the right user present, the device sound — and is gone the moment any condition fails. So its presence is its validity. If the handshake completes, the conditions are met; nothing separate to check. And the key exists in one place only, so no copy is off somewhere staying alive when the user is not.\nUnderneath is a fuller definition of identity: not one thing, proven once, but three things, proven live — who is acting, on which platform, under which conditions. The industry proves the first, at one moment. LIT proves all three, in the channel, continuously.\n\nIn WIMSE this appears as a profile, under the precise term — condition-bounded credential. LIT is the general name for the same idea.\n\nYour EP receipt sits on the authorization row; LIT sits on the possession row. Together they are your two rows, each proven on its own terms.\nYou asked why the human binds into the platform. The core is in the possession row above — the human is verified into the platform, and the platform's live key then stands for that verified human being present. The rest — how the agent case composes two actors on one platform, and how the trusted-rendering piece works — needs more room than a mail. Happy to walk the group through it. Vienna would be ideal — I may not make it in person, but I can do it remotely, or on a call whenever it suits the WG.\n\nCheers\n\nThi Nguyen-Huu | CEO\n\nTel: +1 905.502.7000 x 3288  |  Toll Free: 888.879.5879\nthi.nh@winmagic.com<mailto:thi.nh@winmagic.com> |  www.winmagic.com<http://www.winmagic.com/>\n\nWinMagic Corp. | 11-80 Galaxy Blvd.\nToronto, ON  |  M9W 4Y8 |  Canada | www.winmagic.com<http://www.winmagic.com/>",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "Thanks Joe,\n\nAs with most industry, I would like to see this standardized and supported by libraries so that I can potentially enable it in the future. European cybersecurity agencies such as ANSSI has a high confidence in ML-KEM [1].\n\nThe value of hybridization with quantum-vulnerable cryptography is clearly temporary, especially if one believes that nation-state attackers will have CRQCs in 2029 [2].\n\nThe campaign by Bernstein et al. against the IETF and ML-KEM is a waste of everybody's time and resources and is likely to have a significant negative impact on cybersecurity. Can the IETF please take action before we lose more brilliant researchers, such as Nadim Kobeissi, from the community? [3]\n\nCheers,\nJohn Preuß Mattsson\n\n[1] https://na.eventscloud.com/file_uploads/b635298de1c10be6d3732863e8b1beca_Day2-1600-ANSSI.pdf\n\n[2] https://cr.yp.to/talks/2023.06.15/slides-djb-20230615-pqrisk-4x3.pdf\n\n[3] https://mailarchive.ietf.org/arch/msg/tls/7HNihlgf0I8Mpe-0nqGb56dnON8/\n"
+   },
+   "result": [
+    {
+     "content": "Thanks Joe,\n\nAs with most industry, I would like to see this standardized and supported by libraries so that I can potentially enable it in the future. European cybersecurity agencies such as ANSSI has a high confidence in ML-KEM [1].\n\nThe value of hybridization with quantum-vulnerable cryptography is clearly temporary, especially if one believes that nation-state attackers will have CRQCs in 2029 [2].\n\nThe campaign by Bernstein et al. against the IETF and ML-KEM is a waste of everybody's time and resources and is likely to have a significant negative impact on cybersecurity. Can the IETF please take action before we lose more brilliant researchers, such as Nadim Kobeissi, from the community? [3]\n\nCheers,\nJohn Preuß Mattsson\n\n[1] https://na.eventscloud.com/file_uploads/b635298de1c10be6d3732863e8b1beca_Day2-1600-ANSSI.pdf\n\n[2] https://cr.yp.to/talks/2023.06.15/slides-djb-20230615-pqrisk-4x3.pdf\n\n[3] https://mailarchive.ietf.org/arch/msg/tls/7HNihlgf0I8Mpe-0nqGb56dnON8/\n",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "Thanks for clarifying. I suggest adding two more data elements.\n\nThanks,\n\nDick Brooks\n\nEmail: dick@example.org\n\nTel: +1 978-555-0100"
+   },
+   "result": [
+    {
+     "content": "Thanks for clarifying. I suggest adding two more data elements.\n\nThanks,\n\nDick Brooks\n\nEmail: dick@example.org\n\nTel: +1 978-555-0100",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "Thanks for your feedback, Wesley!\n\nWe have addressed everything you noted in v8 of the document.\n\nCheers,\nNate"
+   },
+   "result": [
+    {
+     "content": "Thanks for your feedback, Wesley!\n\nWe have addressed everything you noted in v8 of the document.\n\nCheers,\nNate",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "This entire message is a verbatim resend of the earlier note today.\nEvery single line here comes straight from the parent message body.\n"
+   },
+   "result": [
+    {
+     "content": "This entire message is a verbatim resend of the earlier note today.\nEvery single line here comes straight from the parent message body.\n",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "[tried and failed to send to 125attendees@ and recentattendees@ so taking\nit to itef@ now]\n\nWhile there was certainly plenty of spirited discussion about the tradeoffs\nsurrounding the IETF 125 location (I found myself on both sides at various\ntimes), I was ultimately very grateful for the opportunity to visit two\nplaces I'd not previously been. I absolutely loved the built and natural\nenvironment and the interplay between them, and I tried to capture some of\nthe aesthetic in photographs. Thanks, as always, for indulging my\ngratuitous sharing of the results: https://flic.kr/s/aHBqjCYWby\n\n-- \n_CONFIDENTIALITY NOTICE: This email may contain confidential and privileged \nmaterial for the sole use of the intended recipient(s). Any review, use, \ndistribution or disclosure by others is strictly prohibited.\u00a0 If you have \nreceived this communication in error, please notify the sender immediately \nby e-mail and delete the message and any file attachments from your \ncomputer. Thank you._\n"
+   },
+   "result": [
+    {
+     "content": "[tried and failed to send to 125attendees@ and recentattendees@ so taking\nit to itef@ now]\n\nWhile there was certainly plenty of spirited discussion about the tradeoffs\nsurrounding the IETF 125 location (I found myself on both sides at various\ntimes), I was ultimately very grateful for the opportunity to visit two\nplaces I'd not previously been. I absolutely loved the built and natural\nenvironment and the interplay between them, and I tried to capture some of\nthe aesthetic in photographs. Thanks, as always, for indulging my\ngratuitous sharing of the results: https://flic.kr/s/aHBqjCYWby\n",
+     "quoted": false
+    },
+    {
+     "content": "-- \n_CONFIDENTIALITY NOTICE: This email may contain confidential and privileged \nmaterial for the sole use of the intended recipient(s). Any review, use, \ndistribution or disclosure by others is strictly prohibited.\u00a0 If you have \nreceived this communication in error, please notify the sender immediately \nby e-mail and delete the message and any file attachments from your \ncomputer. Thank you._\n",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "\nMartin Thomson via Datatracker <noreply@ietf.org> wrote:\n    > It does not appear as though my previous review was considered in the\n    > preparation of this revision.  The bulk of the changes appear to be in\n    > a section I did not review (Section 17, which should be a separate\n    > document).\n\nCorrect.\nWe believe that we understood your point of view.\n\nWe discussed the view that all profiles create non-interoperability, and\nthat none of the certificate belongs, and we respectfully disagree.\n\nWe think you are in the rough on this.\nBut, we very much appreciated the engagement.\n\n    > I don't think it makes sense for me to review this again.  If I were on\n    > the IESG, I would abstain.\n\n\n"
+   },
+   "result": [
+    {
+     "content": "\nMartin Thomson via Datatracker <noreply@ietf.org> wrote:\n    > It does not appear as though my previous review was considered in the\n    > preparation of this revision.  The bulk of the changes appear to be in\n    > a section I did not review (Section 17, which should be a separate\n    > document).\n\nCorrect.\nWe believe that we understood your point of view.\n\nWe discussed the view that all profiles create non-interoperability, and\nthat none of the certificate belongs, and we respectfully disagree.\n\nWe think you are in the rough on this.\nBut, we very much appreciated the engagement.\n\n    > I don't think it makes sense for me to review this again.  If I were on\n    > the IESG, I would abstain.\n\n\n",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "\n\n\nEvents without label \"editorial\"\n\nIssues\n------\n* quicwg/qmux (+1/-0/💬1)\n  1 issues created:\n  - Revisit graceful close? (by Lukasa)\n    https://github.com/quicwg/qmux/issues/67 \n\n  1 issues received 1 new comments:\n  - #67 Revisit graceful close? (1 by LPardue)\n    https://github.com/quicwg/qmux/issues/67 \n\n* quicwg/receive-ts (+0/-0/💬1)\n  1 issues received 1 new comments:\n  - #9 Write Security Considerations (1 by jbeshay)\n    https://github.com/quicwg/receive-ts/issues/9 \n\n\n\nPull requests\n-------------\n* quicwg/qmux (+1/-0/💬1)\n  1 pull requests submitted:\n  -  (by KernelPanic2id)\n     \n\n  1 pull requests received 1 new comments:\n  - #66 Fix typo: PATH_REPONSE -> PATH_RESPONSE (1 by kazuho)\n    https://github.com/quicwg/qmux/pull/66 \n\n* quicwg/receive-ts (+2/-0/💬0)\n  2 pull requests submitted:\n  -  (by jbeshay)\n     \n  -  (by jbeshay)\n     \n\n\nRepositories tracked by this digest:\n-----------------------------------\n* https://github.com/quicwg/base-drafts\n* https://github.com/quicwg/ops-drafts\n* https://github.com/quicwg/datagram\n* https://github.com/quicwg/load-balancers\n* https://github.com/quicwg/version-negotiation\n* https://github.com/quicwg/quic-bit-grease\n* https://github.com/quicwg/qlog\n* https://github.com/quicwg/quic-v2\n* https://github.com/quicwg/multipath\n* https://github.com/quicwg/ack-frequency\n* https://github.com/quicwg/reliable-stream-reset\n* https://github.com/quicwg/qmux\n* https://github.com/quicwg/receive-ts\n* https://github.com/quicwg/extended-key-update\n* https://github.com/quicwg/address-discovery\n\n\n-- \nTo have a summary like this sent to your list, see: https://github.com/ietf-github-services/activity-summary\n"
+   },
+   "result": [
+    {
+     "content": "\n\n\nEvents without label \"editorial\"\n\nIssues\n------\n* quicwg/qmux (+1/-0/💬1)\n  1 issues created:\n  - Revisit graceful close? (by Lukasa)\n    https://github.com/quicwg/qmux/issues/67 \n\n  1 issues received 1 new comments:\n  - #67 Revisit graceful close? (1 by LPardue)\n    https://github.com/quicwg/qmux/issues/67 \n\n* quicwg/receive-ts (+0/-0/💬1)\n  1 issues received 1 new comments:\n  - #9 Write Security Considerations (1 by jbeshay)\n    https://github.com/quicwg/receive-ts/issues/9 \n\n\n\nPull requests\n",
+     "quoted": false
+    },
+    {
+     "content": "-------------\n* quicwg/qmux (+1/-0/💬1)\n  1 pull requests submitted:\n  -  (by KernelPanic2id)\n     \n\n  1 pull requests received 1 new comments:\n  - #66 Fix typo: PATH_REPONSE -> PATH_RESPONSE (1 by kazuho)\n    https://github.com/quicwg/qmux/pull/66 \n\n* quicwg/receive-ts (+2/-0/💬0)\n  2 pull requests submitted:\n  -  (by jbeshay)\n     \n  -  (by jbeshay)\n     \n\n\nRepositories tracked by this digest:\n",
+     "quoted": false
+    },
+    {
+     "content": "-----------------------------------\n* https://github.com/quicwg/base-drafts\n* https://github.com/quicwg/ops-drafts\n* https://github.com/quicwg/datagram\n* https://github.com/quicwg/load-balancers\n* https://github.com/quicwg/version-negotiation\n* https://github.com/quicwg/quic-bit-grease\n* https://github.com/quicwg/qlog\n* https://github.com/quicwg/quic-v2\n* https://github.com/quicwg/multipath\n* https://github.com/quicwg/ack-frequency\n* https://github.com/quicwg/reliable-stream-reset\n* https://github.com/quicwg/qmux\n* https://github.com/quicwg/receive-ts\n* https://github.com/quicwg/extended-key-update\n* https://github.com/quicwg/address-discovery\n\n",
+     "quoted": false
+    },
+    {
+     "content": "-- \nTo have a summary like this sent to your list, see: https://github.com/ietf-github-services/activity-summary\n",
+     "quoted": false
+    }
+   ]
+  }
+ ]
+}

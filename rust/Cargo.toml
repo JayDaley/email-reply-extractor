@@ -1,0 +1,28 @@
+[package]
+name = "email-reply-extractor"
+version = "1.2.1"
+edition = "2021"
+rust-version = "1.80"
+description = "Extract the new text from an email reply: strip quoted text, quote headers, signatures and sign-offs. Rust port of the Python reference, byte-identical output."
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/JayDaley/email-reply-extractor"
+homepage = "https://github.com/JayDaley/email-reply-extractor/tree/main/rust"
+documentation = "https://docs.rs/email-reply-extractor"
+authors = ["Jay Daley"]
+keywords = ["email", "reply", "quote", "signature", "mailing-list"]
+categories = ["email", "text-processing", "parser-implementations"]
+# The conformance tests, the differential-test driver and the table
+# generator read data from the repository checkout (../conformance,
+# ../python), so only the library sources go into the published package.
+include = ["Cargo.toml", "README.md", "LICENSE", "src/**/*.rs"]
+
+[dependencies]
+# Patterns with lookaround or Python's \b (translated to lookaround).
+fancy-regex = "0.20"
+# All other patterns.
+regex = "1.10"
+
+[dev-dependencies]
+serde_json = "1"
+sha2 = "0.10"

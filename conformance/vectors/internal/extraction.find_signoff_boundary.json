@@ -1,0 +1,96 @@
+{
+ "format": 1,
+ "function": "find_signoff_boundary",
+ "module": "extraction",
+ "public": false,
+ "parameters": [
+  {
+   "name": "lines",
+   "kind": "positional_or_keyword"
+  }
+ ],
+ "returns": "int | None",
+ "vectors": [
+  {
+   "args": {
+    "lines": [
+     "Done, see branch.",
+     "",
+     "Cheers, Peter",
+     "",
+     "On Mon, Bob Smith wrote:",
+     "old text"
+    ]
+   },
+   "result": 3
+  },
+  {
+   "args": {
+    "lines": [
+     "Reply text.",
+     "",
+     "Regards",
+     "Alice",
+     "",
+     "Bob <bob@example.org> wrote:",
+     "old"
+    ]
+   },
+   "result": 4
+  },
+  {
+   "args": {
+    "lines": [
+     "Reply.",
+     "",
+     "Best,",
+     "Songbo",
+     "",
+     "Ps. one more authored thought."
+    ]
+   },
+   "result": null
+  },
+  {
+   "args": {
+    "lines": [
+     "Reply.",
+     "",
+     "Best,",
+     "Songbo"
+    ]
+   },
+   "result": null
+  },
+  {
+   "args": {
+    "lines": [
+     "Some quick replies.",
+     "Thanks.",
+     "> quoted point one",
+     "My answer."
+    ]
+   },
+   "result": null
+  },
+  {
+   "args": {
+    "lines": [
+     "The proposed outcome labels are vector vocabulary only.",
+     "",
+     "Best,",
+     "Songbo",
+     "",
+     "On Tue, 14 Jul 2026 18:45:07 +0000, Thi Nguyen-Huu thi.nh@winmagic.com",
+     "wrote:",
+     "",
+     "Karthik, Songbo, all,",
+     "",
+     "Quoted content with no markers.",
+     ""
+    ]
+   },
+   "result": 4
+  }
+ ]
+}

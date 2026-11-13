@@ -1,0 +1,38 @@
+{
+ "format": 1,
+ "function": "custom_clean",
+ "module": "extraction",
+ "public": false,
+ "parameters": [
+  {
+   "name": "text",
+   "kind": "positional_or_keyword"
+  },
+  {
+   "name": "localized",
+   "kind": "keyword_only",
+   "default": true
+  }
+ ],
+ "returns": "str",
+ "vectors": [
+  {
+   "args": {
+    "text": "> old quote\n\nReal content.\n-- \nSignature line\nmore signature"
+   },
+   "result": "Real content.\n--\nSignature line\nmore signature"
+  },
+  {
+   "args": {
+    "text": "Hi all,\n\nThe actual content.\n\nBest,\nSongbo"
+   },
+   "result": "Hi all,\n\nThe actual content.\n\nBest,\nSongbo"
+  },
+  {
+   "args": {
+    "text": "The proposed outcome labels are vector vocabulary only.\n\nBest,\nSongbo\n\nOn Tue, 14 Jul 2026 18:45:07 +0000, Thi Nguyen-Huu thi.nh@winmagic.com\nwrote:\n\nKarthik, Songbo, all,\n\nQuoted content with no markers.\n"
+   },
+   "result": "The proposed outcome labels are vector vocabulary only.\n\nBest,\nSongbo"
+  }
+ ]
+}

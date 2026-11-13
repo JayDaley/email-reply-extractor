@@ -1,0 +1,69 @@
+{
+ "format": 1,
+ "function": "is_attribution_line",
+ "module": "extraction",
+ "public": false,
+ "parameters": [
+  {
+   "name": "line",
+   "kind": "positional_or_keyword"
+  }
+ ],
+ "returns": "bool",
+ "vectors": [
+  {
+   "args": {
+    "line": "2026/07/22 18:12、Alex Konviser <ietf@gravit.space>のメール:"
+   },
+   "result": true
+  },
+  {
+   "args": {
+    "line": "2026年7月22日 18:12 +0900、Alex Konviser <ietf@gravit.space>のメール:"
+   },
+   "result": true
+  },
+  {
+   "args": {
+    "line": "Am Montag, dem 20.07.2026 um 22:55 +0200 schrieb Dennis Jackson:"
+   },
+   "result": true
+  },
+  {
+   "args": {
+    "line": "Hi Roy,"
+   },
+   "result": false
+  },
+  {
+   "args": {
+    "line": "Just wrote some code."
+   },
+   "result": false
+  },
+  {
+   "args": {
+    "line": "Martin Thomson via Datatracker <noreply@example.org> wrote:"
+   },
+   "result": true
+  },
+  {
+   "args": {
+    "line": "On Tue, Jul 7, 2026, at 03:25, Dan Wing wrote:"
+   },
+   "result": true
+  },
+  {
+   "args": {
+    "line": "On the other hand, no."
+   },
+   "result": false
+  },
+  {
+   "args": {
+    "line": "アレックスのメール:"
+   },
+   "result": false
+  }
+ ]
+}

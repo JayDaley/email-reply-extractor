@@ -1,0 +1,97 @@
+{
+ "format": 1,
+ "function": "strip_parent_content",
+ "module": "extraction",
+ "public": true,
+ "parameters": [
+  {
+   "name": "text",
+   "kind": "positional_or_keyword"
+  },
+  {
+   "name": "parent_body",
+   "kind": "positional_or_keyword"
+  },
+  {
+   "name": "continuation",
+   "kind": "keyword_only",
+   "default": false
+  }
+ ],
+ "returns": "str",
+ "vectors": [
+  {
+   "args": {
+    "text": "   \n\n",
+    "parent_body": "anything at all here"
+   },
+   "result": ""
+  },
+  {
+   "args": {
+    "text": "",
+    "parent_body": ""
+   },
+   "result": ""
+  },
+  {
+   "args": {
+    "text": "Best,\nSongbo",
+    "parent_body": "Some earlier discussion here about the draft.\nBest,\nSongbo"
+   },
+   "result": "Best,\nSongbo"
+  },
+  {
+   "args": {
+    "text": "Hi all,\nBest wishes",
+    "parent_body": "Hi all,\nBest wishes\nand some other content only in the parent body."
+   },
+   "result": "Hi all,\nBest wishes"
+  },
+  {
+   "args": {
+    "text": "My genuinely new answer to the thread goes right here in this line.\n\nSongbo\n\nAddress prefixes are orderable as a property of the objects so containment\nis mechanical.\nCommunities are the opposite by design with semantics that stay strictly\nbilateral throughout.\nBoth are useful and the protocol does not pretend the second case is\nthe first.\n",
+    "parent_body": "Address prefixes are orderable as a property of the objects so containment is mechanical.\nCommunities are the opposite by design with semantics that stay strictly bilateral throughout.\nBoth are useful and the protocol does not pretend the second case is the first.\n",
+    "continuation": true
+   },
+   "result": "My genuinely new answer to the thread goes right here in this line.\n\nSongbo"
+  },
+  {
+   "args": {
+    "text": "Quoting you: the status cannot be established.\nI think we should fix that in the next revision of the draft.",
+    "parent_body": "We noted that the status cannot be established within the negotiated window."
+   },
+   "result": "Quoting you: the status cannot be established.\nI think we should fix that in the next revision of the draft."
+  },
+  {
+   "args": {
+    "text": "Thanks for laying this out so clearly.\n\nAddress prefixes are orderable as a property of the objects so containment\nis mechanical.\nCommunities are the opposite by design with semantics that stay strictly\nbilateral throughout.\nBoth are useful and the protocol does not pretend the second case is\nthe first.\n",
+    "parent_body": "Address prefixes are orderable as a property of the objects so containment is mechanical.\nCommunities are the opposite by design with semantics that stay strictly bilateral throughout.\nBoth are useful and the protocol does not pretend the second case is the first.\n",
+    "continuation": true
+   },
+   "result": "Thanks for laying this out so clearly."
+  },
+  {
+   "args": {
+    "text": "Thanks for laying this out so clearly.\n\nAddress prefixes are orderable as a property of the objects so containment\nis mechanical.\nCommunities are the opposite by design with semantics that stay strictly\nbilateral throughout.\nBoth are useful and the protocol does not pretend the second case is\nthe first.\n",
+    "parent_body": "Address prefixes are orderable as a property of the objects so containment is mechanical.\nCommunities are the opposite by design with semantics that stay strictly bilateral throughout.\nBoth are useful and the protocol does not pretend the second case is the first.\n"
+   },
+   "result": "Thanks for laying this out so clearly.\n\nis mechanical.\nbilateral throughout.\nthe first."
+  },
+  {
+   "args": {
+    "text": "The first cited sentence is long enough to match the rewrap rule cleanly\nand the second cited sentence is also long enough to match that same rule.\nA short tail.\nMy own conclusion drawn from those two sentences follows here.\n",
+    "parent_body": "The first cited sentence is long enough to match the rewrap rule cleanly and the second cited sentence is also long enough to match that same rule. A short tail.",
+    "continuation": true
+   },
+   "result": "A short tail.\nMy own conclusion drawn from those two sentences follows here."
+  },
+  {
+   "args": {
+    "text": "This is a fairly long authored looking line with plenty of words.",
+    "parent_body": "This is a fairly long authored looking line with plenty of words."
+   },
+   "result": ""
+  }
+ ]
+}

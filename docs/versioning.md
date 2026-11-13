@@ -1,13 +1,18 @@
 # Versioning
 
 Two numbers are maintained in this repository, and they are independent.
+Each is shared by the Python, TypeScript and Rust ports (see
+[ports.md](ports.md)); `make check-sync` fails when the ports disagree.
 
-- `__version__` (in `src/email_reply_extractor/__init__.py`) is the package's
-  semantic version. `pyproject.toml` reads it dynamically, so the two never
-  drift. The bump policy is in `CLAUDE.md`.
-- `EXTRACTION_VERSION` (an `int` in `src/email_reply_extractor/extraction.py`)
-  is the generation stamp of the routine that derives an extraction's text.
-  This page is its contract.
+- The package version is the semantic version of all three packages:
+  `__version__` in `python/src/email_reply_extractor/__init__.py` (which
+  `python/pyproject.toml` reads dynamically), `version` in
+  `typescript/package.json`, and `version` in `rust/Cargo.toml`. The bump
+  policy is in `CLAUDE.md`.
+- `EXTRACTION_VERSION` is the generation stamp of the routine that derives an
+  extraction's text: an `int` in `python/src/email_reply_extractor/extraction.py`,
+  `typescript/src/extraction.ts` and `rust/src/extraction.rs`, recorded with
+  the corpus digest in `conformance/digest.json`. This page is its contract.
 
 A release that changes the derived text bumps both: the generation by one, and
 the package's minor component. A release that does not touch the derived text
@@ -16,8 +21,10 @@ bumps only the package version.
 ## What EXTRACTION_VERSION identifies
 
 The generation of the text-deriving routine, meaning `extraction.py`,
-`cleaning.py`, `html_text.py` and the vendored `_fragments.py` taken together.
-Two runs of the library that report the same `EXTRACTION_VERSION` derive the
+`cleaning.py`, `html_text.py` and the vendored `_fragments.py` taken together
+(and their counterparts in the TypeScript and Rust ports). Two runs of the
+library, in any of the three languages, that report the same
+`EXTRACTION_VERSION` derive the
 same text from the same input.
 
 It is currently **6**. Six generations exist; the first four shipped in the
@@ -49,37 +56,45 @@ implementation.
   ordering is what lets an older consumer read a store written by a newer
   routine as current rather than offering to re-derive text it cannot
   reproduce.
-- **The digest moves with it.** `EXPECTED_DIGEST` and
-  `DIGEST_EXTRACTION_VERSION` in `tests/test_extraction_version.py` are
-  re-recorded in the same commit as the increment.
+- **The digest moves with it.** `conformance/digest.json` (the digest and
+  the generation it was recorded against) is re-recorded by `make vectors` in
+  the same commit as the increment, and every port's constant is incremented
+  in that commit too.
 
 ## How the behavior is pinned
 
 Nothing can automatically decide whether a change altered the derived text, so
-`tests/test_extraction_version.py` pins the routine's real behavior instead: a
-single SHA-256 over the composite output of every `.eml` fixture in
-`tests/fixtures`, in stem order. Three values go into the hash per fixture —
-the stage-1-then-stage-2 composite, plus stage 1's `text` and its `method` — so
-a change confined to stage 1 that stage 2 happens to erase is still caught.
-Every field is length-prefixed, so no combination of contents can imitate a
-different split.
+the repository pins the routine's real behavior instead: a single SHA-256 over
+the composite output of every `.eml` fixture in `fixtures/`, in stem order,
+recorded in `conformance/digest.json`. Four values go into the hash per
+fixture — the stem, the stage-1-then-stage-2 composite, and stage 1's `text`
+and its `method` — so a change confined to stage 1 that stage 2 happens to
+erase is still caught. Every field is length-prefixed, so no combination of
+contents can imitate a different split. The exact algorithm, the digest of
+each earlier generation, and the rest of the conformance data are specified in
+[conformance/README.md](../conformance/README.md).
 
-This is stricter than the corpus test in `tests/test_extraction.py`, which
-compares tolerantly (blank lines dropped, each line stripped). A whitespace-only
-difference passes there and still changes the exact bytes a consumer derives.
-The digest is taken over the exact strings.
+This is stricter than the corpus test in `python/tests/test_extraction.py`,
+which compares tolerantly (blank lines dropped, each line stripped). A
+whitespace-only difference passes there and still changes the exact bytes a
+consumer derives. The digest is taken over the exact strings.
 
-Three tests hold the contract together:
+The contract is enforced in several places:
 
-- The corpus must contain at least 20 fixtures, so a digest over an empty
-  corpus cannot pin nothing and still pass.
-- `corpus_digest()` must equal `EXPECTED_DIGEST`.
-- `DIGEST_EXTRACTION_VERSION` must equal `EXTRACTION_VERSION`, so a bump
-  without a re-record and a re-record without a bump are both visible in the
-  diff of that one file.
+- `python/tests/test_extraction_version.py` requires at least 20 fixtures (so
+  a digest over an empty corpus cannot pin nothing and still pass), requires
+  the live corpus digest to equal the recorded one, and requires the recorded
+  `extraction_version` to equal `EXTRACTION_VERSION`, so a bump without a
+  re-record and a re-record without a bump both fail.
+- `make vectors` re-records the digest only when `EXTRACTION_VERSION` was
+  incremented or the fixture set changed; a moved digest without either is
+  reported as an error.
+- The TypeScript and Rust test suites compute the same digest from their own
+  output, so a port that diverges from the reference fails.
+- `make check-sync` requires every port's `EXTRACTION_VERSION` to equal the
+  recorded `extraction_version`.
 
-The re-recording procedure, including the exact command, is in
-[CONTRIBUTING.md](../CONTRIBUTING.md).
+The re-recording procedure is in [CONTRIBUTING.md](../CONTRIBUTING.md).
 
 ## How a consumer should use the constant
 

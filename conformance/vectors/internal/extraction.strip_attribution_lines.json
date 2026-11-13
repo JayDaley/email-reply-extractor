@@ -1,0 +1,43 @@
+{
+ "format": 1,
+ "function": "strip_attribution_lines",
+ "module": "extraction",
+ "public": false,
+ "parameters": [
+  {
+   "name": "lines",
+   "kind": "positional_or_keyword"
+  }
+ ],
+ "returns": "list[str]",
+ "vectors": [
+  {
+   "args": {
+    "lines": [
+     "On something happened",
+     "",
+     "wrote: this is real prose"
+    ]
+   },
+   "result": [
+    "On something happened",
+    "",
+    "wrote: this is real prose"
+   ]
+  },
+  {
+   "args": {
+    "lines": [
+     "keep this",
+     "On Tue, Jul 7, 2026, at 03:25,",
+     "Dan Wing wrote:",
+     "keep that"
+    ]
+   },
+   "result": [
+    "keep this",
+    "keep that"
+   ]
+  }
+ ]
+}

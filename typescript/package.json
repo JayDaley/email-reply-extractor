@@ -1,0 +1,58 @@
+{
+  "name": "email-reply-extractor",
+  "version": "1.2.1",
+  "description": "Extract the new text from an email reply: strip quoted text, quote headers, signatures and sign-offs. TypeScript port of the Python reference implementation, with byte-identical output.",
+  "keywords": [
+    "email",
+    "reply",
+    "parser",
+    "email-reply-parser",
+    "quoted-text",
+    "signature",
+    "mailing-list",
+    "text-extraction"
+  ],
+  "homepage": "https://github.com/JayDaley/email-reply-extractor/tree/main/typescript#readme",
+  "bugs": {
+    "url": "https://github.com/JayDaley/email-reply-extractor/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JayDaley/email-reply-extractor.git",
+    "directory": "typescript"
+  },
+  "license": "MIT",
+  "author": "Jay Daley",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "prepack": "npm run build",
+    "test": "tsc -p tsconfig.test.json && node --test --test-reporter=spec .test-build/test/api.test.js .test-build/test/conformance.test.js",
+    "lint": "biome check . && tsc -p tsconfig.json --noEmit",
+    "format": "biome check --write .",
+    "generate-tables": "python3 tools/generate_tables.py"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.6.7",
+    "@types/node": "^20.19.43",
+    "typescript": "~5.9.3"
+  }
+}

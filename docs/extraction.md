@@ -412,10 +412,12 @@ confidence, and the hand-labeled corpus keeps them.
 
 ## Where the rules are pinned
 
-`tests/fixtures` holds 24 hand-labeled real messages whose expected files are
-the composite of both stages. `tests/fixtures/README.md` records, per fixture,
+`fixtures/` holds 26 hand-labeled real messages whose expected files are
+the composite of both stages. `fixtures/README.md` records, per fixture,
 the behavior it pins and where raw `email-reply-parser` diverges from the
 ground truth — those divergences are exactly what the custom pass and the
-over-strip guard exist to fix. `tests/test_extraction_version.py` additionally
-pins the exact bytes of the whole corpus as a single SHA-256; see
-[versioning.md](versioning.md).
+over-strip guard exist to fix. `conformance/digest.json` additionally pins
+the exact bytes of the whole corpus as a single SHA-256 (checked by
+`python/tests/test_extraction_version.py`); see [versioning.md](versioning.md).
+`conformance/` also holds the reference outputs and call-level vectors that the
+TypeScript and Rust ports are tested against; see [ports.md](ports.md).

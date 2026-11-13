@@ -1,0 +1,111 @@
+{
+ "format": 1,
+ "function": "html_to_text",
+ "module": "html_text",
+ "public": true,
+ "parameters": [
+  {
+   "name": "html",
+   "kind": "positional_or_keyword"
+  }
+ ],
+ "returns": "str",
+ "vectors": [
+  {
+   "args": {
+    "html": "   "
+   },
+   "result": ""
+  },
+  {
+   "args": {
+    "html": ""
+   },
+   "result": ""
+  },
+  {
+   "args": {
+    "html": "<<<>>> & & &"
+   },
+   "result": "<<<>>> & & &"
+  },
+  {
+   "args": {
+    "html": "<b><i>no closes"
+   },
+   "result": "no closes"
+  },
+  {
+   "args": {
+    "html": "<div>  lots   of\n\tspace   here </div>"
+   },
+   "result": "lots of space here"
+  },
+  {
+   "args": {
+    "html": "<div><br><br></div><p>content</p><div><br></div>"
+   },
+   "result": "content"
+  },
+  {
+   "args": {
+    "html": "<div>one<br>two<br>three</div>"
+   },
+   "result": "one\ntwo\nthree"
+  },
+  {
+   "args": {
+    "html": "<head><title>hidden title</title></head><body><p>body text</p></body>"
+   },
+   "result": "body text"
+  },
+  {
+   "args": {
+    "html": "<p>&#233;&#x2014;</p>"
+   },
+   "result": "é—"
+  },
+  {
+   "args": {
+    "html": "<p>First para.</p><div>Second block.</div>"
+   },
+   "result": "First para.\n\nSecond block."
+  },
+  {
+   "args": {
+    "html": "<p>a &amp; b &lt; c &gt; d &nbsp;e</p>"
+   },
+   "result": "a & b < c > d e"
+  },
+  {
+   "args": {
+    "html": "<p>a&ampb &copy2026 &#128; &#x0; &#xD800; &#1114112; &notit; &noti;</p><!-- c --><script>x<p>y</script><style>z</style>q<br>r"
+   },
+   "result": "a&b ©2026 € � � � ¬it; ¬i;\nq\nr"
+  },
+  {
+   "args": {
+    "html": "<p>r\u001cs\u00a0t</p>"
+   },
+   "result": "r s t"
+  },
+  {
+   "args": {
+    "html": "<style>.x{color:red}</style><div>visible</div><script>var y = 1 < 2;</script>"
+   },
+   "result": "visible"
+  },
+  {
+   "args": {
+    "html": "<ul><li>alpha</li><li>beta</li></ul><table><tr>r1</tr><tr>r2</tr></table>"
+   },
+   "result": "alpha\n\nbeta\n\nr1\n\nr2"
+  },
+  {
+   "args": {
+    "html": "plain no tags"
+   },
+   "result": "plain no tags"
+  }
+ ]
+}

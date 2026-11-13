@@ -39,6 +39,22 @@ Any other line (headings above level 2, blank lines, prose in this Format
 section) is not part of a release record and can be ignored. Outside fenced
 code blocks, no release section appears before the first `## [` header.
 
+## [1.2.1] - 2026-11-13
+
+Summary: TypeScript and Rust ports added; the repository restructured to maintain three ports against one conformance suite.
+
+- Added a TypeScript port in `typescript/` (npm package `email-reply-extractor`, ESM, no runtime dependencies, Node 20 or later) with the same public API in camelCase.
+- Added a Rust port in `rust/` (crate `email-reply-extractor`, MSRV 1.80, runtime dependencies `regex` and `fancy-regex`) with the same public API.
+- Moved the Python package, its tests and its tools into `python/`; the published Python package and its API are unchanged.
+- Moved the fixture corpus from `tests/fixtures/` to the top-level `fixtures/`.
+- Added `conformance/`: the decoded corpus with the reference outputs (`corpus.json`) and call-level vectors recorded from the Python test suite (`vectors/`), which all three ports are tested against.
+- Moved the recorded corpus digest from `test_extraction_version.py` to `conformance/digest.json`, the single source for all three ports; the digest value is unchanged.
+- Added `python/tests/test_port_hazards.py`, which exercises the Python string, regular-expression, `difflib` and HTML-parser semantics that a port must reproduce.
+- Added `make vectors`, `make check-vectors` and `make check-sync`; the last verifies that the version, `EXTRACTION_VERSION` and the per-port `LICENSE` copies agree across the ports.
+- Added `docs/ports.md`, the port contract: Python is the reference implementation, and a behaviour change is complete only when all three ports pass the regenerated conformance suite.
+- Added TypeScript, Rust and conformance jobs to CI, and publish workflows for npm and crates.io.
+- `EXTRACTION_VERSION` remains 6.
+
 ## [1.2.0] - 2026-11-13
 
 Summary: Generation 6 of the extraction routine — Latin-script localized quote-header blocks and "Original message" dividers are recognized.

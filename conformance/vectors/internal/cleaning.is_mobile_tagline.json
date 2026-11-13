@@ -1,0 +1,63 @@
+{
+ "format": 1,
+ "function": "is_mobile_tagline",
+ "module": "cleaning",
+ "public": false,
+ "parameters": [
+  {
+   "name": "line",
+   "kind": "positional_or_keyword"
+  }
+ ],
+ "returns": "bool",
+ "vectors": [
+  {
+   "args": {
+    "line": "Get Outlook for Android"
+   },
+   "result": true
+  },
+  {
+   "args": {
+    "line": "Get Outlook for iOS"
+   },
+   "result": true
+  },
+  {
+   "args": {
+    "line": "Sent from Proton Mail mobile"
+   },
+   "result": true
+  },
+  {
+   "args": {
+    "line": "Sent from my Samsung Galaxy smartphone"
+   },
+   "result": true
+  },
+  {
+   "args": {
+    "line": "Sent from my iPad"
+   },
+   "result": true
+  },
+  {
+   "args": {
+    "line": "Sent from my iPhone"
+   },
+   "result": true
+  },
+  {
+   "args": {
+    "line": "Sent from my mobile device"
+   },
+   "result": true
+  },
+  {
+   "args": {
+    "line": "Sent the draft to the working group earlier today."
+   },
+   "result": false
+  }
+ ]
+}

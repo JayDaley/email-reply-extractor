@@ -1,0 +1,57 @@
+{
+ "format": 1,
+ "function": "is_signature_delimiter",
+ "module": "cleaning",
+ "public": false,
+ "parameters": [
+  {
+   "name": "line",
+   "kind": "positional_or_keyword"
+  }
+ ],
+ "returns": "bool",
+ "vectors": [
+  {
+   "args": {
+    "line": "- bullet"
+   },
+   "result": false
+  },
+  {
+   "args": {
+    "line": "--   "
+   },
+   "result": true
+  },
+  {
+   "args": {
+    "line": "-- "
+   },
+   "result": true
+  },
+  {
+   "args": {
+    "line": "-- eh"
+   },
+   "result": false
+  },
+  {
+   "args": {
+    "line": "--"
+   },
+   "result": true
+  },
+  {
+   "args": {
+    "line": "--eh."
+   },
+   "result": false
+  },
+  {
+   "args": {
+    "line": "-markku"
+   },
+   "result": false
+  }
+ ]
+}

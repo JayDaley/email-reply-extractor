@@ -1,0 +1,68 @@
+{
+ "format": 1,
+ "function": "texts_equivalent",
+ "module": "equivalence",
+ "public": true,
+ "parameters": [
+  {
+   "name": "a",
+   "kind": "positional_or_keyword"
+  },
+  {
+   "name": "b",
+   "kind": "positional_or_keyword"
+  }
+ ],
+ "returns": "bool",
+ "vectors": [
+  {
+   "args": {
+    "a": "",
+    "b": "\n  \n"
+   },
+   "result": true
+  },
+  {
+   "args": {
+    "a": "One.\nTwo.",
+    "b": "One.\nTwo. Three."
+   },
+   "result": false
+  },
+  {
+   "args": {
+    "a": "One.\nTwo.\nThree.",
+    "b": "One.\n\n  Two.\n\nThree.\n"
+   },
+   "result": true
+  },
+  {
+   "args": {
+    "a": "\ufeffx",
+    "b": "x"
+   },
+   "result": false
+  },
+  {
+   "args": {
+    "a": "a — b",
+    "b": "a - b"
+   },
+   "result": false
+  },
+  {
+   "args": {
+    "a": "one.",
+    "b": "One."
+   },
+   "result": false
+  },
+  {
+   "args": {
+    "a": "x\u0085",
+    "b": "x"
+   },
+   "result": true
+  }
+ ]
+}

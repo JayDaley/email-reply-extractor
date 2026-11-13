@@ -1,0 +1,50 @@
+name: Publish to npm
+
+# Publishes the TypeScript package (typescript/) to npm on every version tag
+# push, or on demand for a version already tagged. The published version comes
+# from typescript/package.json; check_sync.py fails the job when it differs
+# from the Python and Rust versions.
+#
+# Authentication is npm trusted publishing (OIDC): no npm token is stored
+# anywhere. The maintainer configures, once, a trusted publisher for the
+# email-reply-extractor package on npmjs.com that names this repository, this
+# workflow file and the `npm` environment. `--provenance` attaches a signed
+# build provenance statement, which needs `id-token: write`. Trusted
+# publishing and provenance require npm 11.5 or later, installed below.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write
+    defaults:
+      run:
+        working-directory: typescript
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - name: Check that the ports carry the same version
+        working-directory: .
+        run: python python/tools/check_sync.py
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+      - name: Install npm with trusted publishing support
+        run: npm install -g npm@latest
+      - name: Install
+        run: npm ci
+      - name: Lint and test
+        run: |
+          npm run lint
+          npm test
+      - name: Publish
+        run: npm publish --provenance --access public

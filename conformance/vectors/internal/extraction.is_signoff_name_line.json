@@ -1,0 +1,69 @@
+{
+ "format": 1,
+ "function": "is_signoff_name_line",
+ "module": "extraction",
+ "public": false,
+ "parameters": [
+  {
+   "name": "text",
+   "kind": "positional_or_keyword"
+  }
+ ],
+ "returns": "bool",
+ "vectors": [
+  {
+   "args": {
+    "text": ""
+   },
+   "result": false
+  },
+  {
+   "args": {
+    "text": "Brian"
+   },
+   "result": true
+  },
+  {
+   "args": {
+    "text": "Chair, WIMSE WG <chair@example.org>"
+   },
+   "result": false
+  },
+  {
+   "args": {
+    "text": "Markku-Juhani O. Saarinen"
+   },
+   "result": true
+  },
+  {
+   "args": {
+    "text": "Row 4 needs a re-assessment lease"
+   },
+   "result": false
+  },
+  {
+   "args": {
+    "text": "Songbo"
+   },
+   "result": true
+  },
+  {
+   "args": {
+    "text": "Thi Nguyen-Huu"
+   },
+   "result": true
+  },
+  {
+   "args": {
+    "text": "see the attached test-vector plan"
+   },
+   "result": false
+  },
+  {
+   "args": {
+    "text": "the next governed key use must fail because status cannot be established"
+   },
+   "result": false
+  }
+ ]
+}

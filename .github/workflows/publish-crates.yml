@@ -1,0 +1,41 @@
+name: Publish to crates.io
+
+# Publishes the Rust crate (rust/) to crates.io on every version tag push, or
+# on demand for a version already tagged. The published version comes from
+# rust/Cargo.toml; check_sync.py fails the job when it differs from the Python
+# and TypeScript versions.
+#
+# Authentication is a crates.io API token read from the CARGO_REGISTRY_TOKEN
+# secret of the `crates-io` environment. No token value is stored in the
+# repository; the maintainer creates the token on crates.io (scopes
+# publish-update, plus publish-new for the first release, restricted to the
+# email-reply-extractor crate) and stores it as that secret, once.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: crates-io
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: rust
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - name: Check that the ports carry the same version
+        working-directory: .
+        run: python python/tools/check_sync.py
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Test
+        run: cargo test
+      - name: Publish
+        run: cargo publish
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}

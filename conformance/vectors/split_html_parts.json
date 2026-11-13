@@ -1,0 +1,275 @@
+{
+ "format": 1,
+ "function": "split_html_parts",
+ "module": "html_text",
+ "public": true,
+ "parameters": [
+  {
+   "name": "html",
+   "kind": "positional_or_keyword"
+  }
+ ],
+ "returns": "HtmlParts",
+ "vectors": [
+  {
+   "args": {
+    "html": "   "
+   },
+   "result": {
+    "novel_text": "",
+    "quoted_text": "",
+    "signature_text": ""
+   }
+  },
+  {
+   "args": {
+    "html": ""
+   },
+   "result": {
+    "novel_text": "",
+    "quoted_text": "",
+    "signature_text": ""
+   }
+  },
+  {
+   "args": {
+    "html": "</blockquote></div><div>still novel</div></blockquote>"
+   },
+   "result": {
+    "novel_text": "still novel",
+    "quoted_text": "",
+    "signature_text": ""
+   }
+  },
+  {
+   "args": {
+    "html": "<<<>>> & & &"
+   },
+   "result": {
+    "novel_text": "<<<>>> & & &",
+    "quoted_text": "",
+    "signature_text": ""
+   }
+  },
+  {
+   "args": {
+    "html": "<b><i>no closes"
+   },
+   "result": {
+    "novel_text": "no closes",
+    "quoted_text": "",
+    "signature_text": ""
+   }
+  },
+  {
+   "args": {
+    "html": "<blockquote>outer<blockquote>inner</blockquote>more outer</blockquote>"
+   },
+   "result": {
+    "novel_text": "",
+    "quoted_text": "outer\ninner\nmore outer",
+    "signature_text": ""
+   }
+  },
+  {
+   "args": {
+    "html": "<div class=\"gmail_quote\"><blockquote>quoted</blockquote><div>inline reply</div></div><div class=\"gmail_quote\">forwarded body</div>"
+   },
+   "result": {
+    "novel_text": "inline reply",
+    "quoted_text": "quoted\n\nforwarded body",
+    "signature_text": ""
+   }
+  },
+  {
+   "args": {
+    "html": "<div class=\"gmail_signature\" class=\"x\">Sig &amp; co</div><p>hi</p><div id=Signature>S2</div>"
+   },
+   "result": {
+    "novel_text": "Sig & co\n\nhi",
+    "quoted_text": "",
+    "signature_text": "S2"
+   }
+  },
+  {
+   "args": {
+    "html": "<div dir=\"ltr\"><div class=\"gmail_attr\">On Mon, X wrote:</div><div class=\"gmail_quote gmail_quote_container\"><blockquote class=\"gmail_quote\">their first point</blockquote><div>my inline answer</div><blockquote class=\"gmail_quote\">their second point</blockquote><div>my other answer</div><div>-Me</div></div></div>"
+   },
+   "result": {
+    "novel_text": "my inline answer\n\nmy other answer\n\n-Me",
+    "quoted_text": "On Mon, X wrote:\n\ntheir first point\n\ntheir second point",
+    "signature_text": ""
+   }
+  },
+  {
+   "args": {
+    "html": "<div>before</div><blockquote>middle</blockquote><div>after</div>"
+   },
+   "result": {
+    "novel_text": "before\n\nafter",
+    "quoted_text": "middle",
+    "signature_text": ""
+   }
+  },
+  {
+   "args": {
+    "html": "<div>body</div><div class=\"gmail_signature\">my sig</div>"
+   },
+   "result": {
+    "novel_text": "body",
+    "quoted_text": "",
+    "signature_text": "my sig"
+   }
+  },
+  {
+   "args": {
+    "html": "<div>body</div><div class=\"moz-signature\">my sig</div>"
+   },
+   "result": {
+    "novel_text": "body",
+    "quoted_text": "",
+    "signature_text": "my sig"
+   }
+  },
+  {
+   "args": {
+    "html": "<div>body</div><div id=\"Signature\">my sig</div>"
+   },
+   "result": {
+    "novel_text": "body",
+    "quoted_text": "",
+    "signature_text": "my sig"
+   }
+  },
+  {
+   "args": {
+    "html": "<div>mine</div><blockquote><div class=\"gmail_quote\"><blockquote>deep</blockquote><div>theirs inline</div></div></blockquote>"
+   },
+   "result": {
+    "novel_text": "mine",
+    "quoted_text": "deep\n\ntheirs inline",
+    "signature_text": ""
+   }
+  },
+  {
+   "args": {
+    "html": "<div>mine</div><div class=\"OutlookMessageHeader\">quoted stuff</div>"
+   },
+   "result": {
+    "novel_text": "mine",
+    "quoted_text": "quoted stuff",
+    "signature_text": ""
+   }
+  },
+  {
+   "args": {
+    "html": "<div>mine</div><div class=\"gmail_attr\">quoted stuff</div>"
+   },
+   "result": {
+    "novel_text": "mine",
+    "quoted_text": "quoted stuff",
+    "signature_text": ""
+   }
+  },
+  {
+   "args": {
+    "html": "<div>mine</div><div class=\"gmail_quote gmail_quote_container\">quoted stuff</div>"
+   },
+   "result": {
+    "novel_text": "mine",
+    "quoted_text": "quoted stuff",
+    "signature_text": ""
+   }
+  },
+  {
+   "args": {
+    "html": "<div>mine</div><div class=\"gmail_quote\">quoted stuff</div>"
+   },
+   "result": {
+    "novel_text": "mine",
+    "quoted_text": "quoted stuff",
+    "signature_text": ""
+   }
+  },
+  {
+   "args": {
+    "html": "<div>mine</div><div class=\"moz-cite-prefix\">quoted stuff</div>"
+   },
+   "result": {
+    "novel_text": "mine",
+    "quoted_text": "quoted stuff",
+    "signature_text": ""
+   }
+  },
+  {
+   "args": {
+    "html": "<div>mine</div><div id=\"appendonsend\">quoted stuff</div>"
+   },
+   "result": {
+    "novel_text": "mine",
+    "quoted_text": "quoted stuff",
+    "signature_text": ""
+   }
+  },
+  {
+   "args": {
+    "html": "<div>mine</div><div id=\"divRplyFwdMsg\">quoted stuff</div>"
+   },
+   "result": {
+    "novel_text": "mine",
+    "quoted_text": "quoted stuff",
+    "signature_text": ""
+   }
+  },
+  {
+   "args": {
+    "html": "<div>my reply</div><blockquote><div>their words</div></blockquote>"
+   },
+   "result": {
+    "novel_text": "my reply",
+    "quoted_text": "their words",
+    "signature_text": ""
+   }
+  },
+  {
+   "args": {
+    "html": "<div>my reply</div><blockquote><div>their words</div><div class=\"gmail_signature\">their sig</div></blockquote><div class=\"gmail_signature\">my sig</div>"
+   },
+   "result": {
+    "novel_text": "my reply",
+    "quoted_text": "their words\n\ntheir sig",
+    "signature_text": "my sig"
+   }
+  },
+  {
+   "args": {
+    "html": "<div>novel text<blockquote>quoted text with no close"
+   },
+   "result": {
+    "novel_text": "novel text",
+    "quoted_text": "quoted text with no close",
+    "signature_text": ""
+   }
+  },
+  {
+   "args": {
+    "html": "<div>see below</div><div class=\"gmail_quote\">---------- Forwarded message ---------<br>From: someone<br>the forwarded body</div>"
+   },
+   "result": {
+    "novel_text": "see below",
+    "quoted_text": "---------- Forwarded message ---------\nFrom: someone\nthe forwarded body",
+    "signature_text": ""
+   }
+  },
+  {
+   "args": {
+    "html": "plain no tags"
+   },
+   "result": {
+    "novel_text": "plain no tags",
+    "quoted_text": "",
+    "signature_text": ""
+   }
+  }
+ ]
+}

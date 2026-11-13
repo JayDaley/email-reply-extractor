@@ -1,0 +1,361 @@
+{
+ "format": 1,
+ "function": "strip_after_original_message_divider",
+ "module": "extraction",
+ "public": false,
+ "parameters": [
+  {
+   "name": "lines",
+   "kind": "positional_or_keyword"
+  },
+  {
+   "name": "localized",
+   "kind": "keyword_only",
+   "default": true
+  }
+ ],
+ "returns": "list[str]",
+ "vectors": [
+  {
+   "args": {
+    "lines": [
+     "All,Three quick questions:-------- Original message --------From: Steven Mih"
+    ]
+   },
+   "result": [
+    "All,Three quick questions:"
+   ]
+  },
+  {
+   "args": {
+    "lines": [
+     "Le message d'origine est en pièce jointe.",
+     "Texte."
+    ]
+   },
+   "result": [
+    "Le message d'origine est en pièce jointe.",
+    "Texte."
+   ]
+  },
+  {
+   "args": {
+    "lines": [
+     "My reply.",
+     "",
+     "-------- Original message --------",
+     "From: Someone",
+     "Old text."
+    ]
+   },
+   "result": [
+    "My reply.",
+    ""
+   ]
+  },
+  {
+   "args": {
+    "lines": [
+     "My reply.",
+     "-------- Message transféré --------",
+     "Quoted."
+    ],
+    "localized": false
+   },
+   "result": [
+    "My reply.",
+    "-------- Message transféré --------",
+    "Quoted."
+   ]
+  },
+  {
+   "args": {
+    "lines": [
+     "My reply.",
+     "-------- Message transféré --------",
+     "Quoted."
+    ]
+   },
+   "result": [
+    "My reply."
+   ]
+  },
+  {
+   "args": {
+    "lines": [
+     "My reply.",
+     "---------- Weitergeleitete Nachricht ----------",
+     "Quoted."
+    ],
+    "localized": false
+   },
+   "result": [
+    "My reply.",
+    "---------- Weitergeleitete Nachricht ----------",
+    "Quoted."
+   ]
+  },
+  {
+   "args": {
+    "lines": [
+     "My reply.",
+     "---------- Weitergeleitete Nachricht ----------",
+     "Quoted."
+    ]
+   },
+   "result": [
+    "My reply."
+   ]
+  },
+  {
+   "args": {
+    "lines": [
+     "My reply.",
+     "------------------ 原始邮件 ------------------",
+     "Quoted."
+    ]
+   },
+   "result": [
+    "My reply."
+   ]
+  },
+  {
+   "args": {
+    "lines": [
+     "My reply.",
+     "-----Mensagem original-----",
+     "Quoted."
+    ],
+    "localized": false
+   },
+   "result": [
+    "My reply.",
+    "-----Mensagem original-----",
+    "Quoted."
+   ]
+  },
+  {
+   "args": {
+    "lines": [
+     "My reply.",
+     "-----Mensagem original-----",
+     "Quoted."
+    ]
+   },
+   "result": [
+    "My reply."
+   ]
+  },
+  {
+   "args": {
+    "lines": [
+     "My reply.",
+     "-----Mensaje original-----",
+     "Quoted."
+    ],
+    "localized": false
+   },
+   "result": [
+    "My reply.",
+    "-----Mensaje original-----",
+    "Quoted."
+   ]
+  },
+  {
+   "args": {
+    "lines": [
+     "My reply.",
+     "-----Mensaje original-----",
+     "Quoted."
+    ]
+   },
+   "result": [
+    "My reply."
+   ]
+  },
+  {
+   "args": {
+    "lines": [
+     "My reply.",
+     "-----Message d'origine-----",
+     "Quoted."
+    ],
+    "localized": false
+   },
+   "result": [
+    "My reply.",
+    "-----Message d'origine-----",
+    "Quoted."
+   ]
+  },
+  {
+   "args": {
+    "lines": [
+     "My reply.",
+     "-----Message d'origine-----",
+     "Quoted."
+    ]
+   },
+   "result": [
+    "My reply."
+   ]
+  },
+  {
+   "args": {
+    "lines": [
+     "My reply.",
+     "-----Message d’origine-----",
+     "Quoted."
+    ],
+    "localized": false
+   },
+   "result": [
+    "My reply.",
+    "-----Message d’origine-----",
+    "Quoted."
+   ]
+  },
+  {
+   "args": {
+    "lines": [
+     "My reply.",
+     "-----Message d’origine-----",
+     "Quoted."
+    ]
+   },
+   "result": [
+    "My reply."
+   ]
+  },
+  {
+   "args": {
+    "lines": [
+     "My reply.",
+     "-----Messaggio originale-----",
+     "Quoted."
+    ],
+    "localized": false
+   },
+   "result": [
+    "My reply.",
+    "-----Messaggio originale-----",
+    "Quoted."
+   ]
+  },
+  {
+   "args": {
+    "lines": [
+     "My reply.",
+     "-----Messaggio originale-----",
+     "Quoted."
+    ]
+   },
+   "result": [
+    "My reply."
+   ]
+  },
+  {
+   "args": {
+    "lines": [
+     "My reply.",
+     "-----Oorspronkelijk bericht-----",
+     "Quoted."
+    ],
+    "localized": false
+   },
+   "result": [
+    "My reply.",
+    "-----Oorspronkelijk bericht-----",
+    "Quoted."
+   ]
+  },
+  {
+   "args": {
+    "lines": [
+     "My reply.",
+     "-----Oorspronkelijk bericht-----",
+     "Quoted."
+    ]
+   },
+   "result": [
+    "My reply."
+   ]
+  },
+  {
+   "args": {
+    "lines": [
+     "My reply.",
+     "-----Original Message-----",
+     "From: Someone"
+    ]
+   },
+   "result": [
+    "My reply."
+   ]
+  },
+  {
+   "args": {
+    "lines": [
+     "My reply.",
+     "-----Ursprüngliche Nachricht-----",
+     "Quoted."
+    ],
+    "localized": false
+   },
+   "result": [
+    "My reply.",
+    "-----Ursprüngliche Nachricht-----",
+    "Quoted."
+   ]
+  },
+  {
+   "args": {
+    "lines": [
+     "My reply.",
+     "-----Ursprüngliche Nachricht-----",
+     "Quoted."
+    ]
+   },
+   "result": [
+    "My reply."
+   ]
+  },
+  {
+   "args": {
+    "lines": [
+     "My reply.",
+     "-----邮件原件-----",
+     "发件人: Li Ming <li@example.org>",
+     "Quoted."
+    ]
+   },
+   "result": [
+    "My reply."
+   ]
+  },
+  {
+   "args": {
+    "lines": [
+     "Note.",
+     "---------- Forwarded message ---------",
+     "From: X"
+    ]
+   },
+   "result": [
+    "Note."
+   ]
+  },
+  {
+   "args": {
+    "lines": [
+     "The original message said something else.",
+     "-- Original message"
+    ]
+   },
+   "result": [
+    "The original message said something else.",
+    "-- Original message"
+   ]
+  }
+ ]
+}

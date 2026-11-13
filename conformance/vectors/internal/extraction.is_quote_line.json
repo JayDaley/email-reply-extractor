@@ -1,0 +1,75 @@
+{
+ "format": 1,
+ "function": "is_quote_line",
+ "module": "extraction",
+ "public": false,
+ "parameters": [
+  {
+   "name": "line",
+   "kind": "positional_or_keyword"
+  }
+ ],
+ "returns": "bool",
+ "vectors": [
+  {
+   "args": {
+    "line": "    > indented"
+   },
+   "result": true
+  },
+  {
+   "args": {
+    "line": "  Brian"
+   },
+   "result": false
+  },
+  {
+   "args": {
+    "line": "-markku"
+   },
+   "result": false
+  },
+  {
+   "args": {
+    "line": ".. > x"
+   },
+   "result": true
+  },
+  {
+   "args": {
+    "line": "...> flowed elision"
+   },
+   "result": true
+  },
+  {
+   "args": {
+    "line": "> quoted"
+   },
+   "result": true
+  },
+  {
+   "args": {
+    "line": ">> nested"
+   },
+   "result": true
+  },
+  {
+   "args": {
+    "line": "\t>deep"
+   },
+   "result": true
+  },
+  {
+   "args": {
+    "line": "a > b comparison"
+   },
+   "result": false
+  },
+  {
+   "args": {
+    "line": "not a quote"
+   },
+   "result": false
+  }
+ ]
+}
