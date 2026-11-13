@@ -92,7 +92,7 @@ def encode(value):
 def reference(case):
     try:
         return {"result": encode(REFERENCE[case["fn"]](case["args"]))}
-    except Exception:  # noqa: BLE001 - only internal helpers raise
+    except Exception:  # noqa: BLE001 - no function raises; reported as a difference
         return {"error": True}
 
 
@@ -331,7 +331,9 @@ def boundary_line(rng: random.Random) -> str:
     return "".join(parts)
 
 
-TEMPLATE_TOKENS = [
+#: Backslash sequences and ``$`` references that the attribution collapse
+#: inserts literally (a replacement template would interpret them).
+BACKSLASH_TOKENS = [
     "\\U",
     "\\n",
     "\\t",
@@ -342,6 +344,7 @@ TEMPLATE_TOKENS = [
     "\\g<1>",
     "\\g<0>",
     "\\g<2>",
+    "\\g<9>",
     "\\g<x>",
     "\\g<",
     "\\g<>",
@@ -1018,8 +1021,8 @@ def cases(
                     args["html_signature_text"] = line
                 out.append({"fn": fn, "args": args})
         elif r < 0.30:
-            # The attribution collapse's replacement-template rules.
-            esc = "".join(rng.choice(TEMPLATE_TOKENS) for _ in range(rng.randint(1, 4)))
+            # Backslash sequences in the attribution collapse, kept literally.
+            esc = "".join(rng.choice(BACKSLASH_TOKENS) for _ in range(rng.randint(1, 4)))
             text = f"Reply.\n\nOn Mon, Jan 1, 2026{rng.choice([' ', chr(10)])}{esc} X{rng.choice(['', chr(10)])} wrote:\n> q\n"
             if rng.random() < 0.3:
                 text = "On " + text

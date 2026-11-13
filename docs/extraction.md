@@ -62,7 +62,8 @@ the Japanese "\<date\>、X のメール:" form anchored on a leading year so pro
 mentioning someone's mail never matches. The English pattern requires no word
 boundary before "wrote", because the scanner unwraps a line-wrapped attribution
 by deleting the newline, which can glue an address straight onto it
-("…example.comwrote:").
+("…example.comwrote:"). The unwrapped attribution is inserted literally:
+backslash sequences in it are kept as written.
 
 A form wrapped across two or three lines is removed as a unit: a start line
 ("On …", "Am …", "Le …", "El …", a leading year) whose terminator lands on one

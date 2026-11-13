@@ -626,7 +626,7 @@
    },
    "result": {
     "text": "My reply.",
-    "method": "erp+custom",
+    "method": "erp",
     "status": "ok"
    }
   },
@@ -635,9 +635,9 @@
     "body": "My reply.\n\nOn Mon, Jan 1, 2026 at 10:00 C:\\Users\\x wrote:\n> quoted\n"
    },
    "result": {
-    "text": "",
-    "method": "failed",
-    "status": "failed"
+    "text": "My reply.",
+    "method": "erp",
+    "status": "ok"
    }
   },
   {

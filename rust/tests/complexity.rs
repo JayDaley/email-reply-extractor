@@ -60,8 +60,18 @@ fn seed_chain(n: usize) -> (String, String) {
 #[test]
 fn a1_multi_quote_header() {
     // The reference's lookahead was cubic (800 repeats took 1.2 s).
-    bounded(|| read_fragments(&"On ".repeat(4000)).unwrap());
+    bounded(|| read_fragments(&"On ".repeat(4000)));
     bounded(|| extract_new_text(body(&format!("hello\n{}", "On ".repeat(4000))), None, None));
+}
+
+#[test]
+fn a8_attribution_collapse_template() {
+    // The earlier implementations used the collapsed header as a replacement
+    // template; every "\1" expanded to the whole match, so the output was
+    // quadratic in size (4,000 repeats built 32 MB).
+    let header = format!("On {} wrote:", "\\1".repeat(60000));
+    bounded(|| read_fragments(&header));
+    bounded(|| extract_new_text(body(&format!("hello\n{header}\n> q")), None, None));
 }
 
 #[test]

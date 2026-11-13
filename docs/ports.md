@@ -139,17 +139,14 @@ and those inputs are part of the recorded vectors.
   it. Rust's `regex` crate does not; use `fancy-regex` or equivalent hand
   code for these patterns. All patterns use leftmost-first alternation, which
   JavaScript and Rust share.
-- **`re.sub` replacement templates.** `read_fragments` (`_fragments.py`)
-  replaces every match of `_MULTI_QUOTE_HDR` with the *first* match's text
-  (newlines removed), passed as a replacement template. Python processes
-  backslash escapes in it: `\n`, `\t` and similar become control characters,
-  `\\` becomes `\`, `\1`/`\g<1>` insert groups, and an unknown escape of an
-  ASCII letter (`\U` in `C:\Users`) raises `re.error`, which
-  `extract_new_text` turns into the `failed` result. `$` is literal. A
-  JavaScript port must not pass the text to `String.prototype.replace` as a
-  pattern string (which expands `$&`, `$1`); a Rust port must not use the
-  `regex` crate's `$` expansion. Both implement Python's template rules.
-  Pinned by the three `test_*_in_attribution_*` tests.
+- **Literal replacement.** `read_fragments` (`_fragments.py`) replaces the
+  single match of `_MULTI_QUOTE_HDR` with the match's own text, newlines
+  removed, inserted literally: backslash sequences (`\n`, `\\`, `\1`,
+  `\g<1>`, `\U`) and `$` references are kept as written. A JavaScript port
+  must not pass the text to `String.prototype.replace` as a replacement
+  string (which expands `$&`, `$1`); a Rust port must not use the `regex`
+  crate's `$` expansion. Pinned by the `test_*_in_attribution_*` and
+  `test_backslash_*` tests in `test_port_hazards.py`.
 - **`re.split(..., maxsplit=1)`** in `_is_signoff_name_title_line`, and
   `re.escape` for the dynamic pattern in `_is_author_tag`.
 

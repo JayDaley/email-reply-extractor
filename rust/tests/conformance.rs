@@ -145,15 +145,12 @@ fn call(module: &str, function: &str, a: &Args) -> Option<Result<Value, ()>> {
         ("extraction", "strip_attribution_lines") => {
             Ok(json!(internal::strip_attribution_lines(&a.lines("lines"))))
         }
-        ("fragments", "read_fragments") => match internal::read_fragments(a.str("text")) {
-            Ok(frags) => Ok(Value::Array(
-                frags
-                    .iter()
-                    .map(|f| json!({"content": f.content, "quoted": f.quoted}))
-                    .collect(),
-            )),
-            Err(_) => Err(()),
-        },
+        ("fragments", "read_fragments") => Ok(Value::Array(
+            internal::read_fragments(a.str("text"))
+                .iter()
+                .map(|f| json!({"content": f.content, "quoted": f.quoted}))
+                .collect(),
+        )),
         _ => return None,
     };
     Some(v)

@@ -7,12 +7,9 @@
 //! blank line directly above a signature-looking line closes the fragment.
 //!
 //! Before the scan, a wrapped "On … wrote:" attribution is collapsed onto
-//! one line by a substitution whose replacement is the first match's text
-//! (newlines removed) used as a Python `re.sub` *template*. Python processes
-//! backslash escapes in it, and an invalid escape raises `re.error`; the port
-//! reproduces the template rules ([`parse_template`]) and reports such a
-//! failure as [`PatternError`], which `extract_new_text` turns into a
-//! `failed` result.
+//! one line: the first match's text, with its newlines removed, replaces the
+//! match literally. Upstream used it as a Python `re.sub` replacement
+//! template; the reference fixes that defect (see its module docstring).
 //!
 //! The upstream patterns are matched by hand here; each function names the
 //! pattern it implements.
@@ -27,19 +24,6 @@ pub struct Fragment {
     /// Whether the scanner classified the fragment as quoted.
     pub quoted: bool,
 }
-
-/// The replacement template of the attribution collapse was invalid (Python
-/// raises `re.error`, recorded as `PatternError`).
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct PatternError;
-
-impl std::fmt::Display for PatternError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("invalid replacement template in the attribution collapse")
-    }
-}
-
-impl std::error::Error for PatternError {}
 
 struct OpenFragment {
     quoted: bool,
@@ -59,8 +43,8 @@ impl OpenFragment {
 }
 
 /// Scan `text` (LF-normalized) into document-order fragments.
-pub fn read_fragments(text: &str) -> Result<Vec<Fragment>, PatternError> {
-    let text = collapse_wrapped_attribution(text)?;
+pub fn read_fragments(text: &str) -> Vec<Fragment> {
+    let text = collapse_wrapped_attribution(text);
     let text = break_outlook_boundaries(&text);
 
     let mut fragments: Vec<Fragment> = Vec::new();
@@ -72,7 +56,7 @@ pub fn read_fragments(text: &str) -> Result<Vec<Fragment>, PatternError> {
         fragments.push(f.close());
     }
     fragments.reverse();
-    Ok(fragments)
+    fragments
 }
 
 // --- the wrapped-attribution collapse -----------------------------------------
@@ -107,193 +91,19 @@ fn find_multi_quote_header(chars: &[char]) -> Option<(usize, usize)> {
 }
 
 /// `read_fragments`' collapse of a wrapped "On … wrote:" header onto one
-/// line. Upstream ran `re.sub` with the pattern and the first match's text
-/// (newlines removed) as the template; the pattern has exactly one match
-/// (see [`find_multi_quote_header`]), so the template is expanded against
-/// that match, with Python's rules and errors, and spliced in.
-fn collapse_wrapped_attribution(text: &str) -> Result<String, PatternError> {
+/// line. Upstream ran `re.sub` with the pattern; it has exactly one match
+/// (see [`find_multi_quote_header`]), so the match's text, with its newlines
+/// removed, is spliced in place of the match. It is inserted literally, not
+/// as a replacement template.
+fn collapse_wrapped_attribution(text: &str) -> String {
     let chars: Vec<char> = text.chars().collect();
     let Some((p, r)) = find_multi_quote_header(&chars) else {
-        return Ok(text.to_string());
+        return text.to_string();
     };
-    let whole: String = chars[p..r + 6].iter().collect();
-    let inner: String = chars[p + 3..r].iter().collect();
-    let template: Vec<char> = whole.chars().filter(|&c| c != '\n').collect();
-    let pieces = parse_template(&template, 2)?;
     let mut out: String = chars[..p].iter().collect();
-    for piece in pieces {
-        match piece {
-            Piece::Literal(s) => out.push_str(&s),
-            Piece::Group(0) | Piece::Group(1) => out.push_str(&whole),
-            Piece::Group(_) => out.push_str(&inner),
-        }
-    }
+    out.extend(chars[p..r + 6].iter().filter(|&&c| c != '\n'));
     out.extend(&chars[r + 6..]);
-    Ok(out)
-}
-
-/// A parsed `re.sub` replacement template element.
-#[derive(Debug, PartialEq, Eq)]
-pub(crate) enum Piece {
-    Literal(String),
-    Group(usize),
-}
-
-/// One token of Python's template tokenizer: a character, or a backslash and
-/// the character after it.
-fn tokens(t: &[char]) -> Result<Vec<Vec<char>>, PatternError> {
-    let mut out = Vec::new();
-    let mut i = 0;
-    while i < t.len() {
-        if t[i] == '\\' {
-            if i + 1 >= t.len() {
-                return Err(PatternError); // bad escape (end of pattern)
-            }
-            out.push(vec!['\\', t[i + 1]]);
-            i += 2;
-        } else {
-            out.push(vec![t[i]]);
-            i += 1;
-        }
-    }
-    Ok(out)
-}
-
-fn is_single(tok: Option<&Vec<char>>, set: &str) -> bool {
-    matches!(tok, Some(t) if t.len() == 1 && set.contains(t[0]))
-}
-
-const OCT: &str = "01234567";
-const DIGITS: &str = "0123456789";
-
-/// Python's `re._parser.parse_template` for a pattern with `groups` groups
-/// and no named groups (CPython 3.14).
-pub(crate) fn parse_template(t: &[char], groups: usize) -> Result<Vec<Piece>, PatternError> {
-    let toks = tokens(t)?;
-    let mut k = 0;
-    let mut result: Vec<Piece> = Vec::new();
-    let mut literal = String::new();
-    let add_group = |index: usize, literal: &mut String, result: &mut Vec<Piece>| {
-        if index > groups {
-            return Err(PatternError);
-        }
-        if !literal.is_empty() {
-            result.push(Piece::Literal(std::mem::take(literal)));
-        }
-        result.push(Piece::Group(index));
-        Ok(())
-    };
-    while k < toks.len() {
-        let this = toks[k].clone();
-        k += 1;
-        if this[0] != '\\' || this.len() == 1 {
-            literal.push(this[0]);
-            continue;
-        }
-        let c = this[1];
-        if c == 'g' {
-            if toks.get(k).map(|t| t.as_slice()) != Some(&['<'][..]) {
-                return Err(PatternError); // missing <
-            }
-            k += 1;
-            let mut name: Vec<char> = Vec::new();
-            loop {
-                let Some(tok) = toks.get(k) else {
-                    return Err(PatternError); // missing >
-                };
-                k += 1;
-                if tok.as_slice() == ['>'] {
-                    if name.is_empty() {
-                        return Err(PatternError); // missing group name
-                    }
-                    break;
-                }
-                name.extend(tok);
-            }
-            if name.iter().all(|c| c.is_ascii_digit()) {
-                let digits: String = name.iter().collect::<String>();
-                let trimmed = digits.trim_start_matches('0');
-                // An index above the group count is an error; the digits may
-                // be arbitrarily long.
-                if trimmed.len() > 3 {
-                    return Err(PatternError);
-                }
-                let index: usize = if trimmed.is_empty() {
-                    0
-                } else {
-                    trimmed.parse().map_err(|_| PatternError)?
-                };
-                add_group(index, &mut literal, &mut result)?;
-            } else {
-                // No named groups: a valid identifier raises IndexError, an
-                // invalid one re.error. Both are errors.
-                return Err(PatternError);
-            }
-        } else if c == '0' {
-            let mut digits = String::new();
-            if is_single(toks.get(k), OCT) {
-                digits.push(toks[k][0]);
-                k += 1;
-                if is_single(toks.get(k), OCT) {
-                    digits.push(toks[k][0]);
-                    k += 1;
-                }
-            }
-            let value = if digits.is_empty() {
-                0
-            } else {
-                u32::from_str_radix(&digits, 8).map_err(|_| PatternError)?
-            };
-            literal.push(char::from_u32(value & 0xff).ok_or(PatternError)?);
-        } else if DIGITS.contains(c) {
-            let mut text: Vec<char> = vec![c];
-            let mut is_octal = false;
-            if is_single(toks.get(k), DIGITS) {
-                text.push(toks[k][0]);
-                k += 1;
-                if OCT.contains(c) && OCT.contains(text[1]) && is_single(toks.get(k), OCT) {
-                    text.push(toks[k][0]);
-                    k += 1;
-                    is_octal = true;
-                    let s: String = text.iter().collect();
-                    let value = u32::from_str_radix(&s, 8).map_err(|_| PatternError)?;
-                    if value > 0o377 {
-                        return Err(PatternError);
-                    }
-                    literal.push(char::from_u32(value).ok_or(PatternError)?);
-                }
-            }
-            if !is_octal {
-                let s: String = text.iter().collect();
-                let index: usize = s.parse().map_err(|_| PatternError)?;
-                add_group(index, &mut literal, &mut result)?;
-            }
-        } else {
-            let escaped = match c {
-                'a' => Some('\u{7}'),
-                'b' => Some('\u{8}'),
-                'f' => Some('\u{c}'),
-                'n' => Some('\n'),
-                'r' => Some('\r'),
-                't' => Some('\t'),
-                'v' => Some('\u{b}'),
-                '\\' => Some('\\'),
-                _ => None,
-            };
-            match escaped {
-                Some(ch) => literal.push(ch),
-                None if c.is_ascii_alphabetic() => return Err(PatternError), // bad escape
-                None => {
-                    literal.push('\\');
-                    literal.push(c);
-                }
-            }
-        }
-    }
-    if !literal.is_empty() {
-        result.push(Piece::Literal(literal));
-    }
-    Ok(result)
+    out
 }
 
 /// `re.sub("([^\n])(?=\n ?[_-]{7,})", "\\1\n", text)`: break the reply off
@@ -399,26 +209,13 @@ fn scan_line(
 mod tests {
     use super::*;
 
-    fn tpl(s: &str) -> Result<Vec<Piece>, PatternError> {
-        parse_template(&s.chars().collect::<Vec<_>>(), 2)
-    }
-
     #[test]
-    fn template_rules() {
-        assert_eq!(tpl("a$1").unwrap(), vec![Piece::Literal("a$1".into())]);
-        assert_eq!(tpl(r"a\nb").unwrap(), vec![Piece::Literal("a\nb".into())]);
-        assert_eq!(tpl(r"\.").unwrap(), vec![Piece::Literal("\\.".into())]);
+    fn collapse_is_literal() {
+        let text = "a\nOn x\n\\1 \\g<1> \\U $1 wrote:\n> q";
         assert_eq!(
-            tpl(r"x\1").unwrap(),
-            vec![Piece::Literal("x".into()), Piece::Group(1)]
+            collapse_wrapped_attribution(text),
+            "a\nOn x\\1 \\g<1> \\U $1 wrote:\n> q"
         );
-        assert_eq!(tpl(r"\g<2>").unwrap(), vec![Piece::Group(2)]);
-        assert_eq!(tpl(r"\101").unwrap(), vec![Piece::Literal("A".into())]);
-        assert!(tpl(r"C:\Users").is_err());
-        assert!(tpl(r"\3").is_err());
-        assert!(tpl(r"\g<a>").is_err());
-        assert!(tpl("x\\").is_err());
-        assert!(tpl(r"\400").is_err());
     }
 
     #[test]

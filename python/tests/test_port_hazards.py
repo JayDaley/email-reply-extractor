@@ -3,11 +3,12 @@
 Each test exercises one behaviour of the reference implementation that follows
 from a Python standard-library detail rather than from an extraction rule: the
 ``str.isspace`` whitespace set, Unicode ``\\w`` and ``str.isdigit`` /
-``str.isupper``, ``$`` and ``\\r``, ``re.sub`` replacement-template processing,
-and ``html.parser`` character-reference handling. The outputs are not claims
-that the behaviour is desirable; they record what the reference does, so the
-recorded conformance vectors (``make vectors``) cover these inputs and a port
-that diverges fails on a named case. ``docs/ports.md`` lists the hazards.
+``str.isupper``, ``$`` and ``\\r``, literal backslashes in the fragment
+scanner's attribution collapse, and ``html.parser`` character-reference
+handling. The outputs are not claims that the behaviour is desirable; they
+record what the reference does, so the recorded conformance vectors (``make
+vectors``) cover these inputs and a port that diverges fails on a named case.
+``docs/ports.md`` lists the hazards.
 """
 
 from __future__ import annotations
@@ -20,6 +21,7 @@ from email_reply_extractor import (
     texts_equivalent,
     tolerant_lines,
 )
+from email_reply_extractor._fragments import read_fragments
 
 # --- whitespace: str.strip() / str.split() use the str.isspace() set -----------
 
@@ -83,28 +85,46 @@ def test_carriage_return_blocks_end_anchored_rules():
     assert result.ignored_lines == [0]
 
 
-# --- re.sub replacement templates in the fragment scanner -------------------------
+# --- backslashes in the fragment scanner's attribution collapse ------------------
 
 
-def test_backslash_in_attribution_is_a_template_error():
-    # The scanner passes the first "On ... wrote:" match to re.sub as a
-    # replacement *template*; "\U" is a bad escape, re.sub raises, and the
-    # failure is reported as a result instead of raised.
+def test_backslash_in_attribution_is_literal():
+    # The collapsed "On ... wrote:" header is inserted literally, not as a
+    # re.sub replacement template: "\U" (a bad template escape) does not raise.
     body = "My reply.\n\nOn Mon, Jan 1, 2026 at 10:00 C:\\Users\\x wrote:\n> quoted\n"
     result = extract_new_text(body)
-    assert (result.text, result.method, result.status) == ("", "failed", "failed")
+    assert (result.text, result.method, result.status) == ("My reply.", "erp", "ok")
 
 
-def test_backslash_n_in_attribution_is_a_newline_escape():
+def test_backslash_n_in_attribution_is_literal():
+    # "\n" stays two characters; it does not split the attribution line.
     body = "My reply.\n\nOn Mon, Jan 1, 2026 at 10:00 A\\nB wrote:\n> quoted\n"
     result = extract_new_text(body)
-    assert (result.text, result.method) == ("My reply.", "erp+custom")
+    assert (result.text, result.method) == ("My reply.", "erp")
 
 
 def test_dollar_in_attribution_is_literal():
     body = "My reply.\n\nOn Mon, Jan 1, 2026 at 10:00 $1 $& wrote:\n> quoted\n"
     result = extract_new_text(body)
     assert (result.text, result.method) == ("My reply.", "erp")
+
+
+def test_backslash_sequences_survive_a_wrapped_attribution_collapse():
+    # The newline inside the wrapped header is removed; every backslash
+    # sequence (group references, escapes, an out-of-range group, a backslash
+    # before a space) is kept verbatim.
+    header = "On Mon, Jan 1, 2026\nC:\\Users \\1 \\g<1> \\g<9> \\n \\\\ \\U\\ wrote:"
+    fragments = read_fragments("My reply.\n\n" + header + "\n> quoted")
+    assert [(f.content, f.quoted) for f in fragments] == [
+        ("My reply.", False),
+        ("\n" + header.replace("\n", "") + "\n> quoted", True),
+    ]
+
+
+def test_backslash_group_references_do_not_amplify():
+    # As a template, every "\1" expanded to the whole match.
+    body = "On " + "\\1" * 50 + " wrote:\n> quoted"
+    assert [f.content for f in read_fragments(body)] == [body]
 
 
 # --- html.parser with convert_charrefs=True ---------------------------------------

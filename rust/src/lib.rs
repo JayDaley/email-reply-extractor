@@ -83,7 +83,7 @@ pub mod internal {
         is_attribution_line, is_quote_line, is_signoff_name_line, normalize_body,
         strip_after_original_message_divider, strip_attribution_lines,
     };
-    pub use crate::fragments::{read_fragments, Fragment, PatternError};
+    pub use crate::fragments::{read_fragments, Fragment};
 }
 
 /// The README's examples, compiled and run as doctests.

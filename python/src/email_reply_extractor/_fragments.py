@@ -17,8 +17,8 @@ signature-looking line closes the fragment, which is a boundary effect the
 extractor's output depends on even though the signature label itself is not
 reported.
 
-Two upstream defects were preserved byte-for-byte through generation 4 and
-fixed in generation 5 (see ``docs/generation-5.md``):
+Three upstream defects are fixed. The first two were preserved byte-for-byte
+through generation 4 and fixed in generation 5 (see ``docs/generation-5.md``):
 
 1. Upstream capped the Outlook-boundary newline fix at 8 replacements per
    message by passing ``re.MULTILINE`` (value 8) as ``re.sub``'s positional
@@ -28,6 +28,16 @@ fixed in generation 5 (see ``docs/generation-5.md``):
    above a quote-header block's ``From:`` disguised the block from the
    extractor's detector. Fragment content now keeps its edges, preserving the
    blank lines that separate fragments.
+
+The third is fixed after generation 6:
+
+3. Upstream passed the collapsed "On … wrote:" header to ``re.sub`` as a
+   replacement *template*, so backslash sequences in the message body were
+   interpreted: ``\\n``, ``\\\\``, ``\\1`` and ``\\g<1>`` were rewritten, an
+   unknown escape such as ``\\U`` raised ``re.error`` (reported by the extractor
+   as a failed extraction), and ``"On " + "\\1" * n + " wrote:"`` expanded to a
+   string quadratic in the input length. The collapsed header is now inserted
+   literally.
 
 Input is expected to be LF-normalized (:func:`.extraction.normalize_body` runs
 first); the upstream CRLF replacement was dropped as unreachable.
@@ -51,10 +61,10 @@ _HEADER_RE = re.compile(r"^\*?(From|Sent|To|Subject):\*? .+")
 _MULTI_QUOTE_HDR = r"(?!On.*On\s.+?wrote:)(On\s(.+?)wrote:)"
 #: An "On" followed by whitespace (``\s`` as in ``_MULTI_QUOTE_HDR``).
 _ON_SPACE_RE = re.compile(r"On(?=\s)")
-#: ``_MULTI_QUOTE_HDR`` without the lookahead, with the same two groups. Applied
-#: with ``match`` at the one start position :func:`_find_multi_quote_header`
-#: finds; the lazy ``.+?`` stops at the first ``wrote:``, so it is linear.
-_MULTI_QUOTE_HDR_AT_RE = re.compile(r"(On\s(.+?)wrote:)", re.DOTALL)
+#: ``_MULTI_QUOTE_HDR`` without the lookahead. Applied with ``match`` at the one
+#: start position :func:`_find_multi_quote_header` finds; the lazy ``.+?`` stops
+#: at the first ``wrote:``, so it is linear.
+_MULTI_QUOTE_HDR_AT_RE = re.compile(r"On\s.+?wrote:", re.DOTALL)
 
 
 @dataclass(frozen=True)
@@ -111,17 +121,14 @@ def read_fragments(text: str) -> list[Fragment]:
     """Scan ``text`` (LF-normalized) into document-order fragments."""
     match = _find_multi_quote_header(text)
     if match:
-        # Collapse a wrapped multi-line "On … wrote:" header onto one line. The
-        # matched text is passed as a replacement *template*, exactly as
-        # upstream did — a body containing backslash escapes can make this
-        # raise, which the extractor's catch-all reports as a failed extraction.
+        # Collapse a wrapped multi-line "On … wrote:" header onto one line.
         # Upstream ran ``re.sub`` with the pattern; it has exactly one match
-        # (see :func:`_find_multi_quote_header`), so the template is expanded
-        # against that match and spliced in. ``Match.expand`` parses the
-        # template with the same rules and errors as ``re.sub``, and the match
-        # carries the same two groups.
-        template = match.group(1).replace("\n", "")
-        text = text[: match.start()] + match.expand(template) + text[match.end() :]
+        # (see :func:`_find_multi_quote_header`), so the matched text, with its
+        # newlines removed, is spliced in place of the match. It is inserted
+        # literally, not as a replacement template — see fix (3) in the module
+        # docstring.
+        collapsed = match.group(0).replace("\n", "")
+        text = text[: match.start()] + collapsed + text[match.end() :]
 
     # Break the reply off an Outlook-style boundary line it sits directly on
     # top of — every occurrence; see fix (1) in the module docstring.

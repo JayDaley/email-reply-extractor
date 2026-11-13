@@ -668,11 +668,11 @@
    },
    "result": [
     {
-     "content": "My reply.\n\nOn Mon, Jan 1, 2026 at 10:00 A\nB wrote:",
+     "content": "My reply.",
      "quoted": false
     },
     {
-     "content": "> quoted",
+     "content": "\nOn Mon, Jan 1, 2026 at 10:00 A\\nB wrote:\n> quoted",
      "quoted": true
     },
     {
@@ -685,7 +685,35 @@
    "args": {
     "text": "My reply.\n\nOn Mon, Jan 1, 2026 at 10:00 C:\\Users\\x wrote:\n> quoted\n"
    },
-   "error": "PatternError"
+   "result": [
+    {
+     "content": "My reply.",
+     "quoted": false
+    },
+    {
+     "content": "\nOn Mon, Jan 1, 2026 at 10:00 C:\\Users\\x wrote:\n> quoted",
+     "quoted": true
+    },
+    {
+     "content": "",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "My reply.\n\nOn Mon, Jan 1, 2026\nC:\\Users \\1 \\g<1> \\g<9> \\n \\\\ \\U\\ wrote:\n> quoted"
+   },
+   "result": [
+    {
+     "content": "My reply.",
+     "quoted": false
+    },
+    {
+     "content": "\nOn Mon, Jan 1, 2026C:\\Users \\1 \\g<1> \\g<9> \\n \\\\ \\U\\ wrote:\n> quoted",
+     "quoted": true
+    }
+   ]
   },
   {
    "args": {
@@ -703,6 +731,17 @@
     {
      "content": "-- \n_CONFIDENTIALITY NOTICE: This email may contain confidential and privileged \nmaterial for the sole use of the intended recipient(s). Any review, use, \ndistribution or disclosure by others is strictly prohibited.\u00a0 If you have \nreceived this communication in error, please notify the sender immediately \nby e-mail and delete the message and any file attachments from your \ncomputer. Thank you._\n",
      "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "On \\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1 wrote:\n> quoted"
+   },
+   "result": [
+    {
+     "content": "On \\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1 wrote:\n> quoted",
+     "quoted": true
     }
    ]
   },

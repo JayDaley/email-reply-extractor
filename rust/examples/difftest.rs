@@ -2,8 +2,7 @@
 //!
 //! Reads one JSON object per line on stdin, `{"fn": <name>, "args": {...}}`,
 //! calls the named function, and writes one JSON line per input:
-//! `{"result": <value>}`, or `{"error": true}` when an internal helper
-//! signals an error. Names and argument encodings follow
+//! `{"result": <value>}`. Names and argument encodings follow
 //! `conformance/README.md`.
 //!
 //! ```text
@@ -57,14 +56,12 @@ fn call(name: &str, a: &Value) -> Value {
         }
         "tolerant_lines" => json!(tolerant_lines(s(a, "text"))),
         "texts_equivalent" => json!(texts_equivalent(s(a, "a"), s(a, "b"))),
-        "read_fragments" => match internal::read_fragments(s(a, "text")) {
-            Ok(f) => Value::Array(
-                f.iter()
-                    .map(|f| json!({"content": f.content, "quoted": f.quoted}))
-                    .collect(),
-            ),
-            Err(_) => return json!({"error": true}),
-        },
+        "read_fragments" => Value::Array(
+            internal::read_fragments(s(a, "text"))
+                .iter()
+                .map(|f| json!({"content": f.content, "quoted": f.quoted}))
+                .collect(),
+        ),
         "is_attribution_line" => json!(internal::is_attribution_line(s(a, "line"))),
         "is_quote_line" => json!(internal::is_quote_line(s(a, "line"))),
         "is_signoff_name_line" => json!(internal::is_signoff_name_line(s(a, "text"))),

@@ -21,7 +21,7 @@ use std::collections::HashSet;
 use std::sync::LazyLock;
 
 use crate::difflib;
-use crate::fragments::{read_fragments, PatternError};
+use crate::fragments::read_fragments;
 use crate::html_text::split_html_parts;
 use crate::pyre::{Re, IGNORECASE};
 use crate::pystr;
@@ -1038,7 +1038,7 @@ fn is_author_tag(label: &str, head: &str, parent_body: Option<&str>) -> bool {
 
 // --- public entry point -------------------------------------------------------
 
-fn core_extract(body: &str, parent_body: Option<&str>) -> Result<(String, String), PatternError> {
+fn core_extract(body: &str, parent_body: Option<&str>) -> (String, String) {
     let mut normalized = normalize_body(body);
 
     let lines: Vec<&str> = normalized.split('\n').collect();
@@ -1048,7 +1048,7 @@ fn core_extract(body: &str, parent_body: Option<&str>) -> Result<(String, String
         normalized = strip_after_quote_header_block(&lines, localized).join("\n");
     }
 
-    let erp_out = read_fragments(&normalized)?
+    let erp_out = read_fragments(&normalized)
         .into_iter()
         .filter(|f| !f.quoted)
         .map(|f| f.content)
@@ -1084,7 +1084,7 @@ fn core_extract(body: &str, parent_body: Option<&str>) -> Result<(String, String
             }
         }
     }
-    Ok((text, method))
+    (text, method)
 }
 
 const HTML_QUOTE_MIN_REMOVED: usize = 3;
@@ -1119,7 +1119,7 @@ fn extract(
     body: Option<&str>,
     parent_body: Option<&str>,
     html_body: Option<&str>,
-) -> Result<ExtractionResult, PatternError> {
+) -> ExtractionResult {
     let parts = match html_body {
         Some(html) if pystr::has_content(html) => Some(split_html_parts(html)),
         _ => None,
@@ -1131,27 +1131,27 @@ fn extract(
         _ => {
             if let Some(p) = &parts {
                 if pystr::has_content(&p.novel_text) {
-                    let (text, method) = core_extract(&p.novel_text, parent_body)?;
-                    return Ok(result(format!("html-{method}"), text));
+                    let (text, method) = core_extract(&p.novel_text, parent_body);
+                    return result(format!("html-{method}"), text);
                 }
             }
-            return Ok(ExtractionResult {
+            return ExtractionResult {
                 text: String::new(),
                 method: "none".to_string(),
                 status: Status::Empty,
-            });
+            };
         }
     };
 
     // (b) Degenerate plain: a flattened plain body the HTML can replace.
     if let Some(p) = &parts {
         if is_degenerate_plain(body, &p.novel_text) {
-            let (text, method) = core_extract(&p.novel_text, parent_body)?;
-            return Ok(result(format!("html-{method}"), text));
+            let (text, method) = core_extract(&p.novel_text, parent_body);
+            return result(format!("html-{method}"), text);
         }
     }
 
-    let (mut text, mut method) = core_extract(body, parent_body)?;
+    let (mut text, mut method) = core_extract(body, parent_body);
 
     // (c) Oracle assist: remove plain-body content present in the HTML's quoted text.
     if let Some(p) = &parts {
@@ -1165,7 +1165,7 @@ fn extract(
             }
         }
     }
-    Ok(result(method, text))
+    result(method, text)
 }
 
 /// Extract the author's newly written text from a decoded `text/plain` body.
@@ -1199,8 +1199,8 @@ pub fn extract_new_text(
 ) -> ExtractionResult {
     let outcome = std::panic::catch_unwind(|| extract(body, parent_body, html_body));
     match outcome {
-        Ok(Ok(r)) => r,
-        _ => ExtractionResult {
+        Ok(r) => r,
+        Err(_) => ExtractionResult {
             text: String::new(),
             method: "failed".to_string(),
             status: Status::Failed,

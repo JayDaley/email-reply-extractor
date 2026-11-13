@@ -104,9 +104,9 @@ test("options objects: omitted, undefined and null are equivalent", () => {
   assert.equal(stripParentContent("a\n\n\nb", "zzz", { continuation: true }), "a\n\nb");
 });
 
-test("a template error in the scanner is a failed result, not an exception", () => {
+test("backslashes in a collapsed attribution are kept literally", () => {
   const body = "My reply.\n\nOn Mon, Jan 1, 2026 at 10:00 C:\\Users\\x wrote:\n> quoted\n";
-  assert.deepStrictEqual({ ...extractNewText(body) }, { text: "", method: "failed", status: "failed" });
+  assert.deepStrictEqual({ ...extractNewText(body) }, { text: "My reply.", method: "erp", status: "ok" });
 });
 
 test("HTML helpers and equivalence", () => {

@@ -52,15 +52,16 @@ attribution collapse below.
 ## Deferred: two implementations of wrapped-attribution handling
 
 Wrapped "On … wrote:" attributions are still handled twice: the scanner
-collapses a wrapped multi-line header onto one line before the scan (passing
-the matched text as a `re.sub` replacement template, upstream's
-template-substitution failure mode included), and `extraction.py` recognizes
-two- and three-line wrapped attributions directly.
+collapses a wrapped multi-line header onto one line before the scan, and
+`extraction.py` recognizes two- and three-line wrapped attributions directly.
+Through generation 6 the collapse passed the matched text to `re.sub` as a
+replacement template, so backslash sequences in a body were rewritten and an
+invalid escape failed the extraction; it now inserts the text literally.
 
 The fix remains as originally planned: cover the forms only the collapse
 currently catches with the extractor's patterns, then remove the collapse —
-which also removes the failure mode and, per the section above, the need for
-the pre-truncation. This needs corpus work first: fixtures for the collapse's
-distinctive shapes (including the glued `…example.comwrote:` and `On Behalf
-Of` renderings) recorded before the change. It is the natural core of a future
+which, per the section above, also removes the need for the pre-truncation.
+This needs corpus work first: fixtures for the collapse's distinctive shapes
+(including the glued `…example.comwrote:` and `On Behalf Of` renderings)
+recorded before the change. It is the natural core of a future
 generation 6, together with the pre-truncation removal it unblocks.

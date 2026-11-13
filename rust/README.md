@@ -274,9 +274,9 @@ when only whitespace moved.
 
 The port reproduces the Python standard-library behavior the reference relies
 on: code point (not byte) lengths and indices, Python's whitespace,
-`\w`, `\d` and case-insensitive matching sets, `re.sub` replacement-template
-rules, `difflib.SequenceMatcher`, and the `html.parser.HTMLParser` tokenizer
-with `html.unescape` and the HTML5 named character references. The Unicode
+`\w`, `\d` and case-insensitive matching sets, `difflib.SequenceMatcher`,
+and the `html.parser.HTMLParser` tokenizer with `html.unescape` and the HTML5
+named character references. The Unicode
 tables are generated from the Python version that records the conformance
 data (`tools/gen_tables.py`). The hazards are listed in
 [docs/ports.md](https://github.com/JayDaley/email-reply-extractor/blob/main/docs/ports.md).

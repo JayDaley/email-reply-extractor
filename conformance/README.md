@@ -173,8 +173,8 @@ A vector holds `args` and either `result` or `error`:
   Python exception class name (`re.error` is always recorded as
   `PatternError`). A port passes such a vector when its function signals an
   error by its own idiom (a thrown exception, an `Err`); the name is
-  informative. Public functions never raise, so error vectors occur only under
-  `vectors/internal/`.
+  informative. Public functions never raise, so error vectors can occur only
+  under `vectors/internal/`; the current data holds none.
 
 Vectors are independent of one another and may be run in any order. They are
 de-duplicated and sorted by their encoded `args`, so a regeneration with

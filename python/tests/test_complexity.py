@@ -50,6 +50,11 @@ _CASES: list[tuple[str, Callable[[], object]]] = [
     # _MULTI_QUOTE_HDR lookahead: cubic (800 repeats took 1.2 s).
     ("A1-read_fragments", lambda: read_fragments("On " * 4000)),
     ("A1-extract", lambda: extract_new_text("hello\n" + "On " * 4000)),
+    # Attribution collapse as a replacement template: every "\1" expanded to
+    # the whole match, so the output was quadratic in size (4,000 repeats
+    # built 32 MB in 0.34 s; 60,000 would build 7.2 GB).
+    ("A8-read_fragments", lambda: read_fragments("On " + "\\1" * 60000 + " wrote:")),
+    ("A8-extract", lambda: extract_new_text("hello\nOn " + "\\1" * 60000 + " wrote:\n> q")),
     # "<who> <a@b> wrote:": cubic (800 repeats took 0.36 s).
     ("A2-is_attribution_line", lambda: is_attribution_line("x" + "<a@" * 6400)),
     ("A2-extract", lambda: extract_new_text("hello\n" + "<a@" * 6400)),

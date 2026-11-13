@@ -54,6 +54,10 @@ const CASES: [string, () => unknown][] = [
   // MULTI_QUOTE_HDR lookahead (1,600 repeats took 0.12 s, growing quadratically or worse).
   ["A1-readFragments", () => readFragments("On ".repeat(40000))],
   ["A1-extract", () => extractNewText(`hello\n${"On ".repeat(40000)}`)],
+  // Attribution collapse as a replacement template: every "\1" expanded to the
+  // whole match, so the output was quadratic in size (4,000 repeats built 32 MB).
+  ["A8-readFragments", () => readFragments(`On ${"\\1".repeat(60000)} wrote:`)],
+  ["A8-extract", () => extractNewText(`hello\nOn ${"\\1".repeat(60000)} wrote:\n> q`)],
   // "<who> <a@b> wrote:": cubic (1,600 repeats took 3.5 s).
   ["A2-isAttributionLine", () => isAttributionLine(`x${"<a@".repeat(6400)}`)],
   ["A2-extract", () => extractNewText(`hello\n${"<a@".repeat(6400)}`)],

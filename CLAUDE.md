@@ -127,9 +127,13 @@ of them to agree.
 `_fragments.py` is trimmed from `email-reply-parser` 0.5.12. Two upstream
 defects (a `count=8` cap on the Outlook-boundary fix; per-fragment edge
 stripping) were preserved through generation 4 and fixed in generation 5 —
-see `docs/generation-5.md`. One upstream behavior remains and is deliberate:
-the wrapped-attribution collapse, including its template-substitution failure
-mode (pinned in `python/tests/test_port_hazards.py`; the ports reproduce it).
+see `docs/generation-5.md`. A third (the collapsed "On … wrote:" header passed
+to `re.sub` as a replacement template, so backslash sequences in a body were
+rewritten, an invalid escape failed the extraction, and `\1` repeats
+amplified the output quadratically) was preserved through generation 6 and is
+fixed: the collapsed header is inserted literally (pinned in
+`python/tests/test_port_hazards.py`). One upstream behavior remains and is
+deliberate: the wrapped-attribution collapse itself.
 `extraction.py`'s quote-header pre-truncation compensates for the collapse's
 line-gluing and must stay until the collapse itself is removed; that removal
 is deferred, with the measured evidence, in `docs/generation-5.md`. Any change
