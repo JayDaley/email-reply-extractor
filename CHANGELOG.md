@@ -39,6 +39,14 @@ Any other line (headings above level 2, blank lines, prose in this Format
 section) is not part of a release record and can be ignored. Outside fenced
 code blocks, no release section appears before the first `## [` header.
 
+## [1.2.2] - 2026-11-13
+
+Summary: Release-process corrections; the first release published to npm through trusted publishing.
+
+- Corrected the first-release instruction for npm in `CONTRIBUTING.md`: a release published by hand cannot carry provenance.
+- Configured npm trusted publishing for `publish-npm.yml`; this release is the first published to npm by that workflow.
+- No change to the derived text; `EXTRACTION_VERSION` remains 6.
+
 ## [1.2.1] - 2026-11-13
 
 Summary: TypeScript and Rust ports added; the repository restructured to maintain three ports against one conformance suite.

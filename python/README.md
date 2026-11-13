@@ -122,7 +122,7 @@ project's documented behavior; release data is from PyPI as of November 2026.
 | Output stability | Behavior pinned by an integer generation (`EXTRACTION_VERSION`) and a corpus digest test; whitespace-tolerant equivalence helpers for consumers | Not versioned separately | Not versioned separately |
 | Test corpus | Hand-labeled real mailing-list messages (`fixtures/`) | Unit-test fixture emails | Unit-test fixture emails; ML training data |
 | Runtime dependencies | None (standard library) | None (standard library) | lxml, regex, numpy, scipy, scikit-learn, chardet, and others |
-| Latest release | 1.2.1 (2026) | 0.5.12 (2020) | 1.4.4 (2017) |
+| Latest release | 1.2.2 (2026) | 0.5.12 (2020) | 1.4.4 (2017) |
 | License | MIT | MIT | Apache 2.0 |
 
 The fragment scanner at this library's core derives from email-reply-parser

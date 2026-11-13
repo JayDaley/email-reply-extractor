@@ -137,7 +137,7 @@ re-record.
 ## Versioning
 
 The packages use [semantic versioning](https://semver.org/); the current
-version is **1.2.1**. The three ports always carry the same version. The
+version is **1.2.2**. The three ports always carry the same version. The
 sources are `__version__` in `python/src/email_reply_extractor/__init__.py`
 (`python/pyproject.toml` reads it dynamically), `version` in
 `typescript/package.json`, and `version` in `rust/Cargo.toml`; `make

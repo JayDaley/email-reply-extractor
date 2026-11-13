@@ -1,6 +1,6 @@
 [package]
 name = "email-reply-extractor"
-version = "1.2.1"
+version = "1.2.2"
 edition = "2021"
 rust-version = "1.80"
 description = "Extract the new text from an email reply: strip quoted text, quote headers, signatures and sign-offs. Rust port of the Python reference, byte-identical output."

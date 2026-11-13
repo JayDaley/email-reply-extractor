@@ -1,6 +1,6 @@
 {
   "name": "email-reply-extractor",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "Extract the new text from an email reply: strip quoted text, quote headers, signatures and sign-offs. TypeScript port of the Python reference implementation, with byte-identical output.",
   "keywords": [
     "email",

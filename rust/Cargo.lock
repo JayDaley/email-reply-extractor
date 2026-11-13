@@ -72,7 +72,7 @@ dependencies = [
 
 [[package]]
 name = "email-reply-extractor"
-version = "1.2.1"
+version = "1.2.2"
 dependencies = [
  "fancy-regex",
  "regex",
