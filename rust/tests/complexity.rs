@@ -13,9 +13,11 @@
 //!
 //! The tests pin running time, not output: equivalence of the output with the
 //! earlier implementation was established by differential testing when the
-//! paths were rewritten. The remaining tests check that the linear-time
-//! helpers handle multi-byte characters next to the delimiters they slice
-//! at (results as the reference returns them).
+//! paths were rewritten, except for the parent-diff aligned-run rule, whose
+//! output changed by design in generation 7 (`docs/generation-7.md`). The
+//! remaining tests check that the linear-time helpers handle multi-byte
+//! characters next to the delimiters they slice at (results as the reference
+//! returns them).
 
 use std::time::{Duration, Instant};
 
@@ -53,6 +55,57 @@ fn seed_chain(n: usize) -> (String, String) {
     child.extend(seeds);
     let parent = format!("a a\na {}", seeds.join("\n"));
     (child.join("\n"), parent)
+}
+
+/// A child and a parent of `n` lines of 30 words each, no word shared: every
+/// child line is a rewrap-rule (b) query that is not in the parent.
+fn distinct_long_lines(n: usize) -> (String, String) {
+    let side = |tag: char| {
+        (0..n)
+            .map(|k| {
+                (0..30)
+                    .map(|j| format!("{tag}{k}x{j}"))
+                    .collect::<Vec<_>>()
+                    .join(" ")
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+    };
+    (side('c'), side('p'))
+}
+
+/// A re-wrapped paragraph: three 9-word seed lines, then `n` 3-word remainder
+/// lines that the continuation rule (c) chains off the seeds, each join a
+/// query against a parent of 10-word lines.
+fn remainder_chain(n: usize) -> (String, String) {
+    let words: Vec<String> = (0..3 * n + 27).map(|k| format!("w{k}")).collect();
+    let parent: Vec<String> = words.chunks(10).map(|c| c.join(" ")).collect();
+    let mut child: Vec<String> = words[..27].chunks(9).map(|c| c.join(" ")).collect();
+    child.extend(words[27..].chunks(3).map(|c| c.join(" ")));
+    (child.join("\n"), parent.join("\n"))
+}
+
+/// A body with `n` tagged lines below a French quote header, and a parent
+/// that uses every tag: each tag is tested against the parent and the text
+/// above the block, and none belongs to the author.
+fn localized_tags(n: usize) -> (String, String) {
+    let quoted = "The quoted message carries enough words to be matched in the parent.";
+    let tags: String = (0..n).map(|k| format!("[Q{k}] ok\n")).collect();
+    let body = format!(
+        "Thanks for the review.\n{}\nCheers,\nMed\n\
+         De : Someone <someone@example.org>\n\
+         Envoy\u{e9} : lundi 1 janvier 2026 10:00\n\
+         \u{c0} : list@example.org\n\
+         Objet : Re: review\n{quoted}\n{tags}",
+        "zz ".repeat(100000)
+    );
+    let parent_tags: Vec<String> = (0..n).map(|k| format!("[Q{k}]")).collect();
+    let parent = format!(
+        "{}\n{quoted}\n{}",
+        "zz ".repeat(100000),
+        parent_tags.join(" ")
+    );
+    (body, parent)
 }
 
 // --- regex findings (linear in this port's `regex` crate; kept for alignment) ---
@@ -166,6 +219,73 @@ fn c4_seed_chain_marks_every_line() {
     // The C4 input exercises the rule it is meant to: every line chains.
     let (child, parent) = seed_chain(50);
     assert_eq!(strip_parent_content(&child, &parent, true), "");
+}
+
+// --- generation 7: the parent-diff assist and the author-tag test ------------
+//
+// The inputs are built before the clock starts. Comments give the cost of
+// the generation-6 port (release build) on the same input; where it was
+// superlinear, the input is smaller than the reference's, as above.
+
+#[test]
+fn g7a_aligned_runs_of_identical_lines() {
+    // Rule (a): difflib.SequenceMatcher, quadratic in the number of lines
+    // (3.8 s at 10,000 lines, quadratic: about 60 s here).
+    let text = "a\n".repeat(40000);
+    bounded(|| strip_parent_content(&text, &text, false));
+}
+
+#[test]
+fn g7b_distinct_long_lines() {
+    // Rule (b): one substring search of the parent per child line (89 s at
+    // 20,000 lines; the reference uses 60,000).
+    let (child, parent) = distinct_long_lines(20000);
+    bounded(|| strip_parent_content(&child, &parent, false));
+}
+
+#[test]
+fn g7b_automaton_queries() {
+    // Rule (b) queries that only the suffix automaton decides: every interior
+    // word occurs in the parent, which never contains the line. The earlier
+    // port's `str::contains` took 12.6 s on the reference's 1,000,000 lines;
+    // the case is kept at 250,000.
+    let child = "a a a a a a a b\n".repeat(250_000);
+    let parent = "a ".repeat(200_000);
+    bounded(|| strip_parent_content(&child, &parent, false));
+}
+
+#[test]
+fn g7c_remainder_chain() {
+    // Rule (c): one substring search of the parent per join (96 s at
+    // 100,000 remainder lines; the reference uses 300,000).
+    let (child, parent) = remainder_chain(100_000);
+    bounded(|| strip_parent_content(&child, &parent, true));
+}
+
+#[test]
+fn g7tag_localized_tags() {
+    // Inline-reply author tags: per tag, a search of the parent and of the
+    // text above the quote header. The reference took 99 s; the earlier port
+    // 0.64 s (its substring search is linear in the text).
+    let (body, parent) = localized_tags(25000);
+    bounded(|| extract_new_text(Some(&body), Some(&parent), None));
+}
+
+#[test]
+fn remainder_chain_marks_every_line() {
+    // The G7c input exercises the continuation rule: every remainder chains.
+    let (child, parent) = remainder_chain(50);
+    assert_eq!(strip_parent_content(&child, &parent, true), "");
+}
+
+#[test]
+fn localized_tags_reach_every_tag() {
+    // The G7tag input keeps the localized treatment: no tag is the author's,
+    // so the quote header truncates and only the text above it is left.
+    let (body, parent) = localized_tags(50);
+    let result = extract_new_text(Some(&body), Some(&parent), None);
+    assert!(result.text.ends_with("Cheers,\nMed"));
+    assert!(!result.text.contains("[Q"));
 }
 
 #[test]

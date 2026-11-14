@@ -87,7 +87,7 @@ conformance test.
 ## digest.json
 
 ```
-{"format": 1, "extraction_version": 6, "digest": "<64 lowercase hex digits>"}
+{"format": 1, "extraction_version": 7, "digest": "<64 lowercase hex digits>"}
 ```
 
 This file is the single recorded value of the corpus digest for all three
@@ -137,6 +137,7 @@ changed without a generation bump. The rules for incrementing are in
 | 4 | `faf5f388795897201e92a58600b345c19656df939228bd87bd47ab1578f1db5f` | Carried unchanged from mailing-list-ai-check, the application the library was extracted from. |
 | 5 | `2f36f0168c2769b122a0f74c0cfa63a714da3c89f2cd1f90d0f5e072f32d6fb3` | v1.1.0. |
 | 6 | `6ccdd626b598da3948b4119ae383ae02f587855c7ea1cb946ff21984dbb1a0d8` | v1.2.0: localized quote-header blocks and dividers, with the two French fixtures added. |
+| 7 | `b4fc24eee6a5a2daaeac57d87fca6245663f3f25a1a1f495874fd7427a65e9f6` | v1.3.0: the linear parent-diff assist, with the synthetic repeated-signature fixture added. Over the 26 earlier fixtures the output is unchanged; the digest moved with the added fixture. |
 
 ## vectors/
 
@@ -208,3 +209,7 @@ scanner. A port whose internal structure mirrors the reference
 (see [docs/ports.md](../docs/ports.md)) can run them to localize a failure to
 one helper; they are optional. Arguments named `lines` are arrays of strings,
 and helpers that return a line index return an integer or `null`.
+`extraction._aligned_run_marks` (the parent-diff aligned-run rule) takes two
+arrays of normalized lines, `child_seq` and `parent_seq`, and returns an array
+of booleans, one per child line; its vectors pin the tie-breaks of the rule's
+specification.

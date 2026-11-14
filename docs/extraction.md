@@ -235,8 +235,7 @@ Some clients top-post a reply above the entire previous message reproduced with
 no `>` markers, no attribution and no header block, so the quote, attribution
 and header filters have nothing to act on. When the caller can resolve the
 thread parent from `In-Reply-To` and passes its raw body, `strip_parent_content`
-removes what provably came from the parent, using `difflib` as an
-evidence-based backstop. It runs after the over-strip guard has resolved the
+removes what provably came from the parent, as an evidence-based backstop. It runs after the over-strip guard has resolved the
 chosen text, so it never perturbs the guard's denominator, and the assisted
 text is adopted only when it actually dropped a content line — at which point
 `+parent-diff` is appended to the method.
@@ -246,13 +245,25 @@ quoted copy of a parent line compares equal to the bare line), whitespace runs
 collapse to single spaces, and blank lines are ignored. Three rules mark a
 child line as parent content:
 
-- **Aligned-run rule.** `difflib.SequenceMatcher` (with `autojunk=False`) finds
-  matching blocks over the normalized non-blank line sequences. A block marks
-  its child lines only when it carries substance: at least 10 words in total,
-  or at least one line of at least 8 words. Short coincidental echoes fall
-  below both and survive — greetings, list courtesy phrases, and the author's
-  own sign-off and name, which are guaranteed to also sit inside the parent's
-  nested quotes.
+- **Aligned-run rule.** Over the normalized non-blank line sequences (lines
+  compared by exact equality), a *common run* is a run of consecutive child
+  lines that also occurs as consecutive parent lines. A run has *substance*
+  when its lines total at least 10 words, or one of its lines has at least 8
+  words. The longest common run (counted in lines) is the *anchor*; among
+  runs of that length, the one starting earliest in the child, placed at its
+  earliest occurrence in the parent. The anchor's lines are marked when it
+  has substance. Before the anchor, a child line is marked when it lies in a
+  run with substance that occurs in the parent before the anchor's
+  occurrence; after the anchor, likewise against the parent after the
+  anchor's occurrence. Within a side, runs match in any order. Short
+  coincidental echoes fall below the substance bar and survive — greetings,
+  list courtesy phrases, and the author's own sign-off and name, which are
+  guaranteed to also sit inside the parent's nested quotes. The anchor is
+  normally the quoted previous message; splitting at it keeps a block the
+  author repeated on one side of the quote from matching the parent's copy
+  on the other side. Through generation 6 this rule used
+  `difflib.SequenceMatcher`, whose running time is quadratic in the number of
+  lines; generation 7 replaced it (see [generation-7.md](generation-7.md)).
 - **Rewrap rule.** Quoting clients re-wrap long paragraphs at a different
   width, which line-level matching misses. Any unmarked child line of at least
   8 words whose normalized text is a substring of the parent's normalized
@@ -264,6 +275,11 @@ child line as parent content:
   fixpoint so runs of short lines chain off one long seed. It runs only when
   the first two rules marked at least 3 lines, so an isolated inline-citation
   echo cannot seed a chain into the author's own text.
+
+The substring tests of the rewrap and continuation rules give the same
+answers as a plain substring search, but are answered from an index over the
+parent's word-stream built once per call, so the whole function runs in time
+linear in the size of the child and the parent.
 
 The continuation rule is safe against a parent body, which never contains the
 author's new text, but not against this message's own HTML quote container,
@@ -413,8 +429,8 @@ confidence, and the hand-labeled corpus keeps them.
 
 ## Where the rules are pinned
 
-`fixtures/` holds 26 hand-labeled real messages whose expected files are
-the composite of both stages. `fixtures/README.md` records, per fixture,
+`fixtures/` holds 27 hand-labeled messages (25 real, 2 synthetic) whose
+expected files are the composite of both stages. `fixtures/README.md` records, per fixture,
 the behavior it pins and where raw `email-reply-parser` diverges from the
 ground truth — those divergences are exactly what the custom pass and the
 over-strip guard exist to fix. `conformance/digest.json` additionally pins

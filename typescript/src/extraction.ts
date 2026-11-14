@@ -8,12 +8,12 @@
  * @module
  */
 
-import { SequenceMatcher } from "./difflib.js";
 import { readFragments } from "./fragments.js";
+import { absorb, finish, GramTable, HASH_START, StringTable, Transitions } from "./hashTables.js";
 import { splitHtmlParts } from "./htmlText.js";
 import {
+  codePointAt,
   cpLen,
-  escapeRegex,
   firstIsUpper,
   hasPyDigit,
   isBlank,
@@ -34,7 +34,7 @@ import {
  * ports). Consumers stamp stored derived text with it and compare with `<`, so
  * it only ever increases. See docs/versioning.md.
  */
-export const EXTRACTION_VERSION = 6;
+export const EXTRACTION_VERSION = 7;
 
 // --- result -------------------------------------------------------------------
 
@@ -631,6 +631,12 @@ function nonblankLineCount(text: string): number {
 }
 
 // --- parent-diff assist -------------------------------------------------------
+//
+// The input is untrusted, so every step runs in time linear in the size of the
+// child and the parent: rule (a) aligns the line sequences around their longest
+// common run (alignedRunMarks), and rules (b) and (c) answer their substring
+// tests from an index built once per call (ParentStream). See the reference's
+// comment block above `_PARENT_DIFF_MIN_BLOCK_WORDS` for the substance bar.
 
 const PARENT_DIFF_MIN_BLOCK_WORDS = 10;
 const PARENT_DIFF_MIN_LINE_WORDS = 8;
@@ -639,6 +645,365 @@ const PARENT_DIFF_CONTINUATION_MIN_SEEDS = 3;
 /** Normalize one line for parent/child comparison. */
 export function normalizeLineForDiff(line: string): string {
   return pySplit(QUOTE_RE.sub(line, () => "")).join(" ");
+}
+
+// --- suffix automaton -------------------------------------------------------------
+//
+// One routine serves rules (a), (b) and (c): the suffix automaton of a sequence
+// of integer symbols (line ids for rule (a), code points for rules (b) and
+// (c)). It recognizes exactly the contiguous subsequences of its text, has at
+// most 2n states and 3n transitions for a text of n symbols, and is built in
+// O(n) table operations.
+
+/** The reference's automaton tuple `(length, link, trans, first_end)`. */
+interface Automaton {
+  readonly length: Int32Array;
+  readonly link: Int32Array;
+  readonly trans: Transitions;
+  readonly firstEnd: Int32Array;
+}
+
+/**
+ * Suffix automaton of `seq[lo:hi]` (the reference's `_build_automaton`).
+ *
+ * Per state: the length of its longest string, its suffix link, its
+ * transitions and `firstEnd`, the smallest end position (an index of `seq`)
+ * of an occurrence of the state's strings. State 0 is the root. A clone copies
+ * `firstEnd` from the state it splits.
+ */
+function buildAutomaton(seq: Int32Array, lo: number, hi: number): Automaton {
+  const maxStates = 2 * (hi - lo) + 1;
+  const length = new Int32Array(maxStates);
+  const link = new Int32Array(maxStates);
+  const trans = new Transitions(maxStates, 2 * (hi - lo));
+  const firstEnd = new Int32Array(maxStates);
+  link[0] = -1;
+  firstEnd[0] = -1;
+  let size = 1;
+  let last = 0;
+  for (let pos = lo; pos < hi; pos++) {
+    const sym = seq[pos] as number;
+    const cur = size++;
+    length[cur] = (length[last] as number) + 1;
+    link[cur] = -1;
+    firstEnd[cur] = pos;
+    let p = last;
+    while (p !== -1 && trans.get(p, sym) < 0) {
+      trans.set(p, sym, cur);
+      p = link[p] as number;
+    }
+    if (p === -1) {
+      link[cur] = 0;
+    } else {
+      const q = trans.get(p, sym);
+      if ((length[p] as number) + 1 === length[q]) {
+        link[cur] = q;
+      } else {
+        const clone = size++;
+        length[clone] = (length[p] as number) + 1;
+        link[clone] = link[q] as number;
+        trans.copy(q, clone);
+        firstEnd[clone] = firstEnd[q] as number;
+        while (p !== -1 && trans.get(p, sym) === q) {
+          trans.set(p, sym, clone);
+          p = link[p] as number;
+        }
+        link[q] = clone;
+        link[cur] = clone;
+      }
+    }
+    last = cur;
+  }
+  return { length, link, trans, firstEnd };
+}
+
+/**
+ * For each `e` in `[lo, hi)`: the length of the longest run of `seq` ending at
+ * `e` that occurs in the automaton's text, and the state of that run (both
+ * indexed `e - lo`). The reference's `_walk`.
+ */
+function walk(automaton: Automaton, seq: Int32Array, lo: number, hi: number): [Int32Array, Int32Array] {
+  const { length, link, trans } = automaton;
+  const runs = new Int32Array(hi - lo);
+  const states = new Int32Array(hi - lo);
+  let state = 0;
+  let matched = 0;
+  for (let e = lo; e < hi; e++) {
+    const sym = seq[e] as number;
+    while (state !== 0 && trans.get(state, sym) < 0) {
+      state = link[state] as number;
+      matched = length[state] as number;
+    }
+    const next = trans.get(state, sym);
+    if (next >= 0) {
+      state = next;
+      matched += 1;
+    } else {
+      matched = 0;
+    }
+    runs[e - lo] = matched;
+    states[e - lo] = state;
+  }
+  return [runs, states];
+}
+
+// --- rule (a): alignment around the longest common run ------------------------------
+//
+// The specification is the comment above the reference's `_intern_lines`.
+// Lines compare by exact string equality; the anchor is the longest common run
+// (in lines), the earliest in the child among equally long runs, at its
+// earliest occurrence in the parent; each side of the anchor is matched only
+// against the same side of the parent, in any order.
+
+/**
+ * Map each distinct parent line to a small integer id; a child line absent
+ * from the parent gets -1, which no transition carries.
+ */
+function internLines(childSeq: readonly string[], parentSeq: readonly string[]): [Int32Array, Int32Array] {
+  const ids = new StringTable();
+  const parentIds = new Int32Array(parentSeq.length);
+  parentSeq.forEach((line, k) => {
+    parentIds[k] = ids.add(line);
+  });
+  const childIds = new Int32Array(childSeq.length);
+  childSeq.forEach((line, k) => {
+    childIds[k] = ids.get(line);
+  });
+  return [childIds, parentIds];
+}
+
+/** A child run `[start, end)` has substance (prefix sums of words and of long lines). */
+function hasSubstance(wordsBefore: Int32Array, longBefore: Int32Array, start: number, end: number): boolean {
+  return (
+    (wordsBefore[end] as number) - (wordsBefore[start] as number) >= PARENT_DIFF_MIN_BLOCK_WORDS ||
+    (longBefore[end] as number) - (longBefore[start] as number) > 0
+  );
+}
+
+/**
+ * Step 3 for one side: add to `cover` (a difference array over child
+ * positions) every run of `childIds[cLo:cHi]` that has substance and occurs in
+ * `parentIds[pLo:pHi]`. Only the longest run ending at each position is
+ * tested: a shorter one ending there lies inside it.
+ */
+function coverSide(
+  childIds: Int32Array,
+  cLo: number,
+  cHi: number,
+  parentIds: Int32Array,
+  pLo: number,
+  pHi: number,
+  wordsBefore: Int32Array,
+  longBefore: Int32Array,
+  cover: Int32Array,
+): void {
+  if (cLo >= cHi || pLo >= pHi) return;
+  const [runs] = walk(buildAutomaton(parentIds, pLo, pHi), childIds, cLo, cHi);
+  for (let e = cLo; e < cHi; e++) {
+    const run = runs[e - cLo] as number;
+    if (run === 0) continue;
+    const start = e - run + 1;
+    if (hasSubstance(wordsBefore, longBefore, start, e + 1)) {
+      cover[start] = (cover[start] as number) + 1;
+      cover[e + 1] = (cover[e + 1] as number) - 1;
+    }
+  }
+}
+
+/**
+ * Rule (a): which child lines (indexes of `childSeq`) are parent content. The
+ * reference's `_aligned_run_marks`.
+ *
+ * @internal
+ */
+export function alignedRunMarks(childSeq: readonly string[], parentSeq: readonly string[]): boolean[] {
+  const count = childSeq.length;
+  const marks = new Array<boolean>(count).fill(false);
+  if (count === 0 || parentSeq.length === 0) return marks;
+  const [childIds, parentIds] = internLines(childSeq, parentSeq);
+
+  // Prefix sums: words, and lines of at least PARENT_DIFF_MIN_LINE_WORDS
+  // words, before each child position (a run's substance in O(1)).
+  const wordsBefore = new Int32Array(count + 1);
+  const longBefore = new Int32Array(count + 1);
+  for (let k = 0; k < count; k++) {
+    const words = pyWordCount(childSeq[k] as string);
+    wordsBefore[k + 1] = (wordsBefore[k] as number) + words;
+    longBefore[k + 1] = (longBefore[k] as number) + (words >= PARENT_DIFF_MIN_LINE_WORDS ? 1 : 0);
+  }
+
+  // Step 1: the anchor. The first end position reaching the greatest run
+  // length (strict comparison) is the earliest-starting longest run; the
+  // automaton's firstEnd gives its earliest parent occurrence.
+  const automaton = buildAutomaton(parentIds, 0, parentIds.length);
+  const [runs, states] = walk(automaton, childIds, 0, count);
+  let bestLen = 0;
+  let bestEnd = -1;
+  for (let e = 0; e < count; e++) {
+    if ((runs[e] as number) > bestLen) {
+      bestLen = runs[e] as number;
+      bestEnd = e;
+    }
+  }
+  if (bestLen === 0) return marks;
+  const i = bestEnd - bestLen + 1;
+  const j = (automaton.firstEnd[states[bestEnd] as number] as number) - bestLen + 1;
+
+  const cover = new Int32Array(count + 1); // difference array over child positions
+  // Step 2: the anchor itself.
+  if (hasSubstance(wordsBefore, longBefore, i, i + bestLen)) {
+    cover[i] = (cover[i] as number) + 1;
+    cover[i + bestLen] = (cover[i + bestLen] as number) - 1;
+  }
+  // Step 3: each side against the same side of the parent.
+  coverSide(childIds, 0, i, parentIds, 0, j, wordsBefore, longBefore, cover);
+  coverSide(childIds, i + bestLen, count, parentIds, j + bestLen, parentIds.length, wordsBefore, longBefore, cover);
+
+  let depth = 0;
+  for (let k = 0; k < count; k++) {
+    depth += cover[k] as number;
+    marks[k] = depth > 0;
+  }
+  return marks;
+}
+
+// --- rules (b) and (c): substring tests against the parent's word-stream ---------
+
+/** A UTF-16 high (`low` false) or low surrogate. */
+function isSurrogate(code: number, low: boolean): boolean {
+  return low ? code >= 0xdc00 && code <= 0xdfff : code >= 0xd800 && code <= 0xdbff;
+}
+
+/** No surrogate pair of `s` straddles the code-unit position `pos`. */
+function atCodePointBoundary(s: string, pos: number): boolean {
+  return !(
+    pos > 0 &&
+    pos < s.length &&
+    isSurrogate(s.charCodeAt(pos - 1), false) &&
+    isSurrogate(s.charCodeAt(pos), true)
+  );
+}
+
+/** The code points of `s`; a lone surrogate is one code point, as in Python. */
+function codePoints(s: string): Int32Array {
+  const out = new Int32Array(cpLen(s));
+  let n = 0;
+  for (let i = 0; i < s.length; n++) {
+    const cp = codePointAt(s, i);
+    out[n] = cp;
+    i += cp > 0xffff ? 2 : 1;
+  }
+  return out;
+}
+
+/**
+ * Answers `needle in stream` for the parent's word-stream (the parent's
+ * normalized non-blank lines joined by single spaces), exactly, in time linear
+ * in the needle. The reference's `_ParentStream`; its docstring describes the
+ * gram table and the automaton fallback.
+ *
+ * Units. The reference works in code points. Here the gram table and the
+ * comparison at a candidate position use UTF-16 code units, and the automaton
+ * uses code points. A unit-level occurrence is a code-point occurrence exactly
+ * when no surrogate pair of the stream straddles either of its ends
+ * ({@link atCodePointBoundary}); a JavaScript string can hold an unpaired
+ * surrogate, which a needle could otherwise match against half of a pair. The
+ * length test, an absent gram and a unique gram are exact in either unit, so
+ * every answer equals the reference's; only the path that answers may differ.
+ *
+ * @internal
+ */
+export class ParentStream {
+  private readonly stream: string;
+  private table: GramTable | null = null;
+  private trans: Transitions | null = null;
+
+  constructor(parentSeq: readonly string[]) {
+    this.stream = parentSeq.join(" ");
+  }
+
+  private buildTable(): GramTable {
+    const stream = this.stream;
+    let words = 1;
+    for (let at = stream.indexOf(" "); at >= 0; at = stream.indexOf(" ", at + 1)) words++;
+    const table = new GramTable(stream, words + 8);
+    // stream.split(" ") with a running offset, without building the words. A
+    // pair's hash continues from its first word's, so each code unit is
+    // hashed twice.
+    let offset = 0;
+    let end = stream.indexOf(" ");
+    if (end < 0) end = stream.length;
+    let state = absorb(HASH_START, stream, offset, end);
+    for (;;) {
+      table.note(offset, end, false, finish(state, end - offset));
+      if (end === stream.length) break;
+      let nextEnd = stream.indexOf(" ", end + 1);
+      if (nextEnd < 0) nextEnd = stream.length;
+      table.note(offset, nextEnd, true, finish(absorb(state, stream, end, nextEnd), nextEnd - offset));
+      offset = end + 1;
+      end = nextEnd;
+      state = absorb(HASH_START, stream, offset, end);
+    }
+    return table;
+  }
+
+  /** The needle occurs at code-unit position `start` of the stream. */
+  private occursAt(needle: string, start: number): boolean {
+    return (
+      start >= 0 &&
+      this.stream.startsWith(needle, start) &&
+      atCodePointBoundary(this.stream, start) &&
+      atCodePointBoundary(this.stream, start + needle.length)
+    );
+  }
+
+  /** The answer for a needle of at least three `words` when the table decides it, else `null`. */
+  private decidedByTable(needle: string, words: readonly string[]): boolean | null {
+    if (this.table === null) this.table = this.buildTable();
+    const table = this.table;
+    let count = words.length - 2; // grams: the interior word, or the interior pairs
+    if (count > 1) count -= 1;
+    const pair = words.length !== 3;
+    let candidate = -1;
+    let offset = (words[0] as string).length + 1; // the offset of words[k] in the needle
+    for (let k = 1; k < 1 + count; k++) {
+      const wordLen = (words[k] as string).length;
+      const gramEnd = pair ? offset + wordLen + 1 + (words[k + 1] as string).length : offset + wordLen;
+      const gram = table.find(needle, offset, gramEnd, pair);
+      if (gram < 0) return false;
+      const first = table.first(gram);
+      const start = first - offset;
+      if (first === table.last(gram)) return this.occursAt(needle, start);
+      if (candidate < 0 && start >= 0) candidate = start;
+      offset += wordLen + 1;
+    }
+    if (candidate >= 0 && this.occursAt(needle, candidate)) return true;
+    return null;
+  }
+
+  /** `needle in " ".join(parentSeq)`. */
+  contains(needle: string): boolean {
+    if (needle.length > this.stream.length) return false;
+    const words = needle.split(" ");
+    if (words.length >= 3) {
+      const decided = this.decidedByTable(needle, words);
+      if (decided !== null) return decided;
+    }
+    if (this.trans === null) {
+      const codes = codePoints(this.stream);
+      this.trans = buildAutomaton(codes, 0, codes.length).trans;
+    }
+    const trans = this.trans;
+    let state = 0;
+    for (let i = 0; i < needle.length; ) {
+      const cp = codePointAt(needle, i);
+      i += cp > 0xffff ? 2 : 1;
+      const next = trans.get(state, cp);
+      if (next < 0) return false;
+      state = next;
+    }
+    return true;
+  }
 }
 
 /** Options of {@link stripParentContent}. */
@@ -666,30 +1031,28 @@ export function stripParentContent(text: string, parentBody: string, options: St
   const childSeq = childPairs.map(([, norm]) => norm);
   const parentSeq = parentNorm.filter((norm) => norm);
 
-  const marked = new Set<number>();
+  // The reference's `marked` set of child line indexes.
+  const marked = new Uint8Array(childRaw.length);
+  let markedCount = 0;
+  const mark = (i: number): void => {
+    if (marked[i] === 0) {
+      marked[i] = 1;
+      markedCount++;
+    }
+  };
 
-  // Rule (a): aligned runs of matching lines with enough substance.
-  const matcher = new SequenceMatcher(childSeq, parentSeq);
-  for (const [start, , size] of matcher.getMatchingBlocks()) {
-    if (size === 0) continue;
-    const block = childSeq.slice(start, start + size);
-    let totalWords = 0;
-    let maxLineWords = 0;
-    for (const line of block) {
-      const words = pyWordCount(line);
-      totalWords += words;
-      if (words > maxLineWords) maxLineWords = words;
-    }
-    if (totalWords >= PARENT_DIFF_MIN_BLOCK_WORDS || maxLineWords >= PARENT_DIFF_MIN_LINE_WORDS) {
-      for (let k = start; k < start + size; k++) marked.add((childPairs[k] as [number, string])[0]);
-    }
+  // Rule (a): runs of matching lines with enough substance, aligned around
+  // the longest common run.
+  const ruleA = alignedRunMarks(childSeq, parentSeq);
+  for (let k = 0; k < childPairs.length; k++) {
+    if (ruleA[k]) mark((childPairs[k] as [number, string])[0]);
   }
 
   // Rule (b): a long child line re-wrapped from the parent.
-  const parentStream = parentSeq.join(" ");
+  const parentStream = new ParentStream(parentSeq);
   for (const [origI, norm] of childPairs) {
-    if (marked.has(origI)) continue;
-    if (pyWordCount(norm) >= PARENT_DIFF_MIN_LINE_WORDS && parentStream.includes(norm)) marked.add(origI);
+    if (marked[origI]) continue;
+    if (pyWordCount(norm) >= PARENT_DIFF_MIN_LINE_WORDS && parentStream.contains(norm)) mark(origI);
   }
 
   // Rule (c): chain short remainder lines off marked neighbors, to a fixpoint.
@@ -697,16 +1060,16 @@ export function stripParentContent(text: string, parentBody: string, options: St
   // fixpoint is the same whatever order lines are examined in. A worklist
   // re-examines only the neighbors of a newly marked line; repeating full
   // passes until nothing changed needed one pass per backward-chained mark.
-  if (continuation && marked.size >= PARENT_DIFF_CONTINUATION_MIN_SEEDS) {
+  if (continuation && markedCount >= PARENT_DIFF_CONTINUATION_MIN_SEEDS) {
     const count = childPairs.length;
-    const isMarked = childPairs.map(([origI]) => marked.has(origI));
+    const isMarked = childPairs.map(([origI]) => marked[origI] === 1);
     const normAt = (k: number): string => (childPairs[k] as [number, string])[1];
 
     /** Unmarked `k` joins a marked neighbor contiguously in the parent. */
     const chains = (k: number): boolean => {
       const norm = normAt(k);
-      if (k > 0 && isMarked[k - 1] && parentStream.includes(`${normAt(k - 1)} ${norm}`)) return true;
-      if (k + 1 < count && isMarked[k + 1] && parentStream.includes(`${norm} ${normAt(k + 1)}`)) return true;
+      if (k > 0 && isMarked[k - 1] && parentStream.contains(`${normAt(k - 1)} ${norm}`)) return true;
+      if (k + 1 < count && isMarked[k + 1] && parentStream.contains(`${norm} ${normAt(k + 1)}`)) return true;
       return false;
     };
 
@@ -717,7 +1080,7 @@ export function stripParentContent(text: string, parentBody: string, options: St
     for (let k = pending.pop(); k !== undefined; k = pending.pop()) {
       if (isMarked[k] || !chains(k)) continue;
       isMarked[k] = true;
-      marked.add((childPairs[k] as [number, string])[0]);
+      mark((childPairs[k] as [number, string])[0]);
       for (const j of [k - 1, k + 1]) {
         if (j >= 0 && j < count && !isMarked[j]) pending.push(j);
       }
@@ -726,7 +1089,7 @@ export function stripParentContent(text: string, parentBody: string, options: St
 
   const survivors: string[] = [];
   childRaw.forEach((line, i) => {
-    if (!marked.has(i)) survivors.push(pyRstrip(line));
+    if (!marked[i]) survivors.push(pyRstrip(line));
   });
   return collapseAndTrim(survivors);
 }
@@ -778,67 +1141,135 @@ export function localizedInlineReply(lines: readonly string[], parentBody: strin
     const removed = nonblankLineCount(span) - nonblankLineCount(survivors);
     if (removed < INLINE_REPLY_MIN_PARENT_LINES) return false;
   }
-  const head = lines.slice(0, start).join("\n");
+  const labels: string[] = [];
   for (const line of survivors.split("\n")) {
     const m = INLINE_REPLY_TAG_RE.match(line);
-    if (m && isAuthorTag(pyStrip(m[0]).slice(1, -1), head, parentBody)) return true;
+    if (m) labels.push(pyStrip(m[0]).slice(1, -1));
   }
-  return false;
+  if (labels.length === 0) return false;
+  return anyAuthorTag(labels, lines.slice(0, start).join("\n"), parentBody);
 }
 
-/** True when the inline-reply tag `label` belongs to this message's author. */
-export function isAuthorTag(label: string, head: string, parentBody: string | null): boolean {
-  if (parentBody !== null && !parentBody.includes(`[${label}`)) return true;
-  const name = pyStrip(pyRstripChars(label, "0123456789"));
-  if (!name) return false;
-  return containsWholeWord(head, name);
-}
+/** The longest inline-reply tag label, in code points (INLINE_REPLY_TAG_RE). */
+const MAX_TAG_LABEL = 20;
 
 /** `re`'s Unicode `\w` (one code point), matched with `test` at a set position. */
 const WORD_AT_RE = new RegExp(WORD_RE_CLASS, "uy");
 
-function isSurrogate(code: number, low: boolean): boolean {
-  return low ? code >= 0xdc00 && code <= 0xdfff : code >= 0xd800 && code <= 0xdbff;
+/** Python's `\w` on the code point that starts at code-unit position `pos` of `s`. */
+function isWordAt(s: string, pos: number): boolean {
+  WORD_AT_RE.lastIndex = pos;
+  return WORD_AT_RE.test(s);
+}
+
+/** The number of code units of the code point that starts at `pos` (a lone surrogate is one). */
+function unitsAt(s: string, pos: number): number {
+  return isSurrogate(s.charCodeAt(pos), false) && pos + 1 < s.length && isSurrogate(s.charCodeAt(pos + 1), true)
+    ? 2
+    : 1;
 }
 
 /**
- * `re.search(rf"(?<!\w){re.escape(name)}(?!\w)", head)`.
+ * True when one of the inline-reply tag `labels` belongs to this message's
+ * author. The reference's `_any_author_tag`, whose docstring gives the rule.
  *
- * Compiling that pattern for every tag line is the dominant cost here: the
- * Unicode `\w` class makes each compilation take tens of microseconds, so a
- * span of many tagged lines cost far more than the reference, whose `re`
- * module caches compiled patterns. The occurrences of `name` are found with
- * `indexOf` instead (every start, overlapping ones included, as a regex
- * search tries them) and the code points on either side are tested against
- * one precompiled `\w`. A name holding a surrogate code unit (a non-BMP
- * character) still takes the regex path, so that occurrences that start or end
- * inside a surrogate pair are treated exactly as the `u`-flag pattern treats
- * them; without one, every occurrence starts and ends on a code-point
- * boundary.
+ * Per label, the tests are `"[" + label in parentBody` and
+ * `re.search(r"(?<!\w)" + re.escape(name) + r"(?!\w)", head)`, answered for
+ * all labels together in one scan of each text. Lengths and positions are in
+ * code points, as in the reference.
+ *
+ * @internal
  */
-function containsWholeWord(head: string, name: string): boolean {
-  for (let i = 0; i < name.length; i++) {
-    const code = name.charCodeAt(i);
-    if (code >= 0xd800 && code <= 0xdfff) {
-      return new RegExp(`(?<!${WORD_RE_CLASS})${escapeRegex(name)}(?!${WORD_RE_CLASS})`, "u").test(head);
+export function anyAuthorTag(labels: readonly string[], head: string, parentBody: string | null): boolean {
+  if (parentBody !== null) {
+    const found = foundAfterBracket(parentBody, labels);
+    for (const label of labels) {
+      if (!found.has(label)) return true;
     }
   }
-  const isWordAt = (pos: number): boolean => {
-    WORD_AT_RE.lastIndex = pos;
-    return WORD_AT_RE.test(head);
-  };
-  for (let p = head.indexOf(name); p >= 0; p = head.indexOf(name, p + 1)) {
-    if (p > 0) {
-      // The code point that ends at p: a surrogate pair, or one code unit.
-      const before =
-        p >= 2 && isSurrogate(head.charCodeAt(p - 1), true) && isSurrogate(head.charCodeAt(p - 2), false)
-          ? p - 2
-          : p - 1;
-      if (isWordAt(before)) continue;
+  const names: string[] = [];
+  for (const label of labels) {
+    const name = pyStrip(pyRstripChars(label, "0123456789"));
+    if (name) names.push(name);
+  }
+  return nameInHead(head, names);
+}
+
+/**
+ * `strings` (each of 1 to MAX_TAG_LABEL code points) grouped by length: entry
+ * `n` of the first list holds those of length `n` (entry 0 is unused); the
+ * second lists the lengths present, in increasing order.
+ */
+function groupByLength(strings: readonly string[]): [StringTable[], number[]] {
+  const groups: StringTable[] = [];
+  for (let n = 0; n <= MAX_TAG_LABEL; n++) groups.push(new StringTable());
+  for (const text of strings) {
+    const group = groups[cpLen(text)];
+    if (group === undefined) throw new RangeError("label longer than MAX_TAG_LABEL");
+    group.add(text);
+  }
+  const lengths: number[] = [];
+  for (let n = 1; n <= MAX_TAG_LABEL; n++) {
+    if ((groups[n] as StringTable).size > 0) lengths.push(n);
+  }
+  return [groups, lengths];
+}
+
+/**
+ * The labels `label` for which `"[" + label` occurs in `text`. At each `[` of
+ * `text`, the slices that follow it are looked up, one per label length
+ * present.
+ */
+function foundAfterBracket(text: string, labels: readonly string[]): StringTable {
+  const [groups, lengths] = groupByLength(labels);
+  const found = new StringTable();
+  let pos = text.indexOf("[");
+  while (pos >= 0) {
+    // `end` is the code-unit end of the first `taken` code points after the `[`.
+    let end = pos + 1;
+    let taken = 0;
+    for (const n of lengths) {
+      while (taken < n && end < text.length) {
+        end += unitsAt(text, end);
+        taken++;
+      }
+      if (taken < n) break; // a shorter slice is in no group
+      const piece = text.slice(pos + 1, end);
+      if ((groups[n] as StringTable).has(piece)) found.add(piece);
     }
-    const end = p + name.length;
-    if (end < head.length && isWordAt(end)) continue;
-    return true;
+    pos = text.indexOf("[", pos + 1);
+  }
+  return found;
+}
+
+/**
+ * True when one of `names` occurs in `head` with no word character (Python's
+ * `\w`) directly before or after it. At each code point not preceded by a word
+ * character, the slice of each name length present is looked up when no word
+ * character follows it.
+ */
+function nameInHead(head: string, names: readonly string[]): boolean {
+  if (names.length === 0) return false;
+  const [groups, lengths] = groupByLength(names);
+  let previousIsWord = false;
+  for (let start = 0; start < head.length; start += unitsAt(head, start)) {
+    const startIsWord = isWordAt(head, start);
+    if (previousIsWord) {
+      previousIsWord = startIsWord;
+      continue;
+    }
+    previousIsWord = startIsWord;
+    let end = start;
+    let taken = 0;
+    for (const n of lengths) {
+      while (taken < n && end < head.length) {
+        end += unitsAt(head, end);
+        taken++;
+      }
+      if (taken < n) break;
+      if (end < head.length && isWordAt(head, end)) continue;
+      if ((groups[n] as StringTable).has(head.slice(start, end))) return true;
+    }
   }
   return false;
 }

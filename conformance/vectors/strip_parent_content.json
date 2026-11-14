@@ -92,6 +92,34 @@
     "parent_body": "This is a fairly long authored looking line with plenty of words."
    },
    "result": ""
+  },
+  {
+   "args": {
+    "text": "a one two three four\na five six seven eight\nb one two three four\nb five six seven eight",
+    "parent_body": "b one two three four\nb five six seven eight\na one two three four\na five six seven eight"
+   },
+   "result": "b one two three four\nb five six seven eight"
+  },
+  {
+   "args": {
+    "text": "p one two three four\np five six seven eight\nq one two three four\nq five six seven eight\nA short\nB short\nC short",
+    "parent_body": "q one two three four\nq five six seven eight\np one two three four\np five six seven eight\nA short\nB short\nC short"
+   },
+   "result": "A short\nB short\nC short"
+  },
+  {
+   "args": {
+    "text": "s1 short\ns2 short\nL one two three four\nL five six seven eight",
+    "parent_body": "L one two three four\nL five six seven eight\ns1 short\ns2 short"
+   },
+   "result": "s1 short\ns2 short\nL one two three four\nL five six seven eight"
+  },
+  {
+   "args": {
+    "text": "x one two three four\nx five six seven eight\nA one two three four\nA five six seven eight\nB one two three four\nB five six seven eight\ny one two three four\ny five six seven eight",
+    "parent_body": "y one two three four\ny five six seven eight\nA one two three four\nA five six seven eight\nB one two three four\nB five six seven eight\nx one two three four\nx five six seven eight\nz one two three four\nz five six seven eight\nA one two three four\nA five six seven eight\nB one two three four\nB five six seven eight"
+   },
+   "result": "x one two three four\nx five six seven eight\ny one two three four\ny five six seven eight"
   }
  ]
 }

@@ -13,6 +13,7 @@ import { fileURLToPath } from "node:url";
 import { cleanForScoring, isMobileTagline, isSignatureDelimiter } from "../src/cleaning.js";
 import { textsEquivalent, tolerantLines } from "../src/equivalence.js";
 import {
+  alignedRunMarks,
   countUnquotedContentLines,
   customClean,
   EXTRACTION_VERSION,
@@ -86,6 +87,7 @@ const PUBLIC: Record<string, Call> = {
 const INTERNAL: Record<string, Call> = {
   "cleaning.is_mobile_tagline": (a) => isMobileTagline(a.line),
   "cleaning.is_signature_delimiter": (a) => isSignatureDelimiter(a.line),
+  "extraction._aligned_run_marks": (a) => alignedRunMarks(a.child_seq, a.parent_seq),
   "extraction.count_unquoted_content_lines": (a) =>
     countUnquotedContentLines(a.body, { localized: a.localized ?? true }),
   "extraction.custom_clean": (a) => customClean(a.text, { localized: a.localized ?? true }),

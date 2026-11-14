@@ -131,6 +131,27 @@ function inRanges(cp: number, ranges: readonly (readonly [number, number])[]): b
   return false;
 }
 
+/**
+ * `s.codePointAt(i)` for `0 <= i < s.length`, decoded from code units: a
+ * surrogate pair is one code point, an unpaired surrogate is itself.
+ *
+ * Used instead of `String.prototype.codePointAt` where `i` can be the last
+ * index of a string. Once the call site is optimized by V8's Maglev tier
+ * (observed in Node.js 26.5), `codePointAt` at the last index of a sliced
+ * string (a slice of 13 or more code units, which shares its parent's
+ * storage) that ends with a high surrogate reads the next code unit of the
+ * parent, and returns the code point of the pair the slice cuts in half
+ * instead of the unpaired surrogate.
+ */
+export function codePointAt(s: string, i: number): number {
+  const c = s.charCodeAt(i);
+  if (c >= 0xd800 && c <= 0xdbff && i + 1 < s.length) {
+    const d = s.charCodeAt(i + 1);
+    if (d >= 0xdc00 && d <= 0xdfff) return (c - 0xd800) * 0x400 + (d - 0xdc00) + 0x10000;
+  }
+  return c;
+}
+
 /** `any(ch.isdigit() for ch in s)`. */
 export function hasPyDigit(s: string): boolean {
   for (const ch of s) {
@@ -404,7 +425,7 @@ export class PyPattern {
       if (m[0].length === 0) {
         // Python never re-matches an empty match at the same position.
         if (last >= s.length) break;
-        const cp = s.codePointAt(last) as number;
+        const cp = codePointAt(s, last);
         out += String.fromCodePoint(cp);
         last += cp > 0xffff ? 2 : 1;
         this.global.lastIndex = last;

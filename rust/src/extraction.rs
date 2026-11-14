@@ -17,10 +17,9 @@
 //! blocks, list footers, mobile taglines); stage 2 ([`crate::clean_for_scoring`])
 //! removes it.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::sync::LazyLock;
 
-use crate::difflib;
 use crate::fragments::read_fragments;
 use crate::html_text::split_html_parts;
 use crate::pyre::{Re, IGNORECASE};
@@ -32,7 +31,7 @@ use crate::pystr;
 /// `html_text` and `fragments` together). Consumers stamp stored derived
 /// text with it and compare with `<`; it only ever increases. It is
 /// independent of the package version.
-pub const EXTRACTION_VERSION: u32 = 6;
+pub const EXTRACTION_VERSION: u32 = 7;
 
 // --- result -------------------------------------------------------------------
 
@@ -797,19 +796,682 @@ pub(crate) fn normalize_line_for_diff(line: &str) -> String {
     pystr::collapse_ws(rest)
 }
 
+// --- suffix automaton -----------------------------------------------------------
+//
+// One routine serves rules (a), (b) and (c): the suffix automaton of a sequence
+// of symbols (line ids for rule (a), the bytes of the parent's word-stream for
+// rules (b) and (c)). It recognizes exactly the contiguous subsequences of its
+// text, has at most 2n states and 3n transitions for a text of n symbols, and
+// is built in O(n) transition operations. The transitions are stored by a
+// [`Transitions`] implementation: a hash map for line ids (any number of
+// distinct symbols), a first-edge slot and an edge list per state for bytes
+// (at most 256 edges per state).
+
+/// "No state" / "no position" (the reference's `-1`).
+const NONE: usize = usize::MAX;
+
+/// The transition store of a suffix automaton.
+trait Transitions: Default {
+    type Sym: Copy + Eq;
+    /// Reserve room for the automaton of a text of `n` symbols (at most
+    /// `2n + 1` states).
+    fn reserve(&mut self, n: usize);
+    /// Add a state with no transitions.
+    fn push_state(&mut self);
+    /// The target of `state`'s transition on `sym`.
+    fn get(&self, state: usize, sym: Self::Sym) -> Option<usize>;
+    /// Add or redirect `state`'s transition on `sym`.
+    fn set(&mut self, state: usize, sym: Self::Sym, target: usize);
+    /// Give the new, empty state `to` a copy of `from`'s transitions.
+    fn copy_state(&mut self, from: usize, to: usize);
+}
+
+/// Transitions over line ids: a hash map keyed by `(state, symbol)` (the
+/// standard library's randomly keyed SipHash, so adversarial ids cannot
+/// collide on purpose), with a per-state list of symbols for copying a state.
+#[derive(Default)]
+struct LineTransitions {
+    map: HashMap<(usize, usize), usize>,
+    /// Per state: the index in `syms` of its last added symbol, or [`NONE`].
+    head: Vec<usize>,
+    /// (symbol, index of the state's previous symbol or [`NONE`]).
+    syms: Vec<(usize, usize)>,
+}
+
+impl Transitions for LineTransitions {
+    type Sym = usize;
+    fn reserve(&mut self, n: usize) {
+        self.head.reserve(2 * n + 1);
+    }
+    fn push_state(&mut self) {
+        self.head.push(NONE);
+    }
+    fn get(&self, state: usize, sym: usize) -> Option<usize> {
+        self.map.get(&(state, sym)).copied()
+    }
+    fn set(&mut self, state: usize, sym: usize, target: usize) {
+        if self.map.insert((state, sym), target).is_none() {
+            self.syms.push((sym, self.head[state]));
+            self.head[state] = self.syms.len() - 1;
+        }
+    }
+    fn copy_state(&mut self, from: usize, to: usize) {
+        let mut at = self.head[from];
+        while at != NONE {
+            let (sym, next) = self.syms[at];
+            if let Some(target) = self.get(from, sym) {
+                self.set(to, sym, target);
+            }
+            at = next;
+        }
+    }
+}
+
+/// One transition of a [`ByteTransitions`] state.
+#[derive(Clone, Copy)]
+struct ByteEdge {
+    sym: u8,
+    /// The target state, or [`NO_EDGE`] in an empty slot.
+    target: u32,
+    /// Index in the arena of the state's next edge, or [`NO_EDGE`].
+    next: u32,
+}
+
+const NO_EDGE: u32 = u32::MAX;
+
+const EMPTY_EDGE: ByteEdge = ByteEdge {
+    sym: 0,
+    target: NO_EDGE,
+    next: NO_EDGE,
+};
+
+/// Transitions over bytes. Each state has one slot holding its first edge
+/// (most states of a suffix automaton have one), and its further edges form a
+/// linked list in a single arena; a state has at most 256 edges, so a lookup
+/// is O(1). State and edge indexes are `u32`; [`ParentStream`] builds this
+/// automaton only for a stream short enough for them
+/// ([`MAX_AUTOMATON_BYTES`]).
+#[derive(Default)]
+struct ByteTransitions {
+    first: Vec<ByteEdge>,
+    more: Vec<ByteEdge>,
+}
+
+impl ByteTransitions {
+    /// The edge of `state` on `sym`: `(None, slot)` for the first slot,
+    /// `(Some(at), _)` for an arena edge.
+    fn find(&self, state: usize, sym: u8) -> Option<Option<usize>> {
+        let slot = self.first.get(state)?;
+        if slot.target == NO_EDGE {
+            return None;
+        }
+        if slot.sym == sym {
+            return Some(None);
+        }
+        let mut at = slot.next;
+        while at != NO_EDGE {
+            let edge = &self.more[at as usize];
+            if edge.sym == sym {
+                return Some(Some(at as usize));
+            }
+            at = edge.next;
+        }
+        None
+    }
+}
+
+impl Transitions for ByteTransitions {
+    type Sym = u8;
+    fn reserve(&mut self, n: usize) {
+        self.first.reserve(2 * n + 1);
+        self.more.reserve(n);
+    }
+    fn push_state(&mut self) {
+        self.first.push(EMPTY_EDGE);
+    }
+    fn get(&self, state: usize, sym: u8) -> Option<usize> {
+        match self.find(state, sym)? {
+            None => Some(self.first[state].target as usize),
+            Some(at) => Some(self.more[at].target as usize),
+        }
+    }
+    fn set(&mut self, state: usize, sym: u8, target: usize) {
+        let target = target as u32; // a state index, below 2 * MAX_AUTOMATON_BYTES + 1
+        match self.find(state, sym) {
+            Some(None) => self.first[state].target = target,
+            Some(Some(at)) => self.more[at].target = target,
+            None => {
+                let slot = &mut self.first[state];
+                if slot.target == NO_EDGE {
+                    *slot = ByteEdge {
+                        sym,
+                        target,
+                        next: NO_EDGE,
+                    };
+                } else {
+                    let next = slot.next;
+                    slot.next = self.more.len() as u32;
+                    self.more.push(ByteEdge { sym, target, next });
+                }
+            }
+        }
+    }
+    fn copy_state(&mut self, from: usize, to: usize) {
+        let slot = self.first[from];
+        if slot.target == NO_EDGE {
+            return;
+        }
+        self.set(to, slot.sym, slot.target as usize);
+        let mut at = slot.next;
+        while at != NO_EDGE {
+            let edge = self.more[at as usize];
+            self.set(to, edge.sym, edge.target as usize);
+            at = edge.next;
+        }
+    }
+}
+
+/// A suffix automaton: per state, the length of its longest string, its
+/// suffix link, its transitions and `first_end`.
+struct Automaton<T> {
+    length: Vec<usize>,
+    link: Vec<usize>,
+    trans: T,
+    first_end: Vec<usize>,
+}
+
+/// Suffix automaton of `seq[lo..hi]`.
+///
+/// Per state: the length of its longest string, its suffix link, its
+/// transitions and `first_end`, the smallest end position (an index of `seq`)
+/// of an occurrence of the state's strings. State 0 is the root. A clone
+/// copies `first_end` from the state it splits: the clone's occurrences are
+/// that state's plus later positions only.
+fn build_automaton<T: Transitions>(seq: &[T::Sym], lo: usize, hi: usize) -> Automaton<T> {
+    // At most 2n + 1 states and 3n transitions for n symbols: reserving them
+    // avoids copying the arrays as they grow.
+    let n = hi.saturating_sub(lo);
+    let mut length = Vec::with_capacity(2 * n + 1);
+    let mut link = Vec::with_capacity(2 * n + 1);
+    let mut first_end = Vec::with_capacity(2 * n + 1);
+    let mut trans = T::default();
+    trans.reserve(n);
+    length.push(0);
+    link.push(NONE);
+    first_end.push(NONE);
+    trans.push_state();
+    let mut last = 0;
+    for (pos, &sym) in seq.iter().enumerate().take(hi).skip(lo) {
+        let cur = length.len();
+        length.push(length[last] + 1);
+        link.push(NONE);
+        trans.push_state();
+        first_end.push(pos);
+        let mut p = last;
+        let mut q = None;
+        while p != NONE {
+            match trans.get(p, sym) {
+                Some(target) => {
+                    q = Some(target);
+                    break;
+                }
+                None => {
+                    trans.set(p, sym, cur);
+                    p = link[p];
+                }
+            }
+        }
+        match q {
+            None => link[cur] = 0,
+            Some(q) => {
+                if length[p] + 1 == length[q] {
+                    link[cur] = q;
+                } else {
+                    let clone = length.len();
+                    length.push(length[p] + 1);
+                    link.push(link[q]);
+                    trans.push_state();
+                    trans.copy_state(q, clone);
+                    first_end.push(first_end[q]);
+                    while p != NONE && trans.get(p, sym) == Some(q) {
+                        trans.set(p, sym, clone);
+                        p = link[p];
+                    }
+                    link[q] = clone;
+                    link[cur] = clone;
+                }
+            }
+        }
+        last = cur;
+    }
+    Automaton {
+        length,
+        link,
+        trans,
+        first_end,
+    }
+}
+
+/// For each `e` in `lo..hi`: the length of the longest run of `seq` ending at
+/// `e` that occurs in the automaton's text, and the state of that run (both
+/// indexed `e - lo`). Linear: each step adds at most one to the length, and
+/// every suffix-link hop removes at least one.
+fn walk<T: Transitions>(
+    automaton: &Automaton<T>,
+    seq: &[T::Sym],
+    lo: usize,
+    hi: usize,
+) -> (Vec<usize>, Vec<usize>) {
+    let Automaton {
+        length,
+        link,
+        trans,
+        ..
+    } = automaton;
+    let mut runs = Vec::new();
+    let mut states = Vec::new();
+    let mut state = 0;
+    let mut matched = 0;
+    for &sym in seq.iter().take(hi).skip(lo) {
+        let mut next = trans.get(state, sym);
+        while state != 0 && next.is_none() {
+            state = link[state];
+            matched = length[state];
+            next = trans.get(state, sym);
+        }
+        match next {
+            Some(target) => {
+                state = target;
+                matched += 1;
+            }
+            None => matched = 0,
+        }
+        runs.push(matched);
+        states.push(state);
+    }
+    (runs, states)
+}
+
+// --- rule (a): alignment around the longest common run ------------------------------
+//
+// Inputs are the child's normalized non-blank lines c[0..N) and the parent's
+// p[0..M); lines compare by exact string equality. A *common run* is a child
+// interval c[s..s+k), k >= 1, that occurs as a contiguous interval of p. A run
+// *has substance* when its lines total at least PARENT_DIFF_MIN_BLOCK_WORDS
+// words or one of its lines has at least PARENT_DIFF_MIN_LINE_WORDS words.
+//
+// 1. Anchor. K is the greatest length, counted in lines, of any common run. If
+//    K = 0 nothing is marked. The anchor is the common run of length K with
+//    the smallest start in the child, c[i..i+K); its parent position j is the
+//    smallest start of an occurrence of c[i..i+K) in p.
+// 2. The anchor's lines are marked when the anchor has substance.
+// 3. Before the anchor, a line of c[0..i) is marked when it lies inside a run
+//    of c[0..i) that has substance and occurs contiguously in p[0..j). After
+//    the anchor, likewise for c[i+K..N) against p[j+K..M).
+//
+// The anchor is normally the quoted previous message; step 3 keeps a run the
+// author repeated on one side of the quote (a sign-off, say) from matching the
+// parent's copy on the other side. Within a side, runs are matched wherever
+// they occur, in any order.
+//
+// Every step uses a suffix automaton over a parent interval: O(N + M) map
+// operations on small integer line ids (lines are interned once).
+
+/// The id of a child line absent from the parent (the reference's `-1`),
+/// which no transition carries.
+const NO_LINE: usize = usize::MAX;
+
+/// Map each distinct parent line to a small integer id; a child line absent
+/// from the parent gets [`NO_LINE`].
+fn intern_lines(child_seq: &[&str], parent_seq: &[&str]) -> (Vec<usize>, Vec<usize>) {
+    let mut ids: HashMap<&str, usize> = HashMap::new();
+    let mut parent_ids = Vec::with_capacity(parent_seq.len());
+    for &line in parent_seq {
+        let next = ids.len();
+        parent_ids.push(*ids.entry(line).or_insert(next));
+    }
+    let child_ids = child_seq
+        .iter()
+        .map(|line| ids.get(line).copied().unwrap_or(NO_LINE))
+        .collect();
+    (child_ids, parent_ids)
+}
+
+/// The number of words of a line (`len(line.split())`). An ASCII line is
+/// counted byte by byte (Python's ASCII whitespace is `\t\n\x0b\x0c\r`,
+/// `\x1c`-`\x1f` and the space).
+fn word_count(line: &str) -> usize {
+    if !line.is_ascii() {
+        return line
+            .split(pystr::is_space)
+            .filter(|w| !w.is_empty())
+            .count();
+    }
+    let mut count = 0;
+    let mut in_word = false;
+    for &b in line.as_bytes() {
+        let space = matches!(b, b'\t'..=b'\r' | 0x1c..=0x1f | b' ');
+        if !space && !in_word {
+            count += 1;
+        }
+        in_word = !space;
+    }
+    count
+}
+
+/// Prefix sums over the child: words, and lines of at least
+/// `PARENT_DIFF_MIN_LINE_WORDS` words, before each position.
+struct Substance {
+    words_before: Vec<usize>,
+    long_before: Vec<usize>,
+}
+
+impl Substance {
+    /// Whether the child run `[start, end)` has substance.
+    fn of(&self, start: usize, end: usize) -> bool {
+        self.words_before[end] - self.words_before[start] >= PARENT_DIFF_MIN_BLOCK_WORDS
+            || self.long_before[end] - self.long_before[start] > 0
+    }
+}
+
+/// Step 3 for one side: add to `cover` (a difference array over child
+/// positions) every run of `child_ids[c_lo..c_hi]` that has substance and
+/// occurs in `parent_ids[p_lo..p_hi]`. Only the longest run ending at each
+/// position is tested: a shorter one ending there lies inside it and has no
+/// more words and no longer line.
+#[allow(clippy::too_many_arguments)]
+fn cover_side(
+    child_ids: &[usize],
+    c_lo: usize,
+    c_hi: usize,
+    parent_ids: &[usize],
+    p_lo: usize,
+    p_hi: usize,
+    substance: &Substance,
+    cover: &mut [isize],
+) {
+    if c_lo >= c_hi || p_lo >= p_hi {
+        return;
+    }
+    let automaton = build_automaton::<LineTransitions>(parent_ids, p_lo, p_hi);
+    let (runs, _states) = walk(&automaton, child_ids, c_lo, c_hi);
+    for (e, &run) in (c_lo..c_hi).zip(&runs) {
+        if run == 0 {
+            continue;
+        }
+        let start = e + 1 - run;
+        if substance.of(start, e + 1) {
+            cover[start] += 1;
+            cover[e + 1] -= 1;
+        }
+    }
+}
+
+/// Rule (a): which child lines (indexes of `child_seq`) are parent content.
+///
+/// Implements the specification in the comment above this section.
+pub fn aligned_run_marks(child_seq: &[&str], parent_seq: &[&str]) -> Vec<bool> {
+    let count = child_seq.len();
+    let mut marks = vec![false; count];
+    if count == 0 || parent_seq.is_empty() {
+        return marks;
+    }
+    let (child_ids, parent_ids) = intern_lines(child_seq, parent_seq);
+
+    // Prefix sums: words, and lines of at least PARENT_DIFF_MIN_LINE_WORDS
+    // words, before each child position (a run's substance in O(1)).
+    let mut words_before = vec![0; count + 1];
+    let mut long_before = vec![0; count + 1];
+    for (k, line) in child_seq.iter().enumerate() {
+        let words = word_count(line);
+        words_before[k + 1] = words_before[k] + words;
+        long_before[k + 1] = long_before[k] + usize::from(words >= PARENT_DIFF_MIN_LINE_WORDS);
+    }
+    let substance = Substance {
+        words_before,
+        long_before,
+    };
+
+    // Step 1: the anchor. The first end position reaching the greatest run
+    // length (strict comparison) is the earliest-starting longest run; the
+    // automaton's first_end gives its earliest parent occurrence.
+    let automaton = build_automaton::<LineTransitions>(&parent_ids, 0, parent_ids.len());
+    let (runs, states) = walk(&automaton, &child_ids, 0, count);
+    let mut best_len = 0;
+    let mut best_end = 0;
+    for (e, &run) in runs.iter().enumerate() {
+        if run > best_len {
+            best_len = run;
+            best_end = e;
+        }
+    }
+    if best_len == 0 {
+        return marks;
+    }
+    let i = best_end + 1 - best_len;
+    let j = automaton.first_end[states[best_end]] + 1 - best_len;
+    drop(automaton);
+
+    let mut cover = vec![0isize; count + 1]; // difference array over child positions
+                                             // Step 2: the anchor itself.
+    if substance.of(i, i + best_len) {
+        cover[i] += 1;
+        cover[i + best_len] -= 1;
+    }
+    // Step 3: each side against the same side of the parent.
+    cover_side(&child_ids, 0, i, &parent_ids, 0, j, &substance, &mut cover);
+    cover_side(
+        &child_ids,
+        i + best_len,
+        count,
+        &parent_ids,
+        j + best_len,
+        parent_ids.len(),
+        &substance,
+        &mut cover,
+    );
+
+    let mut depth = 0;
+    for (mark, delta) in marks.iter_mut().zip(&cover) {
+        depth += delta;
+        *mark = depth > 0;
+    }
+    marks
+}
+
+// --- rules (b) and (c): substring tests against the parent's word-stream ---------
+
+/// `[needle in " ".join(parent_seq) for needle in needles]`, answered by one
+/// [`ParentStream`] (the queries share its lazily built table and
+/// automaton). Exported for differential testing.
+pub fn parent_stream_contains(parent_seq: &[&str], needles: &[&str]) -> Vec<bool> {
+    let joined = parent_seq.join(" ");
+    let mut stream = ParentStream::new(&joined);
+    needles
+        .iter()
+        .map(|needle| stream.contains(needle))
+        .collect()
+}
+
+/// The longest stream for which [`ParentStream`] builds its byte automaton
+/// (its state and edge indexes are `u32`). A longer stream, over 2 GiB, is
+/// searched with `str::contains`, which gives the same answers.
+const MAX_AUTOMATON_BYTES: usize = (u32::MAX as usize - 2) / 3;
+
+/// The longest stream for which [`ParentStream`] builds its gram table (its
+/// offsets are `u32`). A longer stream, over 4 GiB, skips the table; the
+/// queries it would have decided reach the fallback, with the same answers.
+const MAX_TABLE_BYTES: usize = u32::MAX as usize - 1;
+
+/// Answers `needle in stream` for the parent's word-stream (the parent's
+/// normalized non-blank lines joined by single spaces), exactly, in time
+/// linear in the needle.
+///
+/// Every needle is one or two normalized child lines: words separated by
+/// single spaces, as the stream's are, and neither contains other whitespace.
+/// In an occurrence, each space of the needle falls on a separator of the
+/// stream, so the needle's interior words (all but its first and last) are
+/// consecutive whole words of the stream, each at a fixed distance from the
+/// needle's start.
+///
+/// A needle of at least three words is first checked against a table of the
+/// stream's *grams*: its words and its adjacent word pairs (`"a b"`). The
+/// needle's grams are its interior word when it has three words, else its
+/// adjacent pairs of interior words; they are taken in order:
+///
+/// - a gram absent from the stream proves the needle absent;
+/// - a gram that occurs exactly once in the stream fixes the only position at
+///   which the needle can start, and one comparison there decides;
+/// - when every gram occurs more than once, the first occurrence of the first
+///   gram that leaves room for the needle's first word gives one candidate
+///   position, and a match there is an occurrence.
+///
+/// Every other query is answered by the suffix automaton of the stream's
+/// bytes, built on the first query that needs it (O(len(stream))); a query
+/// walks the needle from the root. The reference indexes code points; for
+/// well-formed strings, membership is the same in bytes, and the table's
+/// offsets and the comparison at a candidate position are all in bytes.
+///
+/// The table maps each gram (a slice of the stream) to the byte offsets of its
+/// first and last occurrence (as `u32`, to keep it small); it is built in one pass over the stream, on the
+/// first query of at least three words.
+struct ParentStream<'a> {
+    stream: &'a str,
+    table: Option<HashMap<&'a str, (u32, u32)>>,
+    trans: Option<ByteTransitions>,
+}
+
+/// Whether `needle` occurs in `stream` at byte offset `start` (a byte
+/// comparison, so `start` need not be a character boundary).
+fn starts_at(stream: &str, start: usize, needle: &str) -> bool {
+    stream
+        .as_bytes()
+        .get(start..)
+        .is_some_and(|rest| rest.starts_with(needle.as_bytes()))
+}
+
+impl<'a> ParentStream<'a> {
+    /// The index of `stream`, `" ".join(parent_seq)` (the reference joins the
+    /// lines itself; the table's keys borrow the joined string).
+    fn new(stream: &'a str) -> Self {
+        ParentStream {
+            stream,
+            table: None,
+            trans: None,
+        }
+    }
+
+    /// The gram table of `stream`, which is at most [`MAX_TABLE_BYTES`] long.
+    fn build_table(stream: &'a str) -> HashMap<&'a str, (u32, u32)> {
+        let mut table: HashMap<&'a str, (u32, u32)> = HashMap::new();
+        let mut words = stream.split(' ').peekable();
+        let mut offset = 0;
+        while let Some(word) = words.next() {
+            let at = offset as u32; // offset < stream.len() <= MAX_TABLE_BYTES
+            table
+                .entry(word)
+                .and_modify(|e| e.1 = at)
+                .or_insert((at, at));
+            if let Some(next) = words.peek() {
+                if let Some(pair) = stream.get(offset..offset + word.len() + 1 + next.len()) {
+                    table
+                        .entry(pair)
+                        .and_modify(|e| e.1 = at)
+                        .or_insert((at, at));
+                }
+            }
+            offset += word.len() + 1;
+        }
+        table
+    }
+
+    /// The answer for a needle of at least three `words` when the table
+    /// decides it, else `None`.
+    fn decided_by_table(&mut self, needle: &str, words: &[&str]) -> Option<bool> {
+        let stream = self.stream;
+        if stream.len() > MAX_TABLE_BYTES {
+            return None;
+        }
+        let table = self
+            .table
+            .get_or_insert_with(|| ParentStream::build_table(stream));
+        // grams: the interior word, or the interior pairs
+        let mut count = words.len().saturating_sub(2);
+        if count > 1 {
+            count -= 1;
+        }
+        let mut candidate: Option<usize> = None;
+        let mut offset = words.first()?.len() + 1; // the offset of words[k] in the needle
+        for k in 1..1 + count {
+            let word = *words.get(k)?;
+            let gram = if words.len() == 3 {
+                word
+            } else {
+                let next = words.get(k + 1)?;
+                needle.get(offset..offset + word.len() + 1 + next.len())?
+            };
+            let Some(&(first, last)) = table.get(gram) else {
+                return Some(false);
+            };
+            let (first, last) = (first as usize, last as usize);
+            if first == last {
+                return Some(first >= offset && starts_at(stream, first - offset, needle));
+            }
+            if candidate.is_none() && first >= offset {
+                candidate = Some(first - offset);
+            }
+            offset += word.len() + 1;
+        }
+        if candidate.is_some_and(|start| starts_at(stream, start, needle)) {
+            return Some(true);
+        }
+        None
+    }
+
+    fn contains(&mut self, needle: &str) -> bool {
+        if needle.len() > self.stream.len() {
+            return false;
+        }
+        let words: Vec<&str> = needle.split(' ').collect();
+        if words.len() >= 3 {
+            if let Some(decided) = self.decided_by_table(needle, &words) {
+                return decided;
+            }
+        }
+        if self.stream.len() > MAX_AUTOMATON_BYTES {
+            return self.stream.contains(needle);
+        }
+        let stream = self.stream.as_bytes();
+        let trans = self.trans.get_or_insert_with(|| {
+            build_automaton::<ByteTransitions>(stream, 0, stream.len()).trans
+        });
+        let mut state = 0;
+        for &byte in needle.as_bytes() {
+            match trans.get(state, byte) {
+                Some(next) => state = next,
+                None => return false,
+            }
+        }
+        true
+    }
+}
+
 /// Remove lines of `text` that provably came from `parent_body`.
 ///
 /// Both sides are normalized ([`normalize_body`], then per line: quote
 /// markers stripped and whitespace collapsed); blank lines are ignored when
-/// matching. A child line is removed when it is part of an aligned run of
-/// matching lines (`difflib.SequenceMatcher`, `autojunk=False`) with at least
-/// 10 words in total or one line of at least 8 words; or when it has at
-/// least 8 words and occurs verbatim in the parent's word stream; or, with
+/// matching. A child line is removed when it is part of a run of matching
+/// lines with at least 10 words in total or one line of at least 8 words,
+/// the runs aligned around the longest run of child lines found contiguously
+/// in the parent (each child side matched only against the same side of the
+/// parent); or when it has at least 8 words and occurs verbatim in the
+/// parent's word stream; or, with
 /// `continuation` (the reference's keyword-only argument, default `false`),
 /// when it continues an adjacent removed line contiguously in the parent's
 /// word stream (once at least 3 lines were removed by the first two rules).
 /// Survivors are right-stripped, runs of blank lines collapse to one, and
-/// blank edges are trimmed.
+/// blank edges are trimmed. The call runs in time linear in the size of
+/// `text` and `parent_body`.
 ///
 /// ```
 /// use email_reply_extractor::strip_parent_content;
@@ -835,40 +1497,33 @@ pub fn strip_parent_content(text: &str, parent_body: &str, continuation: bool) -
         .filter(|(_, n)| !n.is_empty())
         .map(|(i, n)| (i, n.as_str()))
         .collect();
-    let child_seq: Vec<String> = child_pairs.iter().map(|(_, n)| n.to_string()).collect();
-    let parent_seq: Vec<String> = parent_norm.into_iter().filter(|n| !n.is_empty()).collect();
+    let child_seq: Vec<&str> = child_pairs.iter().map(|&(_, n)| n).collect();
+    let parent_seq: Vec<&str> = parent_norm
+        .iter()
+        .map(String::as_str)
+        .filter(|n| !n.is_empty())
+        .collect();
 
     let mut marked: HashSet<usize> = HashSet::new();
 
-    // Rule (a): aligned runs of matching lines with enough substance.
-    for block in difflib::matching_blocks(&child_seq, &parent_seq) {
-        if block.size == 0 {
-            continue;
-        }
-        let lines = &child_seq[block.a..block.a + block.size];
-        let total_words: usize = lines.iter().map(|l| pystr::split_ws(l).len()).sum();
-        let max_line_words = lines
-            .iter()
-            .map(|l| pystr::split_ws(l).len())
-            .max()
-            .unwrap_or(0);
-        if total_words >= PARENT_DIFF_MIN_BLOCK_WORDS
-            || max_line_words >= PARENT_DIFF_MIN_LINE_WORDS
-        {
-            for pair in &child_pairs[block.a..block.a + block.size] {
-                marked.insert(pair.0);
-            }
+    // Rule (a): runs of matching lines with enough substance, aligned around
+    // the longest common run.
+    let rule_a = aligned_run_marks(&child_seq, &parent_seq);
+    for (&(orig_i, _), &mark) in child_pairs.iter().zip(&rule_a) {
+        if mark {
+            marked.insert(orig_i);
         }
     }
 
-    // Rule (b): a long child line re-wrapped from the parent.
-    let parent_stream = parent_seq.join(" ");
+    // Rule (b): a long child line re-wrapped from the parent (line-level match
+    // missed it) but still present verbatim in the parent's word-stream.
+    let joined = parent_seq.join(" ");
+    let mut parent_stream = ParentStream::new(&joined);
     for &(orig_i, norm) in &child_pairs {
         if marked.contains(&orig_i) {
             continue;
         }
-        if pystr::split_ws(norm).len() >= PARENT_DIFF_MIN_LINE_WORDS && parent_stream.contains(norm)
-        {
+        if word_count(norm) >= PARENT_DIFF_MIN_LINE_WORDS && parent_stream.contains(norm) {
             marked.insert(orig_i);
         }
     }
@@ -886,7 +1541,7 @@ pub fn strip_parent_content(text: &str, parent_body: &str, continuation: bool) -
             .collect();
 
         // Unmarked `k` joins a marked neighbor contiguously in the parent.
-        let chains = |k: usize, is_marked: &[bool]| {
+        let mut chains = |k: usize, is_marked: &[bool]| {
             let norm = child_pairs[k].1;
             if k > 0
                 && is_marked[k - 1]
@@ -991,7 +1646,7 @@ fn localized_inline_reply(lines: &[&str], parent_body: Option<&str>) -> bool {
             survivors
         }
     };
-    let head = lines[..start].join("\n");
+    let mut labels: Vec<String> = Vec::new();
     for line in survivors.split('\n') {
         if let Some((_, end)) = INLINE_REPLY_TAG_RE.find(line) {
             let tag: Vec<char> = pystr::strip(&line[..end]).chars().collect();
@@ -1000,38 +1655,142 @@ fn localized_inline_reply(lines: &[&str], parent_body: Option<&str>) -> bool {
             } else {
                 String::new()
             };
-            if is_author_tag(&label, &head, parent_body) {
+            labels.push(label);
+        }
+    }
+    if labels.is_empty() {
+        return false;
+    }
+    any_author_tag(&labels, &lines[..start].join("\n"), parent_body)
+}
+
+/// The longest inline-reply tag label, in characters ([`INLINE_REPLY_TAG_RE`]).
+const MAX_TAG_LABEL: usize = 20;
+
+/// True when one of the inline-reply tag `labels` belongs to this message's
+/// author.
+///
+/// A tag the parent never uses is new in this message. A tag the parent uses
+/// — or any tag, when the parent is not available — belongs to an earlier
+/// round of the thread (as in `[ML] …` answers the parent's author wrote,
+/// which a re-wrapped or re-formatted quote can leave unmatched by the
+/// parent-diff assist) unless its label, without a trailing round number
+/// ("Linda3" → "Linda"), occurs as a word in `head`, the text above the
+/// block — typically the author's sign-off ("Cheers,\nMed" for `[Med]`).
+///
+/// Per label, the tests are `"[" + label in parent_body` and
+/// `re.search(r"(?<!\w)" + re.escape(name) + r"(?!\w)", head)`. Labels and
+/// names are at most [`MAX_TAG_LABEL`] characters, so both are answered for
+/// all labels together in one scan of each text (see [`found_after_bracket`]
+/// and [`name_in_head`]), in time linear in the texts' length.
+pub fn any_author_tag(labels: &[String], head: &str, parent_body: Option<&str>) -> bool {
+    if let Some(parent) = parent_body {
+        let found = found_after_bracket(parent, labels);
+        for label in labels {
+            if !found.contains(label.as_str()) {
                 return true;
             }
         }
     }
-    false
+    let mut names: Vec<&str> = Vec::new();
+    for label in labels {
+        let name = pystr::strip(label.trim_end_matches(|c: char| c.is_ascii_digit()));
+        if !name.is_empty() {
+            names.push(name);
+        }
+    }
+    name_in_head(head, &names)
 }
 
-fn is_author_tag(label: &str, head: &str, parent_body: Option<&str>) -> bool {
-    if let Some(parent) = parent_body {
-        if !parent.contains(&format!("[{label}")) {
-            return true;
+/// `strings` grouped by length in characters: entry `n` of the first list
+/// holds those of length `n` (entry 0 is unused); the second lists the
+/// lengths present, in increasing order. The strings have 1 to
+/// [`MAX_TAG_LABEL`] characters; the list grows for a longer one.
+fn group_by_length<'s>(strings: &[&'s str]) -> (Vec<HashSet<&'s str>>, Vec<usize>) {
+    let mut groups: Vec<HashSet<&str>> = (0..=MAX_TAG_LABEL).map(|_| HashSet::new()).collect();
+    for &text in strings {
+        let n = pystr::len(text);
+        if n >= groups.len() {
+            groups.resize_with(n + 1, HashSet::new);
+        }
+        groups[n].insert(text);
+    }
+    let lengths = (1..groups.len())
+        .filter(|&n| !groups[n].is_empty())
+        .collect();
+    (groups, lengths)
+}
+
+/// The labels `label` for which `"[" + label` occurs in `text`.
+///
+/// At each `[` of `text`, the slices that follow it are looked up, one per
+/// label length present (lengths and slices in characters).
+fn found_after_bracket<'s>(text: &str, labels: &'s [String]) -> HashSet<&'s str> {
+    let label_strs: Vec<&str> = labels.iter().map(String::as_str).collect();
+    let (groups, lengths) = group_by_length(&label_strs);
+    let longest = lengths.last().copied().unwrap_or(0);
+    let mut found: HashSet<&str> = HashSet::new();
+    let mut ends: Vec<usize> = Vec::with_capacity(longest + 1);
+    for (pos, _) in text.match_indices('[') {
+        let rest = &text[pos + 1..];
+        // ends[n]: the byte length of the first n characters of `rest`.
+        ends.clear();
+        ends.push(0);
+        ends.extend(
+            rest.char_indices()
+                .skip(1)
+                .map(|(at, _)| at)
+                .chain(std::iter::once(rest.len()))
+                .take(longest),
+        );
+        for &n in &lengths {
+            let Some(&end) = ends.get(n) else {
+                break;
+            };
+            if let Some(&label) = groups[n].get(&rest[..end]) {
+                found.insert(label);
+            }
         }
     }
-    let name = pystr::strip(label.trim_end_matches(|c: char| c.is_ascii_digit()));
-    if name.is_empty() {
+    found
+}
+
+/// True when one of `names` occurs in `head` with no word character
+/// (Python's `\w`) directly before or after it.
+///
+/// At each position not preceded by a word character, the slice of each name
+/// length present is looked up when no word character follows it (positions
+/// and lengths in characters).
+fn name_in_head(head: &str, names: &[&str]) -> bool {
+    if names.is_empty() {
         return false;
     }
-    // re.search(rf"(?<!\w){re.escape(name)}(?!\w)", head)
-    let mut from = 0;
-    while let Some(off) = head[from..].find(name) {
-        let start = from + off;
-        let end = start + name.len();
-        let before_ok = !head[..start]
-            .chars()
-            .next_back()
-            .is_some_and(pystr::is_word);
-        let after_ok = !head[end..].chars().next().is_some_and(pystr::is_word);
-        if before_ok && after_ok {
-            return true;
+    let (groups, lengths) = group_by_length(names);
+    // bounds[k]: the byte offset of character k (bounds[size] = head.len()).
+    let mut bounds: Vec<usize> = Vec::new();
+    let mut word: Vec<bool> = Vec::new();
+    for (at, c) in head.char_indices() {
+        bounds.push(at);
+        word.push(pystr::is_word(c));
+    }
+    let size = word.len();
+    bounds.push(head.len());
+    for start in 0..size {
+        if start > 0 && word[start - 1] {
+            continue;
         }
-        from = start + head[start..].chars().next().map_or(1, char::len_utf8);
+        for &n in &lengths {
+            let end = start + n;
+            if end > size {
+                break;
+            }
+            if end < size && word[end] {
+                continue;
+            }
+            if groups[n].contains(&head[bounds[start]..bounds[end]]) {
+                return true;
+            }
+        }
     }
     false
 }
@@ -1205,5 +1964,408 @@ pub fn extract_new_text(
             method: "failed".to_string(),
             status: Status::Failed,
         },
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    //! The parent-diff matching structures (generation 7), mirroring the
+    //! reference's `tests/test_parent_diff.py`: the tie-breaks of rule (a)
+    //! and a brute-force transcription of its specification, the parent
+    //! word-stream index against `str::contains`, and the author-tag index
+    //! against the per-label tests it replaced.
+
+    use super::*;
+
+    /// A small deterministic generator (xorshift64*).
+    struct Rng(u64);
+
+    impl Rng {
+        fn next(&mut self) -> u64 {
+            self.0 ^= self.0 >> 12;
+            self.0 ^= self.0 << 25;
+            self.0 ^= self.0 >> 27;
+            self.0.wrapping_mul(0x2545_f491_4f6c_dd1d)
+        }
+        /// Uniform in `lo..=hi`.
+        fn int(&mut self, lo: usize, hi: usize) -> usize {
+            lo + (self.next() % (hi - lo + 1) as u64) as usize
+        }
+        fn choice<T: Copy>(&mut self, items: &[T]) -> T {
+            items[self.int(0, items.len() - 1)]
+        }
+        fn chance(&mut self, p: f64) -> bool {
+            (self.next() % 1_000_000) as f64 / 1_000_000.0 < p
+        }
+    }
+
+    fn long(tag: &str) -> String {
+        format!("{tag} long line with enough words to carry substance")
+    }
+
+    fn short(tag: &str) -> String {
+        format!("{tag} short")
+    }
+
+    fn marks(c: &[String], p: &[String]) -> Vec<bool> {
+        let c: Vec<&str> = c.iter().map(String::as_str).collect();
+        let p: Vec<&str> = p.iter().map(String::as_str).collect();
+        aligned_run_marks(&c, &p)
+    }
+
+    // --- rule (a): the specification's tie-breaks ---------------------------------
+
+    #[test]
+    fn anchor_tie_in_the_child_takes_the_earliest_start() {
+        let (a, b) = (long("a"), long("b"));
+        assert_eq!(marks(&[a.clone(), b.clone()], &[b, a]), vec![true, false]);
+    }
+
+    #[test]
+    fn anchor_takes_the_earliest_parent_occurrence() {
+        let (x, a, b, y) = (long("x"), long("A"), long("B"), long("y"));
+        let child = [x.clone(), a.clone(), b.clone(), y.clone()];
+        let parent = [y, a.clone(), b.clone(), x, long("z"), a, b];
+        assert_eq!(marks(&child, &parent), vec![false, true, true, false]);
+    }
+
+    #[test]
+    fn runs_on_one_side_match_in_any_order() {
+        let (p, q) = (long("p"), long("q"));
+        let tail = [short("A"), short("B"), short("C")];
+        let child: Vec<String> = [p.clone(), q.clone()]
+            .into_iter()
+            .chain(tail.clone())
+            .collect();
+        let parent: Vec<String> = [q, p].into_iter().chain(tail).collect();
+        assert_eq!(
+            marks(&child, &parent),
+            vec![true, true, false, false, false]
+        );
+    }
+
+    #[test]
+    fn an_anchor_without_substance_still_splits_the_sequences() {
+        let (s, big) = (short("s"), long("L"));
+        assert_eq!(
+            marks(&[s.clone(), big.clone()], &[big, s]),
+            vec![false, false]
+        );
+    }
+
+    #[test]
+    fn the_longest_run_is_the_anchor_even_when_it_starts_later() {
+        let (a, x, b, c) = (long("a"), short("x"), long("b"), long("c"));
+        assert_eq!(
+            marks(&[a.clone(), x, b.clone(), c.clone()], &[b, c, a]),
+            vec![false, false, true, true]
+        );
+    }
+
+    #[test]
+    fn a_side_run_has_substance_by_its_total_word_count() {
+        let five = ["one two three four five", "six seven eight nine ten"];
+        let four = ["aa bb cc dd", "ee ff gg hh"];
+        let anchor = [long("m"), long("n"), long("o")];
+        let s = |v: &[&str]| v.iter().map(|x| x.to_string()).collect::<Vec<_>>();
+        let mut child = s(&five);
+        child.extend(anchor.clone());
+        child.extend(s(&four));
+        let mut parent = s(&five);
+        parent.push(short("x"));
+        parent.extend(anchor);
+        parent.push(short("y"));
+        parent.extend(s(&four));
+        assert_eq!(
+            marks(&child, &parent),
+            vec![true, true, true, true, true, false, false]
+        );
+    }
+
+    #[test]
+    fn nothing_is_marked_without_a_common_line() {
+        assert_eq!(marks(&[long("a")], &[long("b")]), vec![false]);
+        assert_eq!(marks(&[], &[long("b")]), Vec::<bool>::new());
+        assert_eq!(marks(&[long("a")], &[]), vec![false]);
+    }
+
+    // --- rule (a): brute-force reference ----------------------------------------------
+
+    /// The specification of rule (a), transcribed literally: every run and
+    /// every occurrence is enumerated.
+    fn reference_marks(c: &[String], p: &[String]) -> Vec<bool> {
+        let (n, m) = (c.len(), p.len());
+        let mut out = vec![false; n];
+        let words: Vec<usize> = c.iter().map(|l| pystr::split_ws(l).len()).collect();
+        let occurrences = |s: usize, e: usize, lo: usize, hi: usize| -> Vec<usize> {
+            let k = e - s;
+            if hi < lo + k {
+                return Vec::new();
+            }
+            (lo..=hi - k).filter(|&j| p[j..j + k] == c[s..e]).collect()
+        };
+        let substance = |s: usize, e: usize| {
+            words[s..e].iter().sum::<usize>() >= 10 || words[s..e].iter().any(|&w| w >= 8)
+        };
+        let mut runs = Vec::new();
+        for s in 0..n {
+            for e in s + 1..=n {
+                if !occurrences(s, e, 0, m).is_empty() {
+                    runs.push((s, e));
+                }
+            }
+        }
+        let Some(best) = runs.iter().map(|&(s, e)| e - s).max() else {
+            return out;
+        };
+        let (i, end) = runs
+            .iter()
+            .copied()
+            .filter(|&(s, e)| e - s == best)
+            .min()
+            .unwrap();
+        let j = occurrences(i, end, 0, m)[0];
+        if substance(i, end) {
+            out[i..end].iter_mut().for_each(|x| *x = true);
+        }
+        for (c_lo, c_hi, p_lo, p_hi) in [(0, i, 0, j), (end, n, j + best, m)] {
+            for s in c_lo..c_hi {
+                for e in s + 1..=c_hi {
+                    if substance(s, e) && !occurrences(s, e, p_lo, p_hi).is_empty() {
+                        out[s..e].iter_mut().for_each(|x| *x = true);
+                    }
+                }
+            }
+        }
+        out
+    }
+
+    fn random_sequences(rng: &mut Rng, max_len: usize) -> (Vec<String>, Vec<String>) {
+        let size = rng.choice(&[1, 2, 3, 4, 5, 6]);
+        let alphabet: Vec<String> = (0..size)
+            .map(|a| {
+                let words = rng.choice(&[1, 1, 2, 3, 4, 5, 7, 8, 9]);
+                format!("s{a}{}", " w".repeat(words - 1))
+            })
+            .collect();
+        let mut c: Vec<String> = (0..rng.int(0, max_len))
+            .map(|_| alphabet[rng.int(0, size - 1)].clone())
+            .collect();
+        let p: Vec<String> = (0..rng.int(0, max_len))
+            .map(|_| alphabet[rng.int(0, size - 1)].clone())
+            .collect();
+        if !p.is_empty() && rng.chance(0.5) {
+            let a = rng.int(0, p.len() - 1);
+            let b = rng.int(a + 1, p.len());
+            let at = rng.int(0, c.len());
+            c.splice(at..at, p[a..b].iter().cloned());
+        }
+        (c, p)
+    }
+
+    #[test]
+    fn aligned_run_marks_match_the_reference_on_random_inputs() {
+        let mut rng = Rng(20261114);
+        for _ in 0..3000 {
+            let (c, p) = random_sequences(&mut rng, 8);
+            assert_eq!(marks(&c, &p), reference_marks(&c, &p), "{c:?} {p:?}");
+        }
+    }
+
+    // --- rules (b) and (c): the parent word-stream index ------------------------------
+
+    #[test]
+    fn parent_stream_answers_equal_substring_search() {
+        let mut rng = Rng(7);
+        let vocabs: [&[&str]; 3] = [
+            &["a", "b"],
+            &["a", "ab", "ba", "b"],
+            &["x", "xy", "yx", "y", "z", "\u{e9}", "\u{1f600}"],
+        ];
+        for _ in 0..4000 {
+            let vocab = rng.choice(&vocabs);
+            let words: Vec<&str> = (0..rng.int(0, 30)).map(|_| rng.choice(vocab)).collect();
+            let mut parent: Vec<String> = Vec::new();
+            let mut k = 0;
+            while k < words.len() {
+                let step = rng.int(1, 5);
+                parent.push(words[k..(k + step).min(words.len())].join(" "));
+                k += step;
+            }
+            let stream = parent.join(" ");
+            let chars: Vec<char> = stream.chars().collect();
+            let mut index = ParentStream::new(&stream);
+            for _ in 0..12 {
+                let needle = if !chars.is_empty() && rng.chance(0.5) {
+                    let lo = rng.int(0, chars.len() - 1);
+                    let hi = rng.int(lo + 1, chars.len());
+                    let slice: String = chars[lo..hi].iter().collect();
+                    let mut needle: Vec<char> = slice.trim_matches(' ').chars().collect();
+                    if needle.is_empty() {
+                        continue;
+                    }
+                    if rng.chance(0.3) {
+                        let at = rng.int(0, needle.len() - 1);
+                        if needle[at] != ' ' {
+                            needle[at] = rng.choice(vocab).chars().next().unwrap();
+                        }
+                    }
+                    needle.into_iter().collect::<String>()
+                } else {
+                    (0..rng.int(1, 8))
+                        .map(|_| rng.choice(vocab))
+                        .collect::<Vec<_>>()
+                        .join(" ")
+                };
+                assert_eq!(
+                    index.contains(&needle),
+                    stream.contains(&needle),
+                    "{parent:?} {needle:?}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn parent_stream_each_path() {
+        let stream = "so the cat sat and the cat ran";
+        let mut index = ParentStream::new(stream);
+        assert!(!index.contains(&format!("{}x", "x ".repeat(20))));
+        assert!(!index.contains("so dog cat"));
+        assert!(index.contains("t sat a"));
+        assert!(!index.contains("xx so the"));
+        assert!(!index.contains("so the sat and"));
+        assert!(index.contains("o the cat sat a"));
+        assert!(!index.contains("so the cat sat on"));
+        assert!(index.contains("o the cat s"));
+        assert!(index.contains("d the cat r"));
+        assert!(!index.contains("d the cat s"));
+        assert!(!index.contains("xso the cat"));
+        assert!(index.contains("at an"));
+        assert!(!index.contains("ran so"));
+        assert!(index.contains("t"));
+        // Multi-byte characters: a computed start may fall inside one.
+        let stream = "\u{e9}\u{e9} a b \u{1f600} b c";
+        let mut index = ParentStream::new(stream);
+        for needle in [
+            "\u{e9} a b",
+            "a b \u{1f600}",
+            "\u{1f600} b c",
+            "x \u{1f600} b c",
+            "b c d",
+        ] {
+            assert_eq!(
+                index.contains(needle),
+                stream.contains(needle),
+                "{needle:?}"
+            );
+        }
+    }
+
+    // --- the inline-reply author-tag index --------------------------------------------
+
+    /// The generation-6 per-label tests.
+    fn reference_any_author_tag(labels: &[String], head: &str, parent_body: Option<&str>) -> bool {
+        for label in labels {
+            if let Some(parent) = parent_body {
+                if !parent.contains(&format!("[{label}")) {
+                    return true;
+                }
+            }
+            let name = pystr::strip(label.trim_end_matches(|c: char| c.is_ascii_digit()));
+            if name.is_empty() {
+                continue;
+            }
+            let mut from = 0;
+            while let Some(off) = head[from..].find(name) {
+                let start = from + off;
+                let end = start + name.len();
+                let before_ok = !head[..start]
+                    .chars()
+                    .next_back()
+                    .is_some_and(pystr::is_word);
+                let after_ok = !head[end..].chars().next().is_some_and(pystr::is_word);
+                if before_ok && after_ok {
+                    return true;
+                }
+                from = start + head[start..].chars().next().map_or(1, char::len_utf8);
+            }
+        }
+        false
+    }
+
+    const TAG_ALPHABET: &[char] = &[
+        'a', 'A', 'b', 'M', '1', '_', '\u{e9}', '\u{663}', ' ', '.', '-',
+    ];
+
+    #[test]
+    fn any_author_tag_equals_the_per_label_tests() {
+        let mut rng = Rng(11);
+        let text_alphabet: Vec<char> = TAG_ALPHABET.iter().copied().chain(['[', '\n']).collect();
+        for _ in 0..4000 {
+            let labels: Vec<String> = (0..rng.int(1, 3))
+                .map(|_| {
+                    (0..rng.int(1, 4))
+                        .map(|_| rng.choice(TAG_ALPHABET))
+                        .collect()
+                })
+                .collect();
+            let head: String = (0..rng.int(0, 30))
+                .map(|_| rng.choice(&text_alphabet))
+                .collect();
+            let parent = if rng.chance(0.2) {
+                None
+            } else {
+                let mut parent: Vec<char> = (0..rng.int(0, 30))
+                    .map(|_| rng.choice(&text_alphabet))
+                    .collect();
+                for label in &labels {
+                    if rng.chance(0.7) {
+                        let at = rng.int(0, parent.len());
+                        let insert: Vec<char> = std::iter::once('[').chain(label.chars()).collect();
+                        parent.splice(at..at, insert);
+                    }
+                }
+                Some(parent.into_iter().collect::<String>())
+            };
+            let want = reference_any_author_tag(&labels, &head, parent.as_deref());
+            assert_eq!(
+                any_author_tag(&labels, &head, parent.as_deref()),
+                want,
+                "{labels:?} {head:?} {parent:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn any_author_tag_cases() {
+        let l = |s: &str| vec![s.to_string()];
+        assert!(any_author_tag(&l("Med"), "", Some("no tags here")));
+        assert!(any_author_tag(
+            &l("Med2"),
+            "Cheers,\nMed",
+            Some("[Med2] earlier")
+        ));
+        assert!(!any_author_tag(
+            &l("Med"),
+            "Cheers,\nMedina",
+            Some("[Med] earlier")
+        ));
+        assert!(!any_author_tag(
+            &l("Med"),
+            "Cheers,\n_Med",
+            Some("[Med] earlier")
+        ));
+        assert!(any_author_tag(&l("J. D."), "-- J. D. x", Some("[J. D.]")));
+        assert!(!any_author_tag(&l("J. D."), "-- J. D.x", Some("[J. D.]")));
+        assert!(!any_author_tag(&l("J. D."), "-- xJ. D.", Some("[J. D.]")));
+        assert!(!any_author_tag(&l("12"), "12", Some("[12]")));
+        assert!(any_author_tag(&l("Linda3"), "Linda", None));
+        assert!(!any_author_tag(&l("Linda3"), "Lindas", None));
+        // Non-ASCII word characters at the boundaries, and a label longer
+        // than the text after a `[` near its end.
+        assert!(!any_author_tag(&l("Med"), "\u{e9}Med", None));
+        assert!(!any_author_tag(&l("Med"), "Med\u{663}", None));
+        assert!(any_author_tag(&l("\u{e9}d"), "x \u{e9}d", Some("[\u{e9}")));
     }
 }

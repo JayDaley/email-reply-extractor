@@ -122,7 +122,7 @@ project's documented behavior; release data is from PyPI as of November 2026.
 | Output stability | Behavior pinned by an integer generation (`EXTRACTION_VERSION`) and a corpus digest test; whitespace-tolerant equivalence helpers for consumers | Not versioned separately | Not versioned separately |
 | Test corpus | Hand-labeled real mailing-list messages (`fixtures/`) | Unit-test fixture emails | Unit-test fixture emails; ML training data |
 | Runtime dependencies | None (standard library) | None (standard library) | lxml, regex, numpy, scipy, scikit-learn, chardet, and others |
-| Latest release | 1.2.3 (2026) | 0.5.12 (2020) | 1.4.4 (2017) |
+| Latest release | 1.3.0 (2026) | 0.5.12 (2020) | 1.4.4 (2017) |
 | License | MIT | MIT | Apache 2.0 |
 
 The fragment scanner at this library's core derives from email-reply-parser
@@ -304,6 +304,9 @@ Generation 5 (shipped in v1.1.0) and the work deferred from it are described in
 Generation 6 (v1.2.0) adds the Latin-script localized quote-header blocks and
 dividers described in
 [docs/extraction.md](https://github.com/JayDaley/email-reply-extractor/blob/main/docs/extraction.md).
+Generation 7 (v1.3.0) replaces the parent-diff assist's `difflib` alignment
+with a linear one and makes the whole assist run in linear time; see
+[docs/generation-7.md](https://github.com/JayDaley/email-reply-extractor/blob/main/docs/generation-7.md).
 
 Because a generation bump can move bytes without changing substance, the
 package exports `tolerant_lines` and `texts_equivalent` so a consumer can
@@ -335,6 +338,8 @@ and [docs/ports.md](https://github.com/JayDaley/email-reply-extractor/blob/main/
   — the language-neutral conformance data and the corpus digest.
 - [docs/generation-5.md](https://github.com/JayDaley/email-reply-extractor/blob/main/docs/generation-5.md)
   — generation 5 and the deferred scanner changes.
+- [docs/generation-7.md](https://github.com/JayDaley/email-reply-extractor/blob/main/docs/generation-7.md)
+  — generation 7: the linear parent-diff assist and its new aligned-run rule.
 - [CONTRIBUTING.md](https://github.com/JayDaley/email-reply-extractor/blob/main/CONTRIBUTING.md)
   — development setup and contributor contracts.
 - [CHANGELOG.md](https://github.com/JayDaley/email-reply-extractor/blob/main/CHANGELOG.md)
@@ -347,7 +352,7 @@ The code was extracted from
 application that checks mailing-list mail with an AI detector, where it shipped
 as four extraction generations: 1 (initial release), 2 (from that
 application's v1.2.0), 3 (from v1.11.0) and 4 (from v1.15.0). The hand-labeled
-fixture corpus (26 real messages from the public IETF mail archive) and its
+fixture corpus (messages from the public IETF mail archive) and its
 provenance came with it; see
 [fixtures/README.md](https://github.com/JayDaley/email-reply-extractor/blob/main/fixtures/README.md).
 

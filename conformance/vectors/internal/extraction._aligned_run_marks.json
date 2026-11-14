@@ -1,0 +1,188 @@
+{
+ "format": 1,
+ "function": "_aligned_run_marks",
+ "module": "extraction",
+ "public": false,
+ "parameters": [
+  {
+   "name": "child_seq",
+   "kind": "positional_or_keyword"
+  },
+  {
+   "name": "parent_seq",
+   "kind": "positional_or_keyword"
+  }
+ ],
+ "returns": "list[bool]",
+ "vectors": [
+  {
+   "args": {
+    "child_seq": [
+     "a long line with enough words to carry substance",
+     "b long line with enough words to carry substance"
+    ],
+    "parent_seq": [
+     "b long line with enough words to carry substance",
+     "a long line with enough words to carry substance"
+    ]
+   },
+   "result": [
+    true,
+    false
+   ]
+  },
+  {
+   "args": {
+    "child_seq": [
+     "a long line with enough words to carry substance",
+     "x short",
+     "b long line with enough words to carry substance",
+     "c long line with enough words to carry substance"
+    ],
+    "parent_seq": [
+     "b long line with enough words to carry substance",
+     "c long line with enough words to carry substance",
+     "a long line with enough words to carry substance"
+    ]
+   },
+   "result": [
+    false,
+    false,
+    true,
+    true
+   ]
+  },
+  {
+   "args": {
+    "child_seq": [
+     "a long line with enough words to carry substance"
+    ],
+    "parent_seq": [
+     "b long line with enough words to carry substance"
+    ]
+   },
+   "result": [
+    false
+   ]
+  },
+  {
+   "args": {
+    "child_seq": [
+     "a long line with enough words to carry substance"
+    ],
+    "parent_seq": []
+   },
+   "result": [
+    false
+   ]
+  },
+  {
+   "args": {
+    "child_seq": [
+     "one two three four five",
+     "six seven eight nine ten",
+     "m long line with enough words to carry substance",
+     "n long line with enough words to carry substance",
+     "o long line with enough words to carry substance",
+     "aa bb cc dd",
+     "ee ff gg hh"
+    ],
+    "parent_seq": [
+     "one two three four five",
+     "six seven eight nine ten",
+     "x short",
+     "m long line with enough words to carry substance",
+     "n long line with enough words to carry substance",
+     "o long line with enough words to carry substance",
+     "y short",
+     "aa bb cc dd",
+     "ee ff gg hh"
+    ]
+   },
+   "result": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    false,
+    false
+   ]
+  },
+  {
+   "args": {
+    "child_seq": [
+     "p long line with enough words to carry substance",
+     "q long line with enough words to carry substance",
+     "A short",
+     "B short",
+     "C short"
+    ],
+    "parent_seq": [
+     "q long line with enough words to carry substance",
+     "p long line with enough words to carry substance",
+     "A short",
+     "B short",
+     "C short"
+    ]
+   },
+   "result": [
+    true,
+    true,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "args": {
+    "child_seq": [
+     "s short",
+     "L long line with enough words to carry substance"
+    ],
+    "parent_seq": [
+     "L long line with enough words to carry substance",
+     "s short"
+    ]
+   },
+   "result": [
+    false,
+    false
+   ]
+  },
+  {
+   "args": {
+    "child_seq": [
+     "x long line with enough words to carry substance",
+     "A long line with enough words to carry substance",
+     "B long line with enough words to carry substance",
+     "y long line with enough words to carry substance"
+    ],
+    "parent_seq": [
+     "y long line with enough words to carry substance",
+     "A long line with enough words to carry substance",
+     "B long line with enough words to carry substance",
+     "x long line with enough words to carry substance",
+     "z long line with enough words to carry substance",
+     "A long line with enough words to carry substance",
+     "B long line with enough words to carry substance"
+    ]
+   },
+   "result": [
+    false,
+    true,
+    true,
+    false
+   ]
+  },
+  {
+   "args": {
+    "child_seq": [],
+    "parent_seq": [
+     "b long line with enough words to carry substance"
+    ]
+   },
+   "result": []
+  }
+ ]
+}

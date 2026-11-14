@@ -64,4 +64,4 @@ which, per the section above, also removes the need for the pre-truncation.
 This needs corpus work first: fixtures for the collapse's distinctive shapes
 (including the glued `…example.comwrote:` and `On Behalf Of` renderings)
 recorded before the change. It is the natural core of a future
-generation 6, together with the pre-truncation removal it unblocks.
+generation, together with the pre-truncation removal it unblocks.

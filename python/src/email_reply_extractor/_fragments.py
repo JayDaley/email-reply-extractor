@@ -29,7 +29,7 @@ through generation 4 and fixed in generation 5 (see ``docs/generation-5.md``):
    extractor's detector. Fragment content now keeps its edges, preserving the
    blank lines that separate fragments.
 
-The third is fixed after generation 6:
+The third is fixed in generation 7:
 
 3. Upstream passed the collapsed "On … wrote:" header to ``re.sub`` as a
    replacement *template*, so backslash sequences in the message body were

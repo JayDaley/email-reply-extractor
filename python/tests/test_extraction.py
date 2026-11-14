@@ -1082,6 +1082,37 @@ def test_parent_diff_keeps_short_authored_echo():
     assert "next revision of the draft" in result
 
 
+# A parent agenda of five two-line items (each item 10 words, no line of 8),
+# reproduced by the child with item 4 moved to the end.
+_AGENDA_ITEMS = {
+    1: ["Agenda bashing and note taker", "Chairs, five minutes in total"],
+    2: ["Refresh interval in section four", "Presenter Bob, twenty minutes"],
+    3: ["Registry changes for the draft", "Presenter Alice, fifteen minutes"],
+    4: ["Open issues on the tracker", "Presenter Carol, ten minutes total"],
+    5: ["Next steps and wrap up", "Chairs, five minutes at the end"],
+}
+
+
+def _agenda(order: tuple[int, ...]) -> str:
+    return "\n\n".join("\n".join(_AGENDA_ITEMS[k]) for k in order)
+
+
+def test_parent_diff_removes_a_reproduced_block_out_of_order():
+    # Items 1-3 are the longest common run (the anchor). After it the child
+    # has items 5 and 4, the parent items 4 and 5: both are parent content on
+    # the same side of the anchor, and both are removed (generation 7; the
+    # generation-6 difflib alignment matched only one of them).
+    parent = "Hi all,\n\nThe agenda for the interim:\n\n" + _agenda((1, 2, 3, 4, 5)) + "\n\nBob\n"
+    child = (
+        "I moved the open issues to the end, since Carol joins late.\n\n"
+        + _agenda((1, 2, 3, 5, 4))
+        + "\n"
+    )
+    result = extract_new_text(child, parent)
+    assert result.text == "I moved the open issues to the end, since Carol joins late."
+    assert result.method == "erp+parent-diff"
+
+
 def test_parent_diff_none_is_identical_to_no_argument():
     body = "> quoted line\n\nMy genuinely new reply text here."
     assert extract_new_text(body, None) == extract_new_text(body)

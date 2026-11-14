@@ -74,8 +74,10 @@ diverges from hand-labeled ground truth:
   chosen text — any content that provably came from the parent is removed. This
   catches fully top-posted replies whose quoted previous message carries no
   ``>`` markers at all (so the quote/attribution/header filters see nothing to
-  drop), using stdlib ``difflib`` as an evidence-based backstop. See
-  :func:`strip_parent_content`; it adds the ``"+parent-diff"`` method suffix.
+  drop), using a line-level alignment around the longest common run of lines
+  and an exact substring index over the parent as an evidence-based backstop.
+  See :func:`strip_parent_content`; it adds the ``"+parent-diff"`` method
+  suffix.
 
 HTML as a structural oracle (optional ``html_body``)
 ----------------------------------------------------
@@ -135,12 +137,14 @@ longer classifying the author's inline replies as quoted (v1.15.0); **5** the
 vendored scanner keeps fragment edges and applies the Outlook-boundary fix to
 every occurrence (this package's v1.1.0; generations 1-4 shipped inside
 mailing-list-ai-check); **6** Latin-script localized quote-header blocks and
-"Original message" dividers, with the inline-reply exception (v1.2.0).
+"Original message" dividers, with the inline-reply exception (v1.2.0); **7**
+the parent-diff aligned-run rule aligns around the longest common run of lines
+instead of ``difflib.SequenceMatcher``, and the vendored scanner inserts the
+collapsed attribution header literally (v1.3.0).
 """
 
 from __future__ import annotations
 
-import difflib
 import re
 from dataclasses import dataclass
 
@@ -153,7 +157,7 @@ from .html_text import split_html_parts
 #: :mod:`html_text` and :mod:`._fragments` together). Hand-incremented; see the
 #: module docstring for when and why. Consumers stamp stored derived text with
 #: it and compare with ``<``, so it must only ever increase.
-EXTRACTION_VERSION: int = 6
+EXTRACTION_VERSION: int = 7
 
 # --- result -------------------------------------------------------------------
 
@@ -962,13 +966,15 @@ def _nonblank_line_count(text: str) -> int:
 # quote/attribution/header filters have nothing to grab. When the thread parent
 # is on hand, we can instead prove which child lines came from it by diffing.
 #
-# stdlib ``difflib.SequenceMatcher`` is exactly the right tool here — line- and
-# word-level longest-matching-block detection over two sequences — so no
-# third-party diff dependency is warranted. The bar for calling a line "parent
-# content" is deliberately high: a matching block must carry real substance
-# (see the two thresholds below), so short coincidental echoes that also appear
-# in the parent — greetings ("Hi all,"), the author's own sign-off salutation
-# and name line ("Best," / "Songbo"), list courtesy phrases — are NOT deleted.
+# The input is untrusted, so every step runs in time linear in the size of the
+# child and the parent: rule (a) aligns the line sequences around their longest
+# common run (:func:`_aligned_run_marks`), and rules (b) and (c) answer their
+# substring tests from an index built once per call (:class:`_ParentStream`).
+# The bar for calling a line "parent content" is deliberately high: a matching
+# block must carry real substance (see the two thresholds below), so short
+# coincidental echoes that also appear in the parent — greetings ("Hi all,"),
+# the author's own sign-off salutation and name line ("Best," / "Songbo"), list
+# courtesy phrases — are NOT deleted.
 # The author's sign-off in particular is guaranteed to also sit inside the
 # parent's nested quotes, and it must survive.
 
@@ -997,6 +1003,342 @@ def _normalize_line_for_diff(line: str) -> str:
     return " ".join(_QUOTE_RE.sub("", line).split())
 
 
+# --- suffix automaton -------------------------------------------------------------
+#
+# One routine serves rules (a), (b) and (c): the suffix automaton of a sequence
+# of integer symbols (line ids for rule (a), character code points for rules
+# (b) and (c)). It recognizes exactly the contiguous subsequences of its text,
+# has at most 2n states and 3n transitions for a text of n symbols, and is
+# built in O(n) map operations.
+
+
+def _build_automaton(
+    seq: list[int], lo: int, hi: int
+) -> tuple[list[int], list[int], list[dict[int, int]], list[int]]:
+    """Suffix automaton of ``seq[lo:hi]``.
+
+    Returns, per state: the length of its longest string, its suffix link, its
+    transitions (symbol -> state) and ``first_end``, the smallest end position
+    (an index of ``seq``) of an occurrence of the state's strings. State 0 is
+    the root. A clone copies ``first_end`` from the state it splits: the
+    clone's occurrences are that state's plus later positions only.
+    """
+    length = [0]
+    link = [-1]
+    trans: list[dict[int, int]] = [{}]
+    first_end = [-1]
+    last = 0
+    for pos in range(lo, hi):
+        sym = seq[pos]
+        cur = len(length)
+        length.append(length[last] + 1)
+        link.append(-1)
+        trans.append({})
+        first_end.append(pos)
+        p = last
+        while p != -1 and sym not in trans[p]:
+            trans[p][sym] = cur
+            p = link[p]
+        if p == -1:
+            link[cur] = 0
+        else:
+            q = trans[p][sym]
+            if length[p] + 1 == length[q]:
+                link[cur] = q
+            else:
+                clone = len(length)
+                length.append(length[p] + 1)
+                link.append(link[q])
+                trans.append(dict(trans[q]))
+                first_end.append(first_end[q])
+                while p != -1 and trans[p].get(sym) == q:
+                    trans[p][sym] = clone
+                    p = link[p]
+                link[q] = clone
+                link[cur] = clone
+        last = cur
+    return length, link, trans, first_end
+
+
+def _walk(
+    automaton: tuple[list[int], list[int], list[dict[int, int]], list[int]],
+    seq: list[int],
+    lo: int,
+    hi: int,
+) -> tuple[list[int], list[int]]:
+    """For each ``e`` in ``[lo, hi)``: the length of the longest run of ``seq``
+    ending at ``e`` that occurs in the automaton's text, and the state of that
+    run (both indexed ``e - lo``). Linear: each step adds at most one to the
+    length, and every suffix-link hop removes at least one."""
+    length, link, trans, _first_end = automaton
+    runs: list[int] = []
+    states: list[int] = []
+    state = 0
+    matched = 0
+    for e in range(lo, hi):
+        sym = seq[e]
+        while state != 0 and sym not in trans[state]:
+            state = link[state]
+            matched = length[state]
+        if sym in trans[state]:
+            state = trans[state][sym]
+            matched += 1
+        else:
+            matched = 0
+        runs.append(matched)
+        states.append(state)
+    return runs, states
+
+
+# --- rule (a): alignment around the longest common run ------------------------------
+#
+# Inputs are the child's normalized non-blank lines c[0..N) and the parent's
+# p[0..M); lines compare by exact string equality. A *common run* is a child
+# interval c[s..s+k), k >= 1, that occurs as a contiguous interval of p. A run
+# *has substance* when its lines total at least _PARENT_DIFF_MIN_BLOCK_WORDS
+# words or one of its lines has at least _PARENT_DIFF_MIN_LINE_WORDS words.
+#
+# 1. Anchor. K is the greatest length, counted in lines, of any common run. If
+#    K = 0 nothing is marked. The anchor is the common run of length K with
+#    the smallest start in the child, c[i..i+K); its parent position j is the
+#    smallest start of an occurrence of c[i..i+K) in p.
+# 2. The anchor's lines are marked when the anchor has substance.
+# 3. Before the anchor, a line of c[0..i) is marked when it lies inside a run
+#    of c[0..i) that has substance and occurs contiguously in p[0..j). After
+#    the anchor, likewise for c[i+K..N) against p[j+K..M).
+#
+# The anchor is normally the quoted previous message; step 3 keeps a run the
+# author repeated on one side of the quote (a sign-off, say) from matching the
+# parent's copy on the other side. Within a side, runs are matched wherever
+# they occur, in any order.
+#
+# Every step uses a suffix automaton over a parent interval: O(N + M) map
+# operations on small integer line ids (lines are interned once).
+
+
+def _intern_lines(child_seq: list[str], parent_seq: list[str]) -> tuple[list[int], list[int]]:
+    """Map each distinct parent line to a small integer id; a child line absent
+    from the parent gets -1, which no transition carries."""
+    ids: dict[str, int] = {}
+    parent_ids: list[int] = []
+    for line in parent_seq:
+        if line not in ids:
+            ids[line] = len(ids)
+        parent_ids.append(ids[line])
+    child_ids: list[int] = []
+    for line in child_seq:
+        child_ids.append(ids.get(line, -1))
+    return child_ids, parent_ids
+
+
+def _cover_side(
+    child_ids: list[int],
+    c_lo: int,
+    c_hi: int,
+    parent_ids: list[int],
+    p_lo: int,
+    p_hi: int,
+    words_before: list[int],
+    long_before: list[int],
+    cover: list[int],
+) -> None:
+    """Step 3 for one side: add to ``cover`` (a difference array over child
+    positions) every run of ``child_ids[c_lo:c_hi]`` that has substance and
+    occurs in ``parent_ids[p_lo:p_hi]``. Only the longest run ending at each
+    position is tested: a shorter one ending there lies inside it and has no
+    more words and no longer line."""
+    if c_lo >= c_hi or p_lo >= p_hi:
+        return
+    runs, _states = _walk(_build_automaton(parent_ids, p_lo, p_hi), child_ids, c_lo, c_hi)
+    for e in range(c_lo, c_hi):
+        run = runs[e - c_lo]
+        if run == 0:
+            continue
+        start = e - run + 1
+        if (
+            words_before[e + 1] - words_before[start] >= _PARENT_DIFF_MIN_BLOCK_WORDS
+            or long_before[e + 1] - long_before[start] > 0
+        ):
+            cover[start] += 1
+            cover[e + 1] -= 1
+
+
+def _aligned_run_marks(child_seq: list[str], parent_seq: list[str]) -> list[bool]:
+    """Rule (a): which child lines (indexes of ``child_seq``) are parent content.
+
+    Implements the specification in the comment above this section.
+    """
+    count = len(child_seq)
+    marks = [False] * count
+    if count == 0 or not parent_seq:
+        return marks
+    child_ids, parent_ids = _intern_lines(child_seq, parent_seq)
+
+    # Prefix sums: words, and lines of at least _PARENT_DIFF_MIN_LINE_WORDS
+    # words, before each child position (a run's substance in O(1)).
+    words_before = [0] * (count + 1)
+    long_before = [0] * (count + 1)
+    for k in range(count):
+        words = len(child_seq[k].split())
+        words_before[k + 1] = words_before[k] + words
+        long_before[k + 1] = long_before[k] + (1 if words >= _PARENT_DIFF_MIN_LINE_WORDS else 0)
+
+    # Step 1: the anchor. The first end position reaching the greatest run
+    # length (strict comparison) is the earliest-starting longest run; the
+    # automaton's first_end gives its earliest parent occurrence.
+    automaton = _build_automaton(parent_ids, 0, len(parent_ids))
+    runs, states = _walk(automaton, child_ids, 0, count)
+    best_len = 0
+    best_end = -1
+    for e in range(count):
+        if runs[e] > best_len:
+            best_len = runs[e]
+            best_end = e
+    if best_len == 0:
+        return marks
+    i = best_end - best_len + 1
+    j = automaton[3][states[best_end]] - best_len + 1
+
+    cover = [0] * (count + 1)  # difference array over child positions
+    # Step 2: the anchor itself.
+    if (
+        words_before[i + best_len] - words_before[i] >= _PARENT_DIFF_MIN_BLOCK_WORDS
+        or long_before[i + best_len] - long_before[i] > 0
+    ):
+        cover[i] += 1
+        cover[i + best_len] -= 1
+    # Step 3: each side against the same side of the parent.
+    _cover_side(child_ids, 0, i, parent_ids, 0, j, words_before, long_before, cover)
+    _cover_side(
+        child_ids,
+        i + best_len,
+        count,
+        parent_ids,
+        j + best_len,
+        len(parent_ids),
+        words_before,
+        long_before,
+        cover,
+    )
+
+    depth = 0
+    for k in range(count):
+        depth += cover[k]
+        marks[k] = depth > 0
+    return marks
+
+
+# --- rules (b) and (c): substring tests against the parent's word-stream ---------
+
+
+class _ParentStream:
+    """Answers ``needle in stream`` for the parent's word-stream (the parent's
+    normalized non-blank lines joined by single spaces), exactly, in time
+    linear in the needle.
+
+    Every needle is one or two normalized child lines: words separated by
+    single spaces, as the stream's are, and neither contains other
+    whitespace. In an occurrence, each space of the needle falls on a
+    separator of the stream, so the needle's interior words (all but its
+    first and last) are consecutive whole words of the stream, each at a
+    fixed distance from the needle's start.
+
+    A needle of at least three words is first checked against a table of the
+    stream's *grams*: its words and its adjacent word pairs (``"a b"``). The
+    needle's grams are its interior word when it has three words, else its
+    adjacent pairs of interior words; they are taken in order:
+
+    - a gram absent from the stream proves the needle absent;
+    - a gram that occurs exactly once in the stream fixes the only position
+      at which the needle can start, and one comparison there decides;
+    - when every gram occurs more than once, the first occurrence of the
+      first gram that leaves room for the needle's first word gives one
+      candidate position, and a match there is an occurrence.
+
+    Every other query is answered by the suffix automaton of the stream's code
+    points, built on the first query that needs it (O(len(stream))); a query
+    walks the needle from the root. On ordinary mail the table decides almost
+    every query, so the automaton is seldom built.
+
+    The table maps each gram to the character offsets of its first and last
+    occurrence; it is built in one pass over the stream, on the first query of
+    at least three words. A query does O(len(needle)) work besides the single
+    automaton build, so the queries of one call cost time linear in the
+    stream and the needles.
+    """
+
+    def __init__(self, parent_seq: list[str]) -> None:
+        self._stream = " ".join(parent_seq)
+        self._first: dict[str, int] | None = None
+        self._last: dict[str, int] = {}
+        self._trans: list[dict[int, int]] | None = None
+
+    def _build_table(self) -> None:
+        first: dict[str, int] = {}
+        last: dict[str, int] = {}
+        words = self._stream.split(" ")
+        offset = 0
+        for k in range(len(words)):
+            word = words[k]
+            if word not in first:
+                first[word] = offset
+            last[word] = offset
+            if k + 1 < len(words):
+                pair = word + " " + words[k + 1]
+                if pair not in first:
+                    first[pair] = offset
+                last[pair] = offset
+            offset += len(word) + 1
+        self._first = first
+        self._last = last
+
+    def _decided_by_table(self, needle: str, words: list[str]) -> bool | None:
+        """The answer for a needle of at least three ``words`` when the table
+        decides it, else ``None``."""
+        if self._first is None:
+            self._build_table()
+        first = self._first
+        assert first is not None
+        count = len(words) - 2  # grams: the interior word, or the interior pairs
+        if count > 1:
+            count -= 1
+        candidate = -1
+        offset = len(words[0]) + 1  # the offset of words[k] in the needle
+        for k in range(1, 1 + count):
+            gram = words[k] if len(words) == 3 else words[k] + " " + words[k + 1]
+            if gram not in first:
+                return False
+            start = first[gram] - offset
+            if first[gram] == self._last[gram]:
+                return start >= 0 and self._stream.startswith(needle, start)
+            if candidate < 0 <= start:
+                candidate = start
+            offset += len(words[k]) + 1
+        if candidate >= 0 and self._stream.startswith(needle, candidate):
+            return True
+        return None
+
+    def contains(self, needle: str) -> bool:
+        if len(needle) > len(self._stream):
+            return False
+        words = needle.split(" ")
+        if len(words) >= 3:
+            decided = self._decided_by_table(needle, words)
+            if decided is not None:
+                return decided
+        if self._trans is None:
+            codes = [ord(ch) for ch in self._stream]
+            self._trans = _build_automaton(codes, 0, len(codes))[2]
+        trans = self._trans
+        state = 0
+        for ch in needle:
+            nxt = trans[state].get(ord(ch))
+            if nxt is None:
+                return False
+            state = nxt
+        return True
+
+
 def strip_parent_content(text: str, parent_body: str, *, continuation: bool = False) -> str:
     """Remove lines of ``text`` that provably came from ``parent_body``.
 
@@ -1006,10 +1348,12 @@ def strip_parent_content(text: str, parent_body: str, *, continuation: bool = Fa
     when matching. A child line is marked as parent content by these rules:
 
     a) **Aligned-run rule** — over the normalized non-blank line sequences,
-       :class:`difflib.SequenceMatcher` (``autojunk=False``) finds matching
-       blocks; a block marks its child lines only when it carries substance:
-       at least :data:`_PARENT_DIFF_MIN_BLOCK_WORDS` words in total, or at least
-       one line of :data:`_PARENT_DIFF_MIN_LINE_WORDS` words. Short coincidental
+       the longest run of child lines found contiguously in the parent splits
+       both sequences in two; each child side is matched only against the
+       same side of the parent (see :func:`_aligned_run_marks`). A run marks
+       its child lines only when it carries substance: at least
+       :data:`_PARENT_DIFF_MIN_BLOCK_WORDS` words in total, or at least one
+       line of :data:`_PARENT_DIFF_MIN_LINE_WORDS` words. Short coincidental
        echoes (greetings, the author's own sign-off + name) fall below both and
        survive.
     b) **Rewrap rule** — quoting clients re-wrap long paragraphs at a different
@@ -1029,6 +1373,11 @@ def strip_parent_content(text: str, parent_body: str, *, continuation: bool = Fa
        HTML quote container, where a client may wrap the author's inline
        replies (so the html-quote oracle call leaves it off).
 
+    The substring tests of rules (b) and (c) are answered by
+    :class:`_ParentStream`, with the same answers as Python's ``in`` and in
+    time linear in the needle, so the whole function runs in time linear in
+    the size of ``text`` and ``parent_body``.
+
     Marked lines are dropped; the survivors are ``rstrip``-ed, any run of 2+
     blank lines left by removals collapses to one, and leading/trailing blank
     lines are trimmed (matching :func:`custom_clean`'s edge handling).
@@ -1047,28 +1396,20 @@ def strip_parent_content(text: str, parent_body: str, *, continuation: bool = Fa
 
     marked: set[int] = set()
 
-    # Rule (a): aligned runs of matching lines with enough substance.
-    matcher = difflib.SequenceMatcher(a=child_seq, b=parent_seq, autojunk=False)
-    for start, _b, size in matcher.get_matching_blocks():
-        if size == 0:
-            continue
-        block = child_seq[start : start + size]
-        total_words = sum(len(line.split()) for line in block)
-        max_line_words = max(len(line.split()) for line in block)
-        if (
-            total_words >= _PARENT_DIFF_MIN_BLOCK_WORDS
-            or max_line_words >= _PARENT_DIFF_MIN_LINE_WORDS
-        ):
-            for k in range(start, start + size):
-                marked.add(child_pairs[k][0])
+    # Rule (a): runs of matching lines with enough substance, aligned around
+    # the longest common run.
+    rule_a = _aligned_run_marks(child_seq, parent_seq)
+    for k in range(len(child_pairs)):
+        if rule_a[k]:
+            marked.add(child_pairs[k][0])
 
     # Rule (b): a long child line re-wrapped from the parent (line-level match
     # missed it) but still present verbatim in the parent's word-stream.
-    parent_stream = " ".join(parent_seq)
+    parent_stream = _ParentStream(parent_seq)
     for orig_i, norm in child_pairs:
         if orig_i in marked:
             continue
-        if len(norm.split()) >= _PARENT_DIFF_MIN_LINE_WORDS and norm in parent_stream:
+        if len(norm.split()) >= _PARENT_DIFF_MIN_LINE_WORDS and parent_stream.contains(norm):
             marked.add(orig_i)
 
     # Rule (c): chain short remainder lines off marked neighbors, to a fixpoint.
@@ -1084,10 +1425,10 @@ def strip_parent_content(text: str, parent_body: str, *, continuation: bool = Fa
             """Unmarked ``k`` joins a marked neighbor contiguously in the parent."""
             norm = child_pairs[k][1]
             if k > 0 and is_marked[k - 1]:
-                if (child_pairs[k - 1][1] + " " + norm) in parent_stream:
+                if parent_stream.contains(child_pairs[k - 1][1] + " " + norm):
                     return True
             if k + 1 < count and is_marked[k + 1]:
-                if (norm + " " + child_pairs[k + 1][1]) in parent_stream:
+                if parent_stream.contains(norm + " " + child_pairs[k + 1][1]):
                     return True
             return False
 
@@ -1171,7 +1512,7 @@ def _localized_inline_reply(lines: list[str], parent_body: str | None) -> bool:
     runs on that span alone; it must remove at least
     :data:`_INLINE_REPLY_MIN_PARENT_LINES` non-blank lines and leave a line
     opening with an inline-reply tag (:data:`_INLINE_REPLY_TAG_RE`) that belongs
-    to the author (:func:`_is_author_tag`). Without the parent, a tag line in
+    to the author (:func:`_any_author_tag`). Without the parent, a tag line in
     the span qualifies only when its label names the author in the text above
     the block (the sign-off "Med" for ``[Med]``).
     """
@@ -1187,29 +1528,110 @@ def _localized_inline_reply(lines: list[str], parent_body: str | None) -> bool:
         removed = _nonblank_line_count(span) - _nonblank_line_count(survivors)
         if removed < _INLINE_REPLY_MIN_PARENT_LINES:
             return False
-    head = "\n".join(lines[:start])
+    labels: list[str] = []
     for line in survivors.split("\n"):
         m = _INLINE_REPLY_TAG_RE.match(line)
-        if m and _is_author_tag(m.group(0).strip()[1:-1], head, parent_body):
-            return True
-    return False
+        if m:
+            labels.append(m.group(0).strip()[1:-1])
+    if not labels:
+        return False
+    return _any_author_tag(labels, "\n".join(lines[:start]), parent_body)
 
 
-def _is_author_tag(label: str, head: str, parent_body: str | None) -> bool:
-    """True when the inline-reply tag ``label`` belongs to this message's author.
+#: The longest inline-reply tag label, in characters (:data:`_INLINE_REPLY_TAG_RE`).
+_MAX_TAG_LABEL = 20
+
+#: Python's ``\w`` for ``str`` patterns, applied to one character.
+_WORD_CHAR_RE = re.compile(r"\w")
+
+
+def _any_author_tag(labels: list[str], head: str, parent_body: str | None) -> bool:
+    """True when one of the inline-reply tag ``labels`` belongs to this
+    message's author.
 
     A tag the parent never uses is new in this message. A tag the parent uses
     — or any tag, when the parent is not available — belongs to an earlier
     round of the thread (as in ``[ML] …`` answers the parent's author wrote,
     which a re-wrapped or re-formatted quote can leave unmatched by the
     parent-diff assist) unless its label, without a trailing round number
-    ("Linda3" → "Linda"), occurs as a word in the text above the block —
-    typically the author's sign-off ("Cheers,\\nMed" for ``[Med]``).
+    ("Linda3" → "Linda"), occurs as a word in ``head``, the text above the
+    block — typically the author's sign-off ("Cheers,\\nMed" for ``[Med]``).
+
+    Per label, the tests are ``"[" + label in parent_body`` and
+    ``re.search(r"(?<!\\w)" + re.escape(name) + r"(?!\\w)", head)``. Labels and
+    names are at most :data:`_MAX_TAG_LABEL` characters, so both are answered
+    for all labels together in one scan of each text (see
+    :func:`_found_after_bracket` and :func:`_name_in_head`), in time linear in
+    the texts' length.
     """
-    if parent_body is not None and f"[{label}" not in parent_body:
-        return True
-    name = label.rstrip("0123456789").strip()
-    return bool(name) and re.search(rf"(?<!\w){re.escape(name)}(?!\w)", head) is not None
+    if parent_body is not None:
+        found = _found_after_bracket(parent_body, labels)
+        for label in labels:
+            if label not in found:
+                return True
+    names: list[str] = []
+    for label in labels:
+        name = label.rstrip("0123456789").strip()
+        if name:
+            names.append(name)
+    return _name_in_head(head, names)
+
+
+def _group_by_length(strings: list[str]) -> tuple[list[set[str]], list[int]]:
+    """``strings`` (each of 1 to :data:`_MAX_TAG_LABEL` characters) grouped by
+    length: entry ``n`` of the first list holds those of length ``n`` (entry 0
+    is unused); the second lists the lengths present, in increasing order."""
+    groups: list[set[str]] = [set() for _n in range(_MAX_TAG_LABEL + 1)]
+    for text in strings:
+        groups[len(text)].add(text)
+    lengths: list[int] = []
+    for n in range(1, _MAX_TAG_LABEL + 1):
+        if groups[n]:
+            lengths.append(n)
+    return groups, lengths
+
+
+def _found_after_bracket(text: str, labels: list[str]) -> set[str]:
+    """The labels ``label`` for which ``"[" + label`` occurs in ``text``.
+
+    At each ``[`` of ``text``, the slices that follow it are looked up, one
+    per label length present.
+    """
+    groups, lengths = _group_by_length(labels)
+    found: set[str] = set()
+    pos = text.find("[")
+    while pos >= 0:
+        for n in lengths:
+            piece = text[pos + 1 : pos + 1 + n]
+            if piece in groups[n]:
+                found.add(piece)
+        pos = text.find("[", pos + 1)
+    return found
+
+
+def _name_in_head(head: str, names: list[str]) -> bool:
+    """True when one of ``names`` occurs in ``head`` with no word character
+    (Python's ``\\w``) directly before or after it.
+
+    At each position not preceded by a word character, the slice of each name
+    length present is looked up when no word character follows it.
+    """
+    if not names:
+        return False
+    groups, lengths = _group_by_length(names)
+    size = len(head)
+    for start in range(size):
+        if start > 0 and _WORD_CHAR_RE.match(head, start - 1):
+            continue
+        for n in lengths:
+            end = start + n
+            if end > size:
+                break
+            if end < size and _WORD_CHAR_RE.match(head, end):
+                continue
+            if head[start:end] in groups[n]:
+                return True
+    return False
 
 
 # --- public entry point -------------------------------------------------------

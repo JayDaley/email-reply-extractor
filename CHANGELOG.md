@@ -39,6 +39,24 @@ Any other line (headings above level 2, blank lines, prose in this Format
 section) is not part of a release record and can be ignored. Outside fenced
 code blocks, no release section appears before the first `## [` header.
 
+## [1.3.0] - 2026-11-14
+
+Summary: Generation 7: the parent-diff assist runs in time linear in its input, with a new aligned-run rule; the fragment scanner inserts the collapsed attribution header literally.
+
+- Bump `EXTRACTION_VERSION` to 7 and re-record the corpus digest.
+- Replaced `difflib.SequenceMatcher` in the parent-diff aligned-run rule with an alignment around the longest common run of lines: the run's lines are marked when it has substance, and each side of it is matched only against the same side of the parent, in any order; ties go to the earliest start in the child, then the earliest occurrence in the parent.
+- Over 179,566 stored messages of the origin application the new aligned-run rule changes the output of 34 (stage-1 text of 26, cleaned text of 13, method of 11, status of none).
+- The rewrap and continuation rules answer their substring tests from an index over the parent's word-stream (a table of words and adjacent word pairs, then a suffix automaton built on first need) instead of searching the stream once per line; the answers are unchanged.
+- The inline-reply author-tag check tests all tags in one pass over the parent and one over the text above the quote header instead of searching both once per tag; the answers are unchanged.
+- The fragment scanner inserts the collapsed "On … wrote:" header literally instead of passing it to `re.sub` as a replacement template: backslash sequences in a body are no longer rewritten, an invalid escape no longer fails the extraction, and repeated `\1` no longer expands the output quadratically.
+- Added the synthetic fixture `toppost-repeated-signature-synthetic-01`: a quoted signature block repeated in the plain part and held once in the HTML quote.
+- Added `python/tests/test_parent_diff.py`: the aligned-run rule's tie-breaks, a brute-force reference of its specification, and exactness tests of the word-stream index and the author-tag check.
+- Added complexity tests for the aligned-run, rewrap and continuation rules and the author-tag check.
+- Added `docs/generation-7.md`.
+- Removed the hand-ported `difflib` modules from the TypeScript and Rust ports.
+- The TypeScript port keeps the parent-diff tables in typed arrays (`hashTables.ts`), because a JavaScript `Map` holds at most 2^24 entries.
+- The TypeScript port reads code points through its own helper: in Node 26.5 an optimised `String.prototype.codePointAt` returns a full code point for an unpaired high surrogate at the end of a sliced string.
+
 ## [1.2.3] - 2026-11-13
 
 Summary: Processing time made linear in input size for inputs that previously took quadratic or cubic time; release workflows hardened.

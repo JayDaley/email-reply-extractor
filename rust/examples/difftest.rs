@@ -34,6 +34,13 @@ fn lines(args: &Value) -> Vec<&str> {
         .unwrap_or_default()
 }
 
+fn strs<'a>(args: &'a Value, name: &str) -> Vec<&'a str> {
+    args[name]
+        .as_array()
+        .map(|a| a.iter().filter_map(Value::as_str).collect())
+        .unwrap_or_default()
+}
+
 fn call(name: &str, a: &Value) -> Value {
     let result = match name {
         "extract_new_text" => {
@@ -85,6 +92,22 @@ fn call(name: &str, a: &Value) -> Value {
         "strip_after_original_message_divider" => json!(
             internal::strip_after_original_message_divider(&lines(a), flag(a, "localized", true))
         ),
+        "_aligned_run_marks" => json!(internal::aligned_run_marks(
+            &strs(a, "child_seq"),
+            &strs(a, "parent_seq")
+        )),
+        "_parent_stream_contains" => json!(internal::parent_stream_contains(
+            &strs(a, "parent_seq"),
+            &strs(a, "needles")
+        )),
+        "_any_author_tag" => {
+            let labels: Vec<String> = strs(a, "labels").into_iter().map(String::from).collect();
+            json!(internal::any_author_tag(
+                &labels,
+                s(a, "head"),
+                opt(a, "parent_body")
+            ))
+        }
         other => return json!({"unknown": other}),
     };
     json!({ "result": result })

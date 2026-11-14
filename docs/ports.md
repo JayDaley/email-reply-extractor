@@ -82,7 +82,11 @@ and those inputs are part of the recorded vectors.
   `[^\[\]\n]{1,20}` (`_INLINE_REPLY_TAG_RE`), `[^:\n]{1,40}`
   (`_LABELED_LINK_LINE_RE`) and `[^.!?;:]{0,60}` (`_GREETING_RE`). In
   TypeScript, count with the string iterator and compile regexes with the `u`
-  (or `v`) flag. In Rust, count `chars()`, not bytes.
+  (or `v`) flag. In Rust, count `chars()`, not bytes. The author-tag index
+  (`_group_by_length`, `_found_after_bracket`, `_name_in_head`) groups labels
+  and names by their length in code points and slices the texts by code
+  points; see "Parent-diff matching structures" below for the units the
+  word-stream index may use.
 - **Line splitting is `split("\n")` only.** Every function splits on LF
   alone; `\r`, U+2028 and other separators stay inside lines, and a trailing
   newline yields a final empty line. `str.splitlines()` is never used. Rust's
@@ -114,8 +118,8 @@ and those inputs are part of the recorded vectors.
   `_SIG_RE` (`-\w`, `\w+\s*`), `_ATTRIBUTION_START_RE` and
   `_ATTRIBUTION_END_RE` (`\b`, `\d{4}`, `\s*`), `_MULTI_QUOTE_HDR` (`\s`),
   `_LINK_ONLY_LINE_RE` (`[\w.+-]`), `_PHONE_LINE_RE`, `_CONTACT_CUE_RE`,
-  `_IDENTIFIER_LINE_RE`, `_INLINE_REPLY_TAG_RE` and `_is_author_tag`
-  (`(?<!\w)…(?!\w)`).
+  `_IDENTIFIER_LINE_RE`, `_INLINE_REPLY_TAG_RE`, and `_WORD_CHAR_RE`, the
+  one-character `\w` test of `_name_in_head`.
 - **`.` excludes only `\n`.** JavaScript's `.` also excludes `\r`, U+2028
   and U+2029 (use `[^\n]`, or the `s` flag where the Python pattern uses
   `re.DOTALL`). Rust's `.` matches Python's.
@@ -134,9 +138,8 @@ and those inputs are part of the recorded vectors.
   `[A-Z]` checked separately).
 - **Lookaround.** `_MULTI_QUOTE_HDR` (`(?!On.*On\s.+?wrote:)` with a lazy
   `.+?` under `re.DOTALL`), the scanner's Outlook-boundary substitution
-  (`(?=\n ?[_-]{7,})`), `_INLINE_REPLY_TAG_RE` (`(?!…)`, `(?=…)`) and
-  `_is_author_tag` (`(?<!\w)`, `(?!\w)`) use lookaround. JavaScript supports
-  it. Rust's `regex` crate does not; use `fancy-regex` or equivalent hand
+  (`(?=\n ?[_-]{7,})`) and `_INLINE_REPLY_TAG_RE` (`(?!…)`, `(?=…)`) use
+  lookaround. JavaScript supports it. Rust's `regex` crate does not; use `fancy-regex` or equivalent hand
   code for these patterns. All patterns use leftmost-first alternation, which
   JavaScript and Rust share.
 - **Literal replacement.** `read_fragments` (`_fragments.py`) replaces the
@@ -147,8 +150,7 @@ and those inputs are part of the recorded vectors.
   string (which expands `$&`, `$1`); a Rust port must not use the `regex`
   crate's `$` expansion. Pinned by the `test_*_in_attribution_*` and
   `test_backslash_*` tests in `test_port_hazards.py`.
-- **`re.split(..., maxsplit=1)`** in `_is_signoff_name_title_line`, and
-  `re.escape` for the dynamic pattern in `_is_author_tag`.
+- **`re.split(..., maxsplit=1)`** in `_is_signoff_name_title_line`.
 
 ### Character predicates
 
@@ -161,18 +163,46 @@ and those inputs are part of the recorded vectors.
   (`ǅ`, U+01C5). Rust's `char::is_uppercase()` matches; in JavaScript use
   `/\p{Uppercase}/u`.
 
-### `difflib.SequenceMatcher`
+### Parent-diff matching structures
 
-`strip_parent_content` runs `SequenceMatcher(a=child, b=parent,
-autojunk=False)` over lists of normalized lines and uses
-`get_matching_blocks()`. The blocks depend on the algorithm's tie-breaking:
-`find_longest_match` returns the longest block, and among equally long
-blocks the one starting earliest in `a`, then earliest in `b`;
-`get_matching_blocks` recurses on the regions left and right of each block
-and merges adjacent blocks. With `autojunk=False` and no junk function there
-is no popularity pruning. A port reimplements these two methods literally;
-a different LCS or diff algorithm produces different blocks and different
-output.
+`strip_parent_content` and the inline-reply check run in time linear in
+their input. Each structure below is specified by its answers, and a port
+reproduces the answers exactly; the data structures are the port's choice.
+
+- **Rule (a), `_aligned_run_marks`.** The specification is the comment above
+  it in `extraction.py`. The tie-breaks are part of it: the anchor is the
+  longest common run counted in lines; among equally long runs, the one with
+  the smallest start in the child; its parent position is the smallest start
+  of an occurrence in the parent. Lines compare by exact string equality.
+  The reference finds the anchor with a suffix automaton over parent line
+  ids (`_build_automaton`, `_walk`): the first child end position at which
+  the longest matched run strictly exceeds every earlier one, and the
+  automaton state's `first_end` (the smallest end position of its strings,
+  copied to a clone from the state it splits).
+- **Rules (b) and (c), `_ParentStream`.** `contains(needle)` equals the
+  substring test `needle in " ".join(parent_seq)`. Every needle is one or two
+  normalized lines (single spaces between non-empty words, no other
+  whitespace); the reference relies on that form only in its word table, and
+  its suffix automaton answers any needle. Membership of one string in
+  another gives the same answer whether both are taken as code points, as
+  UTF-8 bytes, or as well-formed UTF-16 code units, so a Rust port may index
+  bytes. A JavaScript string can hold an unpaired surrogate; keying the
+  automaton by code point gives the reference's answer for such strings as
+  well. The offsets in the word table and the comparison at a candidate
+  position must use one unit consistently. A port that compares UTF-16 code
+  units at a candidate position must also reject a match that starts or ends
+  inside a surrogate pair of the stream: the stream `a b` followed by U+1F600
+  does not contain the needle `a b` followed by the unpaired surrogate U+D83D.
+  The TypeScript port keeps its tables in typed arrays (`hashTables.ts`),
+  because a JavaScript `Map` holds at most 2^24 entries. The Rust port answers
+  with `str::contains`, which gives the same result, for a stream too large
+  for its 32-bit table offsets.
+- **Inline-reply tags, `_any_author_tag`.** Equals, per label, the tests
+  `"[" + label in parent_body` and
+  `re.search(r"(?<!\w)" + re.escape(name) + r"(?!\w)", head)`, with `\w` as
+  above. Labels and names are at most 20 code points.
+- **No map iteration order.** No result depends on the order in which a
+  hash map or set is iterated.
 
 ### `html.parser.HTMLParser`
 

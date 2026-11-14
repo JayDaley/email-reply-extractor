@@ -30,6 +30,7 @@ const CONFORMANCE = join(ROOT, "conformance");
 const PYTHON = process.env.PYTHON ?? join(ROOT, ".venv", "bin", "python");
 
 const PER_FN = Number(process.argv[2] ?? 400);
+const FUNCTIONS = process.env.FUNCTIONS ? new Set(process.env.FUNCTIONS.split(",")) : null;
 let seed = Number(process.argv[3] ?? 1);
 // Fraction of text and HTML inputs drawn from the adversarial token runs.
 const ADVERSARIAL_SHARE = Number(process.env.ADVERSARIAL_SHARE ?? 0.1);
@@ -472,7 +473,7 @@ const FOCUSED_HTML = [
   '<div class="gmail_attr">',
 ];
 
-/** Text around an inline-reply tag's name (the whole-word test of `_is_author_tag`). */
+/** Text around an inline-reply tag's name (the whole-word test of `_any_author_tag`). */
 const AUTHOR_HEAD = ["Med", "Bob", "Bo", "o", "x", " ", "\n", "\u{1d49c}", "\u{1f600}", "_", "1", "é", "\u0301", "-"];
 
 /** A short string over a small alphabet. */
@@ -633,6 +634,221 @@ function lines(s) {
   return s.split("\n");
 }
 
+// --- parent-diff generators ----------------------------------------------------------
+
+/**
+ * Words for the parent-diff generators: short ASCII words that are prefixes
+ * and suffixes of one another, a letter with a diacritic, astral characters,
+ * and unpaired surrogates (alone and next to a letter).
+ */
+const DIFF_WORDS = [
+  ["a", "b"],
+  ["a", "ab", "ba", "b", "aa"],
+  ["x", "xy", "yx", "y", "z", "é", "\u{1f600}", "xé"],
+  ["\u{1f600}", "\ud83d", "\ude00", "a\ude00", "\ud83da", "a", "\u{1d49c}"],
+  Array.from({ length: 30 }, (_, k) => `w${k}`),
+];
+
+/** Characters normalize_body deletes; between two halves of a pair they would join them in JavaScript only. */
+const MERGES_A_PAIR = /[\ud800-\udbff](?:﻿|​|‌|‍|⁠)+[\udc00-\udfff]/;
+
+/** A raw line around normalized `words`: quote markers, extra and non-ASCII whitespace. */
+function rawLine(words) {
+  let line = words.join(rand() < 0.8 ? " " : pick([" ", "  ", "\t", " ", " 　"]));
+  if (rand() < 0.15) line = pick(["> ", ">", ">> ", "> > ", " > "]) + line;
+  if (rand() < 0.1) line = pick([" ", "\t"]) + line;
+  if (rand() < 0.1) line += pick([" ", "\t", "\r", "​"]);
+  return line;
+}
+
+/** A small alphabet of lines (1 to 12 words each) over one word list. */
+function lineAlphabet(vocab) {
+  const counts = [1, 1, 2, 3, 4, 5, 7, 8, 9, 10, 12];
+  return Array.from({ length: 1 + randint(6) }, () => Array.from({ length: pick(counts) }, () => pick(vocab)));
+}
+
+/** Child and parent sequences over `alphabet`, often with a slice of the parent planted in the child. */
+function tieSequences(alphabet, maxLen) {
+  const c = Array.from({ length: randint(maxLen + 1) }, () => pick(alphabet));
+  const p = Array.from({ length: randint(maxLen + 1) }, () => pick(alphabet));
+  for (let k = randint(3); k > 0; k--) {
+    if (p.length === 0) break;
+    const a = randint(p.length);
+    const b = a + 1 + randint(p.length - a);
+    const at = randint(c.length + 1);
+    c.splice(at, 0, ...p.slice(a, b));
+  }
+  return [c, p];
+}
+
+/** Rule (a) inputs: child and parent bodies over a small alphabet of lines. */
+function tieCase() {
+  const vocab = pick(DIFF_WORDS);
+  const [c, p] = tieSequences(lineAlphabet(vocab), rand() < 0.8 ? 12 : 60);
+  const body = (seq) => {
+    const out = [];
+    for (const words of seq) {
+      if (rand() < 0.1) out.push(pick(["", " ", "\t", ">"]));
+      out.push(rawLine(words));
+    }
+    return out.join(rand() < 0.9 ? "\n" : "\r\n");
+  };
+  return { text: body(c), parent_body: body(p), continuation: rand() < 0.5 };
+}
+
+/** Rules (b) and (c) inputs: the same word run wrapped at different widths, with own lines and edits. */
+function rewrapCase() {
+  const vocab = pick(DIFF_WORDS);
+  const words = Array.from({ length: randint(120) }, () => pick(vocab));
+  const wrap = (ws, width) => {
+    const out = [];
+    for (let k = 0; k < ws.length; ) {
+      const w = Math.max(1, width + randint(3) - 1);
+      out.push(ws.slice(k, k + w));
+      k += w;
+    }
+    return out;
+  };
+  const parent = wrap(words, 1 + randint(12));
+  let child = wrap(words.slice(randint(10), words.length - randint(10)), 1 + randint(12));
+  for (let k = randint(4); k > 0; k--) {
+    const own = Array.from({ length: 1 + randint(10) }, () => pick(vocab));
+    child.splice(randint(child.length + 1), 0, own);
+  }
+  if (rand() < 0.3 && child.length > 0) {
+    const at = randint(child.length);
+    child[at] = child[at].map((w) => (rand() < 0.2 ? pick(vocab) : w));
+  }
+  if (rand() < 0.2) child = child.reverse();
+  const body = (lines) => lines.map(rawLine).join("\n");
+  return { text: body(child), parent_body: body(parent), continuation: rand() < 0.7 };
+}
+
+/** A strip_parent_content input that normalize_body cannot turn into a different code-point sequence. */
+function stripCase() {
+  for (;;) {
+    const r = rand();
+    let args;
+    if (r < 0.4) args = tieCase();
+    else if (r < 0.8) args = rewrapCase();
+    else {
+      const text = textInput();
+      args = { text, parent_body: rand() < 0.6 ? mutate(text, SPICE, 4) : textInput(), continuation: rand() < 0.5 };
+    }
+    if (!MERGES_A_PAIR.test(args.text) && !MERGES_A_PAIR.test(args.parent_body)) return args;
+  }
+}
+
+/** _ParentStream inputs: parent lines over a small word list and needles cut from the stream or made up. */
+function streamCase() {
+  const vocab = pick(DIFF_WORDS);
+  const words = Array.from({ length: randint(61) }, () => pick(vocab));
+  const parent = [];
+  for (let k = 0; k < words.length; ) {
+    const step = 1 + randint(8);
+    parent.push(words.slice(k, k + step).join(rand() < 0.95 ? " " : "  "));
+    k += step;
+  }
+  const stream = parent.join(" ");
+  const needles = [];
+  for (let q = 1 + randint(15); q > 0; q--) {
+    let needle;
+    if (stream && rand() < 0.6) {
+      // A slice in code units: it can cut a pair in half.
+      const lo = randint(stream.length);
+      needle = stream.slice(lo, lo + 1 + randint(80));
+      if (rand() < 0.8) needle = needle.replace(/^ +| +$/g, "");
+      if (rand() < 0.3 && needle) {
+        const at = randint(needle.length);
+        if (needle[at] !== " ") needle = needle.slice(0, at) + pick(vocab).charAt(0) + needle.slice(at + 1);
+      }
+    } else {
+      needle = Array.from({ length: 1 + randint(10) }, () => pick(vocab)).join(" ");
+    }
+    needles.push(needle);
+  }
+  return { parent_seq: parent, needles };
+}
+
+/** _aligned_run_marks inputs: normalized lines over a small alphabet. */
+function alignedCase() {
+  const vocab = pick(DIFF_WORDS);
+  const alphabet = lineAlphabet(vocab).map((ws) => ws.join(" "));
+  const [c, p] = tieSequences(alphabet, rand() < 0.8 ? 10 : 50);
+  return { child_seq: c, parent_seq: p };
+}
+
+/** Characters of tag labels, heads and parents: word and non-word characters, astral and unpaired. */
+const TAG_CHARS = [
+  "a",
+  "A",
+  "b",
+  "M",
+  "1",
+  "9",
+  "_",
+  "é",
+  "٣",
+  " ",
+  ".",
+  "-",
+  "\u{1d49c}",
+  "\u{1f600}",
+  "\ud83d",
+  "\udc9c",
+  "́",
+];
+const TAG_TEXT = [...TAG_CHARS, "[", "[", "\n", "Med", "Bob"];
+
+/** _any_author_tag inputs: labels of 1 to 20 code points, planted in the parent most of the time. */
+function authorTagCase() {
+  const str = (alphabet, n) => Array.from({ length: n }, () => pick(alphabet)).join("");
+  const labels = Array.from({ length: 1 + randint(4) }, () =>
+    str(TAG_CHARS, rand() < 0.9 ? 1 + randint(4) : 1 + randint(20)),
+  );
+  const head = rand() < 0.3 ? focused(AUTHOR_HEAD) : str(TAG_TEXT, randint(40));
+  let parent = null;
+  if (rand() >= 0.2) {
+    parent = str(TAG_TEXT, randint(40));
+    for (const label of labels) {
+      if (rand() < 0.7) {
+        const chars = Array.from(parent);
+        const at = randint(chars.length + 1);
+        parent = `${chars.slice(0, at).join("")}[${label}${chars.slice(at).join("")}`;
+      }
+    }
+  }
+  return { labels, head, parent_body: parent };
+}
+
+/** extract_new_text inputs that reach the inline-reply tag test below a localized quote header. */
+function inlineReplyCase() {
+  const tags = ["Med", "SAH", "Linda3", "J. D.", "Bob", "\u{1d49c}x", "Q1", "ML"];
+  const quoted = Array.from(
+    { length: 1 + randint(4) },
+    () => `quoted line ${randint(5)} with enough words to match here`,
+  );
+  const tagLines = Array.from(
+    { length: 1 + randint(4) },
+    () => `[${pick(tags)}] ${pick(["ok", "agreed", "see above"])}`,
+  );
+  const head = `Thanks.\n${pick(["Cheers,", "Best,", ""])}\n${pick(["Med", "Bob", "Linda", "J. D.", "x"])}`;
+  const block = pick([
+    "De : Someone <someone@example.org>\nEnvoyé : lundi 1 janvier 2026 10:00\nÀ : list@example.org\nObjet : Re: x",
+    "-------- Message d'origine --------",
+    "Von: X <x@y.z>\nGesendet: Montag\nAn: list@example.org\nBetreff: Re: x",
+  ]);
+  const mix = [...quoted];
+  for (const t of tagLines) mix.splice(randint(mix.length + 1), 0, t);
+  const body = `${head}\n${block}\n${mix.join("\n")}`;
+  const args = { body };
+  if (rand() < 0.8) {
+    const parentTags = tags.filter(() => rand() < 0.5).map((t) => `[${t}] earlier`);
+    args.parent_body = [...quoted, ...parentTags].join("\n");
+  }
+  return args;
+}
+
 // --- the calls -----------------------------------------------------------------------------
 
 const GENERATORS = {
@@ -649,10 +865,11 @@ const GENERATORS = {
       args.html_signature_text = rand() < 0.5 ? shortText() : args.extracted_text.split("\n").slice(-4).join("\n");
     return args;
   },
-  "extraction.strip_parent_content": () => {
-    const text = textInput();
-    return { text, parent_body: rand() < 0.6 ? mutate(text, SPICE, 4) : textInput(), continuation: rand() < 0.5 };
-  },
+  "extraction.strip_parent_content": stripCase,
+  "extraction._aligned_run_marks": alignedCase,
+  "extraction._ParentStream.contains": streamCase,
+  "extraction._any_author_tag": authorTagCase,
+  "extraction.extract_new_text#inline-reply": inlineReplyCase,
   "html_text.html_to_text": () => ({ html: htmlInput() }),
   "html_text.split_html_parts": () => ({ html: htmlInput() }),
   "equivalence.tolerant_lines": () => ({ text: textInput() }),
@@ -672,27 +889,6 @@ const GENERATORS = {
   "extraction.count_unquoted_content_lines": () => ({ body: textInput(), localized: rand() < 0.7 }),
   "extraction._localized_inline_reply": () => ({
     lines: lines(textInput()),
-    parent_body: rand() < 0.5 ? null : textInput(),
-  }),
-  "extraction._is_author_tag": () => ({
-    label: pick([
-      "Med",
-      "SAH",
-      "Linda3",
-      "a.b",
-      "x y",
-      "J\u0301",
-      "İ",
-      "(x",
-      "$",
-      "\\",
-      "Bob",
-      "Bo",
-      "o",
-      "\u{1d49c}x",
-      "_",
-    ]),
-    head: rand() < 0.5 ? focused(AUTHOR_HEAD) : textInput(),
     parent_body: rand() < 0.5 ? null : textInput(),
   }),
   "_fragments.read_fragments": () => ({ text: extraction.normalizeBody(textInput()) }),
@@ -727,7 +923,12 @@ const TS = {
   "extraction.count_unquoted_content_lines": (a) =>
     extraction.countUnquotedContentLines(a.body, { localized: a.localized }),
   "extraction._localized_inline_reply": (a) => extraction.localizedInlineReply(a.lines, a.parent_body),
-  "extraction._is_author_tag": (a) => extraction.isAuthorTag(a.label, a.head, a.parent_body),
+  "extraction._aligned_run_marks": (a) => extraction.alignedRunMarks(a.child_seq, a.parent_seq),
+  "extraction._ParentStream.contains": (a) => {
+    const index = new extraction.ParentStream(a.parent_seq);
+    return a.needles.map((needle) => index.contains(needle));
+  },
+  "extraction._any_author_tag": (a) => extraction.anyAuthorTag(a.labels, a.head, a.parent_body),
   "_fragments.read_fragments": (a) => fragments.readFragments(a.text),
   "cleaning.is_mobile_tagline": (a) => cleaning.isMobileTagline(a.line),
   "cleaning._is_droppable_signature_line": (a) => cleaning.isDroppableSignatureLine(a.line),
@@ -752,14 +953,19 @@ function encode(value) {
   return value;
 }
 
+// A "#variant" suffix names a second generator for the same function.
+const fnOf = (name) => name.split("#")[0];
+TS["extraction.extract_new_text#inline-reply"] = TS["extraction.extract_new_text"];
+
 const calls = [];
-for (const [fn, gen] of Object.entries(GENERATORS)) {
-  for (let k = 0; k < PER_FN; k++) calls.push({ fn, args: gen() });
+for (const [name, gen] of Object.entries(GENERATORS)) {
+  if (FUNCTIONS && !FUNCTIONS.has(name)) continue;
+  for (let k = 0; k < PER_FN; k++) calls.push({ name, fn: fnOf(name), args: gen() });
 }
 
 const python = JSON.parse(
   execFileSync(PYTHON, [join(HERE, "reference.py")], {
-    input: JSON.stringify(calls),
+    input: JSON.stringify(calls.map(({ fn, args }) => ({ fn, args }))),
     maxBuffer: 1 << 30,
     env: { ...process.env, PYTHONPATH: join(ROOT, "python", "src") },
   }).toString("utf8"),
@@ -770,16 +976,16 @@ const counts = {};
 calls.forEach((call, k) => {
   let ts;
   try {
-    ts = { result: encode(TS[call.fn](call.args)) };
+    ts = { result: encode(TS[call.name](call.args)) };
   } catch (err) {
     ts = { error: err.name };
   }
   const py = python[k];
   const same = "error" in py ? "error" in ts : JSON.stringify(ts.result) === JSON.stringify(py.result);
-  counts[call.fn] = counts[call.fn] ?? [0, 0];
-  counts[call.fn][0]++;
+  counts[call.name] = counts[call.name] ?? [0, 0];
+  counts[call.name][0]++;
   if (!same) {
-    counts[call.fn][1]++;
+    counts[call.name][1]++;
     mismatches.push({ ...call, python: py, typescript: ts });
   }
 });

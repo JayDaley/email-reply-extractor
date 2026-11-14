@@ -1,0 +1,63 @@
+From: Alice Example <alice@example.org>
+To: wg@example.org
+Subject: Re: [wg] Draft agenda for the interim meeting
+Date: Thu, 12 Nov 2026 09:14:02 +0000
+Message-ID: <synthetic-repeated-signature-01@example.org>
+In-Reply-To: <synthetic-agenda-01@example.org>
+References: <synthetic-agenda-01@example.org>
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="synthetic-boundary-01"
+
+--synthetic-boundary-01
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+Hi Bob,
+
+Thanks, the agenda works for me. I will present the registry changes
+and can take the notes for the second half of the session.
+
+Alice
+
+Here is the draft agenda for the interim meeting:
+1. Agenda bashing (5 min)
+2. Refresh interval in section 4 (20 min)
+3. Registry changes (15 min)
+4. Next steps (5 min)
+
+Bob Example
+Co-Chair - Example Platform Working Group
+Co-Chair - Example Metadata Access Working Group
+
+Please send any additions to the agenda before Wednesday,
+so that the presenters have enough time to prepare slides.
+
+Bob Example
+Co-Chair - Example Platform Working Group
+Co-Chair - Example Metadata Access Working Group
+
+--synthetic-boundary-01
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+<html><body>
+<div>Hi Bob,<br>
+<br>
+Thanks, the agenda works for me. I will present the registry changes<br>
+and can take the notes for the second half of the session.<br>
+<br>
+Alice</div>
+<blockquote type="cite">
+<div>Here is the draft agenda for the interim meeting:<br>
+1. Agenda bashing (5 min)<br>
+2. Refresh interval in section 4 (20 min)<br>
+3. Registry changes (15 min)<br>
+4. Next steps (5 min)</div>
+<p>Please send any additions to the agenda before Wednesday, so that the presenters have enough time to prepare slides.</p>
+<div>Bob Example<br>
+Co-Chair - Example Platform Working Group<br>
+Co-Chair - Example Metadata Access Working Group</div>
+</blockquote>
+</body></html>
+
+--synthetic-boundary-01--

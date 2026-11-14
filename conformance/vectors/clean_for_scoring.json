@@ -587,6 +587,17 @@
   },
   {
    "args": {
+    "extracted_text": "Hi Bob,\n\nThanks, the agenda works for me. I will present the registry changes\nand can take the notes for the second half of the session.\n\nAlice"
+   },
+   "result": {
+    "text": "Thanks, the agenda works for me. I will present the registry changes\nand can take the notes for the second half of the session.\n\nAlice",
+    "ignored_lines": [
+     0
+    ]
+   }
+  },
+  {
+   "args": {
     "extracted_text": "Hi Dennis,\n\nthanks for sharing. But this only reflects parts of the discussion.\n\nSince I too provide public mail listings for my users, I know, this is\na difficult issue.\n\nFrom my point of view, this IETF Web-based ML is dysfunctional because\nit is difficult to digest the important topics.\n\nSubscribers often express their oppinion not matching the topic\n(Subject). This is bad for readers and digesting.\n\nRegards.\n--eh.\n\n\n\n--\nDr. Erwin Hoffmann | www.fehcom.de\nPGP key-id: 36553F7F9C58D1CC\nPGP key-fingerprint:  950B 5555 0B08 5A2A 1C00 9594 3655 3F7F 9C58 D1CC"
    },
    "result": {

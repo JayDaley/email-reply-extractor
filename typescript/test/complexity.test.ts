@@ -4,14 +4,18 @@
 // a superlinear path of an earlier implementation of this port — regex
 // backtracking on V8's engine or a quadratic scan — and asserts that the call
 // completes within BOUND_MS. The inputs are sized so that the earlier
-// implementation needed more than a minute on each of them (the leading-blank
-// case excepted: it is quadratic only in the reference, and is kept for
-// parity); the current one needs under a second, so the bound is generous and
-// not sensitive to the speed of the machine.
+// implementation needed more than a minute on most of them and well over the
+// bound on the rest (the leading-blank and G7tag cases excepted: their earlier
+// cost was high only in the reference, and they are kept for parity); the
+// current one needs under two seconds, so the bound is not sensitive to the
+// speed of the machine. The larger inputs of the parent-diff cases are built
+// before the clock starts (PREPARED_CASES).
 //
 // The tests pin running time, not output: equivalence of the output with the
 // earlier implementation and with the Python reference was established by
-// differential testing (tools/differential.mjs) when the paths were rewritten.
+// differential testing (tools/differential.mjs) when the paths were rewritten,
+// except for the parent-diff aligned-run rule, whose output changed by design
+// in generation 7 (docs/generation-7.md).
 
 import assert from "node:assert/strict";
 import { test } from "node:test";
@@ -41,6 +45,51 @@ function seedChain(n: number): [string, string] {
   const child = [...new Array<string>(n).fill("a"), ...seeds].join("\n");
   const parent = `a a\na ${seeds.join("\n")}`;
   return [child, parent];
+}
+
+/**
+ * A child and a parent of `n` lines of 30 words each, no word shared: every
+ * child line is a rewrap-rule (b) query that is not in the parent.
+ */
+function distinctLongLines(n: number): [string, string] {
+  const lines = (prefix: string): string =>
+    Array.from({ length: n }, (_, k) => Array.from({ length: 30 }, (_, j) => `${prefix}${k}x${j}`).join(" ")).join(
+      "\n",
+    );
+  return [lines("c"), lines("p")];
+}
+
+/**
+ * A re-wrapped paragraph: three 9-word seed lines, then `n` 3-word remainder
+ * lines that the continuation rule (c) chains off the seeds, each join a query
+ * against a parent of 10-word lines.
+ */
+function remainderChain(n: number): [string, string] {
+  const words = Array.from({ length: 3 * n + 27 }, (_, k) => `w${k}`);
+  const parent: string[] = [];
+  for (let k = 0; k < words.length; k += 10) parent.push(words.slice(k, k + 10).join(" "));
+  const child: string[] = [];
+  for (let k = 0; k < 27; k += 9) child.push(words.slice(k, k + 9).join(" "));
+  for (let k = 27; k < words.length; k += 3) child.push(words.slice(k, k + 3).join(" "));
+  return [child.join("\n"), parent.join("\n")];
+}
+
+/**
+ * A body with `n` tagged lines below a French quote header, and a parent that
+ * uses every tag: each tag is tested against the parent and the text above the
+ * block, and none belongs to the author.
+ */
+function localizedTags(n: number): [string, string] {
+  const quoted = "The quoted message carries enough words to be matched in the parent.";
+  const tags = Array.from({ length: n }, (_, k) => `[Q${k}] ok\n`).join("");
+  const body =
+    `Thanks for the review.\n${"zz ".repeat(100000)}\nCheers,\nMed\n` +
+    "De : Someone <someone@example.org>\n" +
+    "Envoyé : lundi 1 janvier 2026 10:00\n" +
+    "À : list@example.org\n" +
+    `Objet : Re: review\n${quoted}\n${tags}`;
+  const parent = `${"zz ".repeat(100000)}\n${quoted}\n${Array.from({ length: n }, (_, k) => `[Q${k}]`).join(" ")}`;
+  return [body, parent];
 }
 
 /** A localized quote-header block followed by `n` inline-reply tag lines whose names are not in the head. */
@@ -111,6 +160,29 @@ const CASES: [string, () => unknown][] = [
   ["customClean-leading-blanks", () => customClean(`${"\n".repeat(1000000)}hello`)],
 ];
 
+// [finding id, input builder, call]. The input is built before timing starts.
+// Comments give the generation-6 port's cost on the same input on V8.
+const PREPARED_CASES: [string, () => [string, string], (child: string, parent: string) => unknown][] = [
+  // Aligned-run rule (a): the port of difflib.SequenceMatcher, quadratic in the
+  // number of lines (92 s).
+  ["G7a-stripParentContent", () => ["a\n".repeat(40000), "a\n".repeat(40000)], (c, p) => stripParentContent(c, p)],
+  // Rewrap rule (b): one substring search of the parent per child line (19 s).
+  ["G7b-stripParentContent", () => distinctLongLines(60000), (c, p) => stripParentContent(c, p)],
+  // Rule (b) queries that only the suffix automaton decides: every interior
+  // word occurs in the parent, which never contains the line (116 s).
+  [
+    "G7b-automaton-stripParentContent",
+    () => ["a a a a a a a b\n".repeat(1000000), "a ".repeat(200000)],
+    (c, p) => stripParentContent(c, p),
+  ],
+  // Continuation rule (c): one substring search of the parent per join (184 s).
+  ["G7c-stripParentContent", () => remainderChain(300000), (c, p) => stripParentContent(c, p, { continuation: true })],
+  // Inline-reply author tags: per tag, a search of the parent and of the text
+  // above the quote header (2.2 s in this port, whose name search was already
+  // an indexOf scan; 99 s in the reference; kept for parity).
+  ["G7tag-extract", () => localizedTags(25000), (body, parent) => extractNewText(body, { parentBody: parent })],
+];
+
 for (const [name, call] of CASES) {
   test(`completes in linear time: ${name}`, () => {
     const start = performance.now();
@@ -120,8 +192,33 @@ for (const [name, call] of CASES) {
   });
 }
 
+for (const [name, build, call] of PREPARED_CASES) {
+  test(`prepared input completes in linear time: ${name}`, () => {
+    const [child, parent] = build();
+    const start = performance.now();
+    call(child, parent);
+    const elapsed = performance.now() - start;
+    assert.ok(elapsed < BOUND_MS, `took ${(elapsed / 1000).toFixed(2)} s`);
+  });
+}
+
 test("the C4 input marks every line", () => {
   // The C4 input exercises the rule it is meant to: every line chains.
   const [child, parent] = seedChain(50);
   assert.equal(stripParentContent(child, parent, { continuation: true }), "");
+});
+
+test("the G7c input marks every line", () => {
+  // The G7c input exercises the continuation rule: every remainder chains.
+  const [child, parent] = remainderChain(50);
+  assert.equal(stripParentContent(child, parent, { continuation: true }), "");
+});
+
+test("the G7tag input reaches every tag", () => {
+  // The G7tag input keeps the localized treatment: no tag is the author's, so
+  // the quote header truncates and only the text above it is left.
+  const [body, parent] = localizedTags(50);
+  const result = extractNewText(body, { parentBody: parent });
+  assert.ok(result.text.endsWith("Cheers,\nMed"));
+  assert.ok(!result.text.includes("[Q"));
 });

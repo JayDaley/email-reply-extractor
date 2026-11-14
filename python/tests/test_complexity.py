@@ -4,12 +4,14 @@ Each test feeds one input that drove a superlinear path of an earlier
 implementation — regex backtracking or a quadratic scan — and asserts that the
 call completes within :data:`_BOUND` seconds. The inputs are sized so that the
 earlier implementation needed well over a minute on each of them; the current
-one needs a small fraction of a second, so the bound is generous and not
-sensitive to the speed of the machine.
+one needs at most about two seconds, so the bound is not sensitive to the
+speed of the machine. The larger inputs of the parent-diff cases are built
+before the clock starts (:data:`_PREPARED_CASES`).
 
 The tests pin running time, not output: equivalence of the output with the
 earlier implementation was established by differential testing when the paths
-were rewritten. ``python/tools/conformance.py`` leaves this module out of the
+were rewritten, except for the parent-diff aligned-run rule, whose output
+changed by design in generation 7 (``docs/generation-7.md``). ``python/tools/conformance.py`` leaves this module out of the
 vector recording, because its inputs run to megabytes.
 """
 
@@ -43,6 +45,41 @@ def _seed_chain(n: int) -> tuple[str, str]:
     child = "\n".join(["a"] * n + seeds)
     parent = "a a\na " + "\n".join(seeds)
     return child, parent
+
+
+def _distinct_long_lines(n: int) -> tuple[str, str]:
+    """A child and a parent of ``n`` lines of 30 words each, no word shared:
+    every child line is a rewrap-rule (b) query that is not in the parent."""
+    child = "\n".join(" ".join(f"c{k}x{j}" for j in range(30)) for k in range(n))
+    parent = "\n".join(" ".join(f"p{k}x{j}" for j in range(30)) for k in range(n))
+    return child, parent
+
+
+def _remainder_chain(n: int) -> tuple[str, str]:
+    """A re-wrapped paragraph: three 9-word seed lines, then ``n`` 3-word
+    remainder lines that the continuation rule (c) chains off the seeds, each
+    join a query against a parent of 10-word lines."""
+    words = [f"w{k}" for k in range(3 * n + 27)]
+    parent = "\n".join(" ".join(words[k : k + 10]) for k in range(0, len(words), 10))
+    child = [" ".join(words[k : k + 9]) for k in range(0, 27, 9)]
+    child += [" ".join(words[k : k + 3]) for k in range(27, len(words), 3)]
+    return "\n".join(child), parent
+
+
+def _localized_tags(n: int) -> tuple[str, str]:
+    """A body with ``n`` tagged lines below a French quote header, and a
+    parent that uses every tag: each tag is tested against the parent and
+    the text above the block, and none belongs to the author."""
+    quoted = "The quoted message carries enough words to be matched in the parent."
+    body = (
+        "Thanks for the review.\n" + "zz " * 100000 + "\nCheers,\nMed\n"
+        "De : Someone <someone@example.org>\n"
+        "Envoyé : lundi 1 janvier 2026 10:00\n"
+        "À : list@example.org\n"
+        "Objet : Re: review\n" + quoted + "\n" + "".join(f"[Q{k}] ok\n" for k in range(n))
+    )
+    parent = "zz " * 100000 + "\n" + quoted + "\n" + " ".join(f"[Q{k}]" for k in range(n))
+    return body, parent
 
 
 # (finding id, call). Comments give the earlier implementation's cost.
@@ -101,6 +138,39 @@ _CASES: list[tuple[str, Callable[[], object]]] = [
 ]
 
 
+# (finding id, input builder, call). The input is built before timing starts.
+# Comments give the earlier implementation's cost on the same input.
+_PREPARED_CASES: list[tuple[str, Callable[[], tuple[str, str]], Callable[[str, str], object]]] = [
+    # Aligned-run rule (a): difflib.SequenceMatcher, quadratic in the number of
+    # lines (over 90 s).
+    (
+        "G7a-strip_parent_content",
+        lambda: ("a\n" * 40000, "a\n" * 40000),
+        strip_parent_content,
+    ),
+    # Rewrap rule (b): one substring search of the parent per child line
+    # (93 s).
+    ("G7b-strip_parent_content", lambda: _distinct_long_lines(60000), strip_parent_content),
+    # Rule (b) queries that only the suffix automaton decides: every interior
+    # word occurs in the parent, which never contains the line (77 s).
+    (
+        "G7b-automaton-strip_parent_content",
+        lambda: ("a a a a a a a b\n" * 1000000, "a " * 200000),
+        strip_parent_content,
+    ),
+    # Continuation rule (c): one substring search of the parent per join
+    # (155 s).
+    (
+        "G7c-strip_parent_content",
+        lambda: _remainder_chain(300000),
+        lambda child, parent: strip_parent_content(child, parent, continuation=True),
+    ),
+    # Inline-reply author tags: per tag, a search of the parent and of the
+    # text above the quote header (99 s).
+    ("G7tag-extract", lambda: _localized_tags(25000), extract_new_text),
+]
+
+
 @pytest.mark.parametrize("call", [call for _name, call in _CASES], ids=[n for n, _c in _CASES])
 def test_completes_in_linear_time(call: Callable[[], object]) -> None:
     start = time.perf_counter()
@@ -109,7 +179,36 @@ def test_completes_in_linear_time(call: Callable[[], object]) -> None:
     assert elapsed < _BOUND, f"took {elapsed:.2f} s"
 
 
+@pytest.mark.parametrize(
+    ("build", "call"),
+    [(build, call) for _name, build, call in _PREPARED_CASES],
+    ids=[name for name, _b, _c in _PREPARED_CASES],
+)
+def test_prepared_input_completes_in_linear_time(
+    build: Callable[[], tuple[str, str]], call: Callable[[str, str], object]
+) -> None:
+    child, parent = build()
+    start = time.perf_counter()
+    call(child, parent)
+    elapsed = time.perf_counter() - start
+    assert elapsed < _BOUND, f"took {elapsed:.2f} s"
+
+
 def test_seed_chain_marks_every_line() -> None:
     # The C4 input exercises the rule it is meant to: every line chains.
     child, parent = _seed_chain(50)
     assert strip_parent_content(child, parent, continuation=True) == ""
+
+
+def test_remainder_chain_marks_every_line() -> None:
+    # The G7c input exercises the continuation rule: every remainder chains.
+    assert strip_parent_content(*_remainder_chain(50), continuation=True) == ""
+
+
+def test_localized_tags_reach_every_tag() -> None:
+    # The G7tag input keeps the localized treatment: no tag is the author's,
+    # so the quote header truncates and only the text above it is left.
+    body, parent = _localized_tags(50)
+    result = extract_new_text(body, parent)
+    assert result.text.endswith("Cheers,\nMed")
+    assert "[Q" not in result.text

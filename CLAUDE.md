@@ -44,6 +44,8 @@ commit and release. Never edit the JSON under `conformance/` by hand.
     `test_conformance.py` (committed data matches live output; vector replay),
     `test_extraction_version.py` (the digest contract), `test_sync.py`,
     `test_port_hazards.py` (pins Python-specific semantics for the ports),
+    `test_parent_diff.py` (the parent-diff matching structures: tie-breaks,
+    a brute-force reference, exactness against the searches they replaced),
     `test_complexity.py` (adversarial inputs that must complete in linear
     time; each port carries the same file)
   - `tools/conformance.py` — generates and checks `conformance/`
@@ -53,15 +55,16 @@ commit and release. Never edit the JSON under `conformance/` by hand.
   holds `EXTRACTION_VERSION`, `LICENSE` copy)
 - `rust/` — the Rust port (`Cargo.toml`, `src/extraction.rs` holds
   `EXTRACTION_VERSION`, `LICENSE` copy)
-- `fixtures/` — the hand-labeled corpus of 26 real messages (`<stem>.eml`,
+- `fixtures/` — the hand-labeled corpus of 27 messages (`<stem>.eml`,
   `expected/<stem>.txt`, `README.md`), shared by all ports
 - `conformance/` — generated, committed test data: `corpus.json`,
   `digest.json` (the single recorded corpus digest), `vectors/`; its
   `README.md` specifies the formats and the digest algorithm
 - `docs/` — `extraction.md` (the rules of both stages), `versioning.md` (the
   `EXTRACTION_VERSION` contract), `ports.md` (the port contract and the
-  semantic hazards a porter must respect), `generation-5.md` (planned output
-  changes)
+  semantic hazards a porter must respect), `generation-5.md` and
+  `generation-7.md` (the output changes of those generations, with their
+  measured effect)
 - `Makefile` — run from the root: `make test`, `make lint`, `make vectors`,
   `make check-vectors`, `make check-sync`, and per-port
   `make test-python|test-typescript|test-rust` and `lint-…` targets
@@ -87,7 +90,7 @@ measurements and rationale plainly.
 
 ## Extraction version
 
-`EXTRACTION_VERSION` (an integer, currently 6) identifies the generation of
+`EXTRACTION_VERSION` (an integer, currently 7) identifies the generation of
 the routine that derives an extraction's text: `extraction.py`, `cleaning.py`,
 `html_text.py` and `_fragments.py` taken together, and their counterparts in
 the ports. It is independent of the package version and is incremented
@@ -115,12 +118,16 @@ of them to agree.
 - Adding or removing a fixture moves the digest without changing the routine:
   `make vectors` re-records the digest and leaves the generation where it is.
   An edited `.eml` needs `python python/tools/conformance.py --rerecord-digest`.
-- Six generations exist: **1** (initial release of the origin application),
-  **2** (from its v1.2.0), **3** (from v1.11.0), **4** (from v1.15.0, the
-  generation this package's v1.0.0 shipped), **5** (this package's v1.1.0:
-  fragment edges kept, Outlook-boundary fix uncapped) and **6** (v1.2.0:
-  Latin-script localized quote-header blocks and dividers). The digest of each
-  is listed in `conformance/README.md`.
+- Seven generations exist: **1** (initial release of the origin
+  application), **2** (from its v1.2.0), **3** (from v1.11.0), **4** (from
+  v1.15.0, the generation this package's v1.0.0 shipped), **5** (this
+  package's v1.1.0: fragment edges kept, Outlook-boundary fix uncapped), **6**
+  (v1.2.0: Latin-script localized quote-header blocks and dividers) and **7**
+  (v1.3.0: the parent-diff aligned-run rule aligns around the longest common
+  run instead of `difflib`, the parent-diff assist is linear, and the scanner
+  inserts the collapsed attribution header literally; see
+  `docs/generation-7.md`). The digest of each is listed in
+  `conformance/README.md`.
 
 ## The vendored scanner
 
@@ -131,7 +138,7 @@ see `docs/generation-5.md`. A third (the collapsed "On … wrote:" header passed
 to `re.sub` as a replacement template, so backslash sequences in a body were
 rewritten, an invalid escape failed the extraction, and `\1` repeats
 amplified the output quadratically) was preserved through generation 6 and is
-fixed: the collapsed header is inserted literally (pinned in
+fixed in generation 7: the collapsed header is inserted literally (pinned in
 `python/tests/test_port_hazards.py`). One upstream behavior remains and is
 deliberate: the wrapped-attribution collapse itself.
 `extraction.py`'s quote-header pre-truncation compensates for the collapse's
@@ -143,7 +150,7 @@ re-record.
 ## Versioning
 
 The packages use [semantic versioning](https://semver.org/); the current
-version is **1.2.3**. The three ports always carry the same version. The
+version is **1.3.0**. The three ports always carry the same version. The
 sources are `__version__` in `python/src/email_reply_extractor/__init__.py`
 (`python/pyproject.toml` reads it dynamically), `version` in
 `typescript/package.json`, and `version` in `rust/Cargo.toml`; `make

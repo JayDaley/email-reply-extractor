@@ -260,7 +260,7 @@ Three modifiers combine with the base value:
 `EXTRACTION_VERSION` is a `u32` identifying the generation of the routine that
 derives the text. It is independent of the package version, only ever
 increases, and is incremented whenever a change can alter the derived text. It
-is currently **6**.
+is currently **7**.
 
 An application that stores derived text should store `EXTRACTION_VERSION`
 alongside it and compare the stored stamp with the running constant using `<`
@@ -274,10 +274,11 @@ when only whitespace moved.
 
 The port reproduces the Python standard-library behavior the reference relies
 on: code point (not byte) lengths and indices, Python's whitespace,
-`\w`, `\d` and case-insensitive matching sets, `difflib.SequenceMatcher`,
-and the `html.parser.HTMLParser` tokenizer with `html.unescape` and the HTML5
-named character references. The Unicode
-tables are generated from the Python version that records the conformance
+`\w`, `\d` and case-insensitive matching sets, and the
+`html.parser.HTMLParser` tokenizer with `html.unescape` and the HTML5
+named character references. The parent-diff assist's index of the parent's
+word stream works in bytes, which gives the same substring answers as the
+reference's code points. The Unicode tables are generated from the Python version that records the conformance
 data (`tools/gen_tables.py`). The hazards are listed in
 [docs/ports.md](https://github.com/JayDaley/email-reply-extractor/blob/main/docs/ports.md).
 

@@ -117,6 +117,10 @@ fn call(module: &str, function: &str, a: &Args) -> Option<Result<Value, ()>> {
         ("cleaning", "is_signature_delimiter") => {
             Ok(json!(internal::is_signature_delimiter(a.str("line"))))
         }
+        ("extraction", "_aligned_run_marks") => Ok(json!(internal::aligned_run_marks(
+            &a.lines("child_seq"),
+            &a.lines("parent_seq")
+        ))),
         ("extraction", "count_unquoted_content_lines") => Ok(json!(
             internal::count_unquoted_content_lines(a.str("body"), a.bool("localized"))
         )),

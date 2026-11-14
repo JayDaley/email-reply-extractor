@@ -218,7 +218,7 @@ Three modifiers combine with the base value:
 `EXTRACTION_VERSION` is an integer identifying the generation of the routine
 that derives the text. It is independent of the package version, only ever
 increases, and is the same in the Python, TypeScript and Rust packages. It is
-currently **6**.
+currently **7**.
 
 An application that stores derived text stores `EXTRACTION_VERSION` alongside
 it and compares the stored stamp with the running constant using `<` to decide
@@ -234,10 +234,12 @@ whitespace moved.
 
 Node.js 20, 22 and 24; each is exercised in CI. The port reproduces the Python
 standard-library behaviour the reference relies on (the `str.isspace()`
-whitespace set, Unicode `\w`, `\d` and `\b`, `re.IGNORECASE` matching,
-`difflib.SequenceMatcher` and the `html.parser` tokenizer) with its own code
-and tables generated from Python, so the output does not depend on the Unicode
-version of the JavaScript engine.
+whitespace set, Unicode `\w`, `\d` and `\b`, `re.IGNORECASE` matching
+and the `html.parser` tokenizer) with its own code and tables generated from
+Python, so the output does not depend on the Unicode version of the JavaScript
+engine. The parent-diff assist's index of the parent's word stream compares
+UTF-16 code units and rejects a match that starts or ends inside a surrogate
+pair, which gives the same substring answers as the reference's code points.
 
 ## Documentation
 

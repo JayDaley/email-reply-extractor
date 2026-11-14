@@ -10,7 +10,10 @@ lists, Unicode edge strings, HTML fragments, and adversarial inputs for the
 linear-time rewrites (token soups of the delimiters those paths slice at,
 multi-byte characters next to them, header runs, sign-off tails, tag
 sequences and parent-diff chains; ``--adversarial`` sets their share) —
-runs each through the
+or, with ``--parent-diff``, only inputs for the parent-diff assist
+(``strip_parent_content`` over small alphabets of lines and words, and the
+aligned-run marks, the parent word-stream index and the author-tag test
+called directly) — runs each through the
 Python reference (``python/src``) and through the Rust port
 (``cargo run --release --example difftest``), and reports every case whose
 outputs differ. Exit status 1 when any case differs or the Rust driver
@@ -78,7 +81,17 @@ REFERENCE = {
             _lines(a), localized=a.get("localized", True)
         )
     ),
+    "_aligned_run_marks": lambda a: extraction._aligned_run_marks(a["child_seq"], a["parent_seq"]),
+    "_parent_stream_contains": lambda a: _stream_contains(a["parent_seq"], a["needles"]),
+    "_any_author_tag": lambda a: extraction._any_author_tag(
+        a["labels"], a["head"], a.get("parent_body")
+    ),
 }
+
+
+def _stream_contains(parent_seq, needles):
+    index = extraction._ParentStream(parent_seq)
+    return [index.contains(needle) for needle in needles]
 
 
 def encode(value):
@@ -948,6 +961,148 @@ def adversarial_case(rng: random.Random) -> dict:
     return {"fn": "strip_parent_content", "args": adversarial_chain(rng)}
 
 
+# --- parent-diff cases (generation 7) -----------------------------------------------
+#
+# Small alphabets of lines and words, so that runs, occurrences and grams tie
+# and repeat; non-ASCII and multi-byte words; raw lines with quote markers and
+# Python-only whitespace, so that normalization is exercised as well.
+
+PD_WORDS = [
+    ["a", "b"],
+    ["a", "ab", "ba", "b"],
+    ["x", "xy", "yx", "y", "z", "\xe9", "\U0001f600"],
+    ["w1", "w2", "\u0663", "\u5e74", "\xe9\xe9", "e\u0301", "a\U0001f600b"],
+]
+PD_SPACES = [" ", " ", " ", " ", "  ", "\t", "\xa0", "\u3000", "\x1c"]
+
+
+def pd_line(rng: random.Random, vocab: list[str]) -> str:
+    """One normalized line: 1 to 12 words of ``vocab``."""
+    n = rng.choice((1, 1, 2, 2, 3, 4, 5, 7, 8, 9, 10, 12))
+    return " ".join(rng.choice(vocab) for _ in range(n))
+
+
+def pd_raw(rng: random.Random, line: str) -> str:
+    """``line`` as it might appear in a body: quote markers, other spacing."""
+    if rng.random() < 0.2:
+        line = rng.choice(["> ", ">", ">> ", "> > "]) + line
+    if rng.random() < 0.2:
+        line = line.replace(" ", rng.choice(PD_SPACES))
+    if rng.random() < 0.1:
+        line = rng.choice(PD_SPACES) + line + rng.choice(PD_SPACES)
+    return line
+
+
+def pd_sequences(rng: random.Random, max_len: int) -> tuple[list[str], list[str]]:
+    """Child and parent line lists over a small alphabet of lines, often with a
+    slice of the parent planted in the child (and sometimes two)."""
+    vocab = rng.choice(PD_WORDS)
+    alphabet = [pd_line(rng, vocab) for _ in range(rng.choice((1, 2, 3, 4, 6, 10)))]
+    c = [rng.choice(alphabet) for _ in range(rng.randint(0, max_len))]
+    p = [rng.choice(alphabet) for _ in range(rng.randint(0, max_len))]
+    for _ in range(rng.choice((0, 1, 1, 2))):
+        if p:
+            a = rng.randrange(len(p))
+            b = rng.randint(a + 1, len(p))
+            at = rng.randint(0, len(c))
+            c = c[:at] + p[a:b] + c[at:]
+    return c, p
+
+
+def pd_body(rng: random.Random, lines: list[str]) -> str:
+    out = []
+    for line in lines:
+        if rng.random() < 0.1:
+            out.append(rng.choice(["", " ", ">"]))
+        out.append(pd_raw(rng, line))
+    joiner = "\r\n" if rng.random() < 0.05 else "\n"
+    return joiner.join(out)
+
+
+def pd_rewrap(rng: random.Random, lines: list[str]) -> list[str]:
+    """``lines`` re-wrapped at other word boundaries (rules (b) and (c))."""
+    words = " ".join(lines).split(" ")
+    out = []
+    k = 0
+    while k < len(words):
+        step = rng.randint(1, 10)
+        out.append(" ".join(words[k : k + step]))
+        k += step
+    return [w for w in out if w]
+
+
+def pd_stream_needles(rng: random.Random, parent: list[str]) -> list[str]:
+    stream = " ".join(parent)
+    vocab = sorted({w for line in parent for w in line.split(" ")} | {"q", "\xe9"})
+    needles = []
+    for _ in range(rng.randint(1, 12)):
+        r = rng.random()
+        if stream and r < 0.5:
+            lo = rng.randrange(len(stream))
+            hi = rng.randint(lo + 1, len(stream))
+            needle = stream[lo:hi].strip(" ")
+            if not needle:
+                continue
+            if rng.random() < 0.3:
+                at = rng.randrange(len(needle))
+                if needle[at] != " ":
+                    needle = needle[:at] + rng.choice(vocab)[0] + needle[at + 1 :]
+        elif r < 0.8:
+            needle = " ".join(rng.choice(vocab) for _ in range(rng.randint(1, 9)))
+        else:  # two adjacent lines joined, as rule (c) asks
+            needle = pd_line(rng, vocab) + " " + pd_line(rng, vocab)
+        needles.append(needle)
+    return needles
+
+
+PD_TAG = list("aAbM1_\xe9\u0663 .-") + ["\U0001f600", "\u0301"]
+PD_TEXT = PD_TAG + ["[", "\n", "[", " "]
+
+
+def pd_case(rng: random.Random) -> dict:
+    r = rng.random()
+    if r < 0.6:
+        c, p = pd_sequences(rng, 14)
+        if rng.random() < 0.3:
+            p = pd_rewrap(rng, p) if rng.random() < 0.5 else p + pd_rewrap(rng, c)
+        return {
+            "fn": "strip_parent_content",
+            "args": {
+                "text": pd_body(rng, c),
+                "parent_body": pd_body(rng, p),
+                "continuation": rng.random() < 0.5,
+            },
+        }
+    if r < 0.8:
+        c, p = pd_sequences(rng, 12)
+        return {"fn": "_aligned_run_marks", "args": {"child_seq": c, "parent_seq": p}}
+    if r < 0.92:
+        _c, p = pd_sequences(rng, 10)
+        if rng.random() < 0.3:
+            p = pd_rewrap(rng, p)
+        return {
+            "fn": "_parent_stream_contains",
+            "args": {"parent_seq": p, "needles": pd_stream_needles(rng, p)},
+        }
+    labels = [
+        "".join(rng.choice(PD_TAG) for _ in range(rng.randint(1, rng.choice((3, 4, 20)))))
+        for _ in range(rng.randint(1, 4))
+    ]
+    head = "".join(rng.choice(PD_TEXT) for _ in range(rng.randint(0, 40)))
+    for label in labels:
+        if rng.random() < 0.4:
+            at = rng.randint(0, len(head))
+            head = head[:at] + label.rstrip("0123456789").strip() + head[at:]
+    parent = None
+    if rng.random() < 0.8:
+        parent = "".join(rng.choice(PD_TEXT) for _ in range(rng.randint(0, 40)))
+        for label in labels:
+            if rng.random() < 0.7:
+                at = rng.randint(0, len(parent))
+                parent = parent[:at] + "[" + label[: rng.randint(len(label) - 1, len(label))] + parent[at:]
+    return {"fn": "_any_author_tag", "args": {"labels": labels, "head": head, "parent_body": parent}}
+
+
 def cases(
     rng: random.Random, count: int, corpus: list[dict], adversarial: float = 0.0
 ) -> list[dict]:
@@ -1120,6 +1275,11 @@ def main() -> int:
         help="share of adversarial cases (0 reproduces the earlier case stream)",
     )
     parser.add_argument(
+        "--parent-diff",
+        action="store_true",
+        help="only parent-diff cases: strip_parent_content and its matching structures",
+    )
+    parser.add_argument(
         "--keep", type=pathlib.Path, help="write cases and results to this directory"
     )
     opts = parser.parse_args()
@@ -1128,7 +1288,10 @@ def main() -> int:
     corpus = json.loads((ROOT / "conformance" / "corpus.json").read_text(encoding="utf-8"))[
         "entries"
     ]
-    all_cases = cases(rng, opts.cases, corpus, opts.adversarial)
+    if opts.parent_diff:
+        all_cases = [pd_case(rng) for _ in range(opts.cases)]
+    else:
+        all_cases = cases(rng, opts.cases, corpus, opts.adversarial)
     expected = [reference(c) for c in all_cases]
 
     payload = "".join(json.dumps(c, ensure_ascii=False) + "\n" for c in all_cases)

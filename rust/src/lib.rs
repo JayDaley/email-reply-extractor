@@ -51,7 +51,6 @@
 #![warn(missing_docs)]
 
 mod cleaning;
-mod difflib;
 mod equivalence;
 mod extraction;
 mod fragments;
@@ -79,8 +78,9 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub mod internal {
     pub use crate::cleaning::{is_mobile_tagline, is_signature_delimiter};
     pub use crate::extraction::{
-        count_unquoted_content_lines, custom_clean, find_quote_header_block, find_signoff_boundary,
-        is_attribution_line, is_quote_line, is_signoff_name_line, normalize_body,
+        aligned_run_marks, any_author_tag, count_unquoted_content_lines, custom_clean,
+        find_quote_header_block, find_signoff_boundary, is_attribution_line, is_quote_line,
+        is_signoff_name_line, normalize_body, parent_stream_contains,
         strip_after_original_message_divider, strip_attribution_lines,
     };
     pub use crate::fragments::{read_fragments, Fragment};
