@@ -138,6 +138,8 @@ _CASES: list[tuple[str, Callable[[], object]]] = [
 ]
 
 
+# The G7 inputs are sized so that a slow CI interpreter (about three times the
+# development machine's time) stays under the bound.
 # (finding id, input builder, call). The input is built before timing starts.
 # Comments give the earlier implementation's cost on the same input.
 _PREPARED_CASES: list[tuple[str, Callable[[], tuple[str, str]], Callable[[str, str], object]]] = [
@@ -149,20 +151,21 @@ _PREPARED_CASES: list[tuple[str, Callable[[], tuple[str, str]], Callable[[str, s
         strip_parent_content,
     ),
     # Rewrap rule (b): one substring search of the parent per child line
-    # (93 s).
-    ("G7b-strip_parent_content", lambda: _distinct_long_lines(60000), strip_parent_content),
+    # (93 s at 60,000 lines, quadratic: about 23 s here).
+    ("G7b-strip_parent_content", lambda: _distinct_long_lines(30000), strip_parent_content),
     # Rule (b) queries that only the suffix automaton decides: every interior
-    # word occurs in the parent, which never contains the line (77 s).
+    # word occurs in the parent, which never contains the line (77 s
+    # at 1,000,000 lines, linear in the lines: about 31 s here).
     (
         "G7b-automaton-strip_parent_content",
-        lambda: ("a a a a a a a b\n" * 1000000, "a " * 200000),
+        lambda: ("a a a a a a a b\n" * 400000, "a " * 200000),
         strip_parent_content,
     ),
     # Continuation rule (c): one substring search of the parent per join
-    # (155 s).
+    # (155 s at 300,000 lines, quadratic: about 39 s here).
     (
         "G7c-strip_parent_content",
-        lambda: _remainder_chain(300000),
+        lambda: _remainder_chain(150000),
         lambda child, parent: strip_parent_content(child, parent, continuation=True),
     ),
     # Inline-reply author tags: per tag, a search of the parent and of the

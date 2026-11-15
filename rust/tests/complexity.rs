@@ -238,7 +238,7 @@ fn g7a_aligned_runs_of_identical_lines() {
 #[test]
 fn g7b_distinct_long_lines() {
     // Rule (b): one substring search of the parent per child line (89 s at
-    // 20,000 lines, quadratic: about 14 s here; the reference uses 60,000).
+    // 20,000 lines, quadratic: about 14 s here; the reference uses 30,000).
     // At 20,000 lines the debug build took 5.0 s on a CI runner.
     let (child, parent) = distinct_long_lines(8000);
     bounded(|| strip_parent_content(&child, &parent, false));
@@ -248,7 +248,7 @@ fn g7b_distinct_long_lines() {
 fn g7b_automaton_queries() {
     // Rule (b) queries that only the suffix automaton decides: every interior
     // word occurs in the parent, which never contains the line. The earlier
-    // port's `str::contains` took 12.6 s on the reference's 1,000,000 lines;
+    // port's `str::contains` took 12.6 s on 1,000,000 lines;
     // the case is kept at 250,000.
     let child = "a a a a a a a b\n".repeat(250_000);
     let parent = "a ".repeat(200_000);
@@ -258,7 +258,7 @@ fn g7b_automaton_queries() {
 #[test]
 fn g7c_remainder_chain() {
     // Rule (c): one substring search of the parent per join (96 s at
-    // 100,000 remainder lines; the reference uses 300,000).
+    // 100,000 remainder lines; the reference uses 150,000).
     let (child, parent) = remainder_chain(100_000);
     bounded(|| strip_parent_content(&child, &parent, true));
 }

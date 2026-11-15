@@ -169,10 +169,11 @@ const PREPARED_CASES: [string, () => [string, string], (child: string, parent: s
   // Rewrap rule (b): one substring search of the parent per child line (19 s).
   ["G7b-stripParentContent", () => distinctLongLines(60000), (c, p) => stripParentContent(c, p)],
   // Rule (b) queries that only the suffix automaton decides: every interior
-  // word occurs in the parent, which never contains the line (116 s).
+  // word occurs in the parent, which never contains the line (116 s
+  // at 1,000,000 lines, linear in the lines: about 46 s here).
   [
     "G7b-automaton-stripParentContent",
-    () => ["a a a a a a a b\n".repeat(1000000), "a ".repeat(200000)],
+    () => ["a a a a a a a b\n".repeat(400000), "a ".repeat(200000)],
     (c, p) => stripParentContent(c, p),
   ],
   // Continuation rule (c): one substring search of the parent per join (184 s).
