@@ -60,7 +60,7 @@ test("VERSION equals package.json version", () => {
 });
 
 test("constants", () => {
-  assert.equal(EXTRACTION_VERSION, 7);
+  assert.equal(EXTRACTION_VERSION, 8);
   assert.deepStrictEqual([STATUS_OK, STATUS_EMPTY, STATUS_FAILED], ["ok", "empty", "failed"]);
 });
 
@@ -72,22 +72,30 @@ test("quickstart example", () => {
   const cleaned: CleanResult = cleanForScoring(result.text);
   assert.equal(cleaned.text, "Two comments below.\n\nAgreed, and the draft already says so.");
   assert.deepStrictEqual(cleaned.ignoredLines, [0, 6, 7]);
+  assert.deepStrictEqual(cleaned.parts, [cleaned.text]);
 });
 
 test("results are frozen plain objects", () => {
   const result = extractNewText(BODY);
   assert.ok(Object.isFrozen(result));
-  assert.deepStrictEqual(Object.keys(result), ["text", "method", "status"]);
-  const cleaned = cleanForScoring(result.text);
+  assert.deepStrictEqual(Object.keys(result), ["text", "method", "status", "partStarts"]);
+  assert.ok(Object.isFrozen(result.partStarts));
+  const cleaned = cleanForScoring(result.text, { partStarts: result.partStarts });
   assert.ok(Object.isFrozen(cleaned));
+  assert.deepStrictEqual(Object.keys(cleaned), ["text", "ignoredLines", "parts"]);
   assert.ok(Object.isFrozen(cleaned.ignoredLines));
+  assert.ok(Object.isFrozen(cleaned.parts));
   const parts: HtmlParts = splitHtmlParts("<p>a</p>");
   assert.ok(Object.isFrozen(parts));
-  assert.deepStrictEqual(Object.keys(parts), ["novelText", "quotedText", "signatureText"]);
+  assert.deepStrictEqual(Object.keys(parts), ["novelText", "quotedText", "signatureText", "hasShareContainer"]);
+  assert.deepStrictEqual(
+    { ...splitHtmlParts("") },
+    { novelText: "", quotedText: "", signatureText: "", hasShareContainer: false },
+  );
 });
 
 test("missing and blank bodies", () => {
-  const empty = { text: "", method: "none", status: "empty" };
+  const empty = { text: "", method: "none", status: "empty", partStarts: [] };
   assert.deepStrictEqual({ ...extractNewText(null) }, empty);
   assert.deepStrictEqual({ ...extractNewText(undefined) }, empty);
   assert.deepStrictEqual({ ...extractNewText(" \n\t") }, empty);
@@ -101,12 +109,16 @@ test("options objects: omitted, undefined and null are equivalent", () => {
   assert.deepStrictEqual(extractNewText(BODY, { parentBody: null, htmlBody: null }), extractNewText(BODY));
   assert.deepStrictEqual(extractNewText(BODY, {}), extractNewText(BODY));
   assert.deepStrictEqual(cleanForScoring("x", { htmlSignatureText: null }), cleanForScoring("x"));
+  assert.deepStrictEqual(cleanForScoring("x", { partStarts: null }), cleanForScoring("x"));
   assert.equal(stripParentContent("a\n\n\nb", "zzz", { continuation: true }), "a\n\nb");
 });
 
 test("backslashes in a collapsed attribution are kept literally", () => {
   const body = "My reply.\n\nOn Mon, Jan 1, 2026 at 10:00 C:\\Users\\x wrote:\n> quoted\n";
-  assert.deepStrictEqual({ ...extractNewText(body) }, { text: "My reply.", method: "erp", status: "ok" });
+  assert.deepStrictEqual(
+    { ...extractNewText(body) },
+    { text: "My reply.", method: "erp", status: "ok", partStarts: [] },
+  );
 });
 
 test("HTML helpers and equivalence", () => {

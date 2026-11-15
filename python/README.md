@@ -116,13 +116,13 @@ project's documented behavior; release data is from PyPI as of November 2026.
 |---|---|---|---|
 | Extracts | The author's full novel content (stage 1), then the substantive prose alone (stage 2) | The latest reply, quoted text and signatures hidden | The reply with quotations removed; signatures separately |
 | Signature handling | Kept in stage 1, removed and reported line-by-line in stage 2 | Hidden along with the reply's quoted fragments; not reported | Regex ("brute force") extractor, plus an SVM machine-learning extractor |
-| HTML part | Used as a structural oracle: as the body when no usable plain part exists, replacing a flattened plain part, or removing a quoted message leaked unmarked into the plain part | Not handled | Quotation extraction has an HTML mode (lxml-based) |
+| HTML part | Used as a structural oracle: as the body when no usable plain part exists, replacing a flattened plain part or the plain part of an Apple Mail Share-sheet message, or removing a quoted message leaked unmarked into the plain part | Not handled | Quotation extraction has an HTML mode (lxml-based) |
 | Thread parent | Optional parent-diff assist removes a quoted previous message that carries no `>` markers | Not used | Not used |
 | Quote headers | Outlook-style blocks, including French, Spanish, Portuguese, Italian, Dutch, German and Chinese label sets, folded and double-spaced renderings | `From:`/`Sent:`/`To:`/`Subject:` fragment detection, English only | Delimiter patterns (e.g. `-----Original Message-----`), several languages |
 | Output stability | Behavior pinned by an integer generation (`EXTRACTION_VERSION`) and a corpus digest test; whitespace-tolerant equivalence helpers for consumers | Not versioned separately | Not versioned separately |
 | Test corpus | Hand-labeled real mailing-list messages (`fixtures/`) | Unit-test fixture emails | Unit-test fixture emails; ML training data |
 | Runtime dependencies | None (standard library) | None (standard library) | lxml, regex, numpy, scipy, scikit-learn, chardet, and others |
-| Latest release | 1.3.0 (2026) | 0.5.12 (2020) | 1.4.4 (2017) |
+| Latest release | 1.4.0 (2026) | 0.5.12 (2020) | 1.4.4 (2017) |
 | License | MIT | MIT | Apache 2.0 |
 
 The fragment scanner at this library's core derives from email-reply-parser
@@ -223,7 +223,8 @@ result = extract_new_text(body, parent_body=parent_body)
 
 # The message's decoded text/html part. Used as a structural oracle: as the
 # body when there is no usable plain part, as a replacement for a flattened
-# plain part, or to remove a quoted message leaked unmarked into the plain part.
+# plain part or for the plain part of an Apple Mail Share-sheet message, or to
+# remove a quoted message leaked unmarked into the plain part.
 result = extract_new_text(body, html_body=html_body)
 ```
 
@@ -238,18 +239,39 @@ parts = split_html_parts(html_body)
 cleaned = clean_for_scoring(result.text, html_signature_text=parts.signature_text)
 ```
 
+## Parts of an inline reply
+
+An inline reply interleaves the author's answers with quoted passages. Stage 1
+removes the quoted passages and joins the answers into one text;
+`ExtractionResult.part_starts` records where each separate run of the author's
+text begins, as indices into `result.text.split("\n")`. Passing it to
+`clean_for_scoring` divides the cleaned text at the same boundaries:
+
+```python
+result = extract_new_text(body)
+cleaned = clean_for_scoring(result.text, part_starts=result.part_starts)
+cleaned.text  # the whole cleaned text, unchanged by part_starts
+cleaned.parts  # one string per run of the author's text
+```
+
+A top-posted reply, or any text written as one run, has an empty
+`part_starts` and a single part. The boundaries are found by aligning the
+text with the body it was derived from; when a line cannot be aligned (the
+scanner joins a wrapped attribution onto one line, for example), the text is
+reported as one part.
+
 ## API reference
 
 | Name | What it is |
 |---|---|
 | `extract_new_text(body, parent_body=None, html_body=None)` | Stage 1; returns an `ExtractionResult`. |
-| `ExtractionResult` | Frozen dataclass: `text`, `method`, `status`. |
+| `ExtractionResult` | Frozen dataclass: `text`, `method`, `status`, `part_starts`. |
 | `STATUS_OK`, `STATUS_EMPTY`, `STATUS_FAILED` | The three `status` values. |
 | `EXTRACTION_VERSION` | `int` generation stamp of the text-deriving routine. |
-| `clean_for_scoring(extracted_text, html_signature_text=None)` | Stage 2; returns a `CleanResult`. |
-| `CleanResult` | Frozen dataclass: `text`, `ignored_lines`. |
+| `clean_for_scoring(extracted_text, html_signature_text=None, *, part_starts=())` | Stage 2; returns a `CleanResult`. |
+| `CleanResult` | Frozen dataclass: `text`, `ignored_lines`, `parts`. |
 | `html_to_text(html)` | Visible text of an HTML part, block structure as newlines. |
-| `split_html_parts(html)` | The same text split into `HtmlParts(novel_text, quoted_text, signature_text)`. |
+| `split_html_parts(html)` | The same text split into `HtmlParts(novel_text, quoted_text, signature_text, has_share_container)`. |
 | `HtmlParts` | Frozen dataclass returned by `split_html_parts`. |
 | `strip_parent_content(text, parent_body, *, continuation=False)` | Remove lines of `text` provably drawn from `parent_body`. |
 | `tolerant_lines(text)` | The non-blank lines of `text`, edge whitespace stripped and U+00A0 unified to spaces. |
@@ -277,9 +299,10 @@ auditable after the fact. The base value is one of:
 
 Three modifiers combine with the base value:
 
-- `html-` prefix — the text was derived from the HTML part, either because
-  there was no usable plain body or because a flattened plain body was
-  replaced (for example `html-erp+custom`).
+- `html-` prefix — the text was derived from the HTML part, because there
+  was no usable plain body, because a flattened plain body was replaced, or
+  because the HTML holds an Apple Mail Share-sheet container (for example
+  `html-erp+custom`).
 - `+parent-diff` suffix — the parent-diff assist removed content (for example
   `erp+parent-diff`).
 - `+html-quote` suffix — the HTML quoted-text oracle removed content from a
@@ -291,7 +314,7 @@ Three modifiers combine with the base value:
 derives the text. It is independent of the package version, only ever
 increases, and is incremented whenever a change to the extraction, cleaning,
 HTML or vendored-scanner modules can alter the derived text. It is currently
-**6**.
+**8**.
 
 An application that stores derived text should store `EXTRACTION_VERSION`
 alongside it and compare the stored stamp with the running constant using `<`
@@ -307,6 +330,9 @@ dividers described in
 Generation 7 (v1.3.0) replaces the parent-diff assist's `difflib` alignment
 with a linear one and makes the whole assist run in linear time; see
 [docs/generation-7.md](https://github.com/JayDaley/email-reply-extractor/blob/main/docs/generation-7.md).
+Generation 8 (v1.4.0) reads the text of a message sent through Apple Mail's
+Share sheet, which the plain part marks as quoted, from the HTML part; see
+[docs/generation-8.md](https://github.com/JayDaley/email-reply-extractor/blob/main/docs/generation-8.md).
 
 Because a generation bump can move bytes without changing substance, the
 package exports `tolerant_lines` and `texts_equivalent` so a consumer can
@@ -340,6 +366,8 @@ and [docs/ports.md](https://github.com/JayDaley/email-reply-extractor/blob/main/
   — generation 5 and the deferred scanner changes.
 - [docs/generation-7.md](https://github.com/JayDaley/email-reply-extractor/blob/main/docs/generation-7.md)
   — generation 7: the linear parent-diff assist and its new aligned-run rule.
+- [docs/generation-8.md](https://github.com/JayDaley/email-reply-extractor/blob/main/docs/generation-8.md)
+  — generation 8: Apple Mail Share-sheet containers.
 - [CONTRIBUTING.md](https://github.com/JayDaley/email-reply-extractor/blob/main/CONTRIBUTING.md)
   — development setup and contributor contracts.
 - [CHANGELOG.md](https://github.com/JayDaley/email-reply-extractor/blob/main/CHANGELOG.md)

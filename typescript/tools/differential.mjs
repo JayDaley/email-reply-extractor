@@ -863,6 +863,10 @@ const GENERATORS = {
     const args = { extracted_text: textInput() };
     if (rand() < 0.3)
       args.html_signature_text = rand() < 0.5 ? shortText() : args.extracted_text.split("\n").slice(-4).join("\n");
+    if (rand() < 0.4) {
+      const n = args.extracted_text.split("\n").length;
+      args.part_starts = Array.from({ length: Math.floor(rand() * 5) }, () => Math.floor(rand() * (n + 2)) - 1);
+    }
     return args;
   },
   "extraction.strip_parent_content": stripCase,
@@ -906,7 +910,10 @@ const TS = {
   "extraction.extract_new_text": (a) =>
     extraction.extractNewText(a.body, { parentBody: a.parent_body ?? null, htmlBody: a.html_body ?? null }),
   "cleaning.clean_for_scoring": (a) =>
-    cleaning.cleanForScoring(a.extracted_text, { htmlSignatureText: a.html_signature_text ?? null }),
+    cleaning.cleanForScoring(a.extracted_text, {
+      htmlSignatureText: a.html_signature_text ?? null,
+      partStarts: a.part_starts ?? [],
+    }),
   "extraction.strip_parent_content": (a) =>
     extraction.stripParentContent(a.text, a.parent_body, { continuation: a.continuation }),
   "html_text.html_to_text": (a) => htmlText.htmlToText(a.html),
@@ -943,11 +950,20 @@ const TS = {
 function encode(value) {
   if (Array.isArray(value)) return value.map(encode);
   if (value !== null && typeof value === "object") {
-    if ("ignoredLines" in value) return { text: value.text, ignored_lines: [...value.ignoredLines] };
-    if ("novelText" in value) {
-      return { novel_text: value.novelText, quoted_text: value.quotedText, signature_text: value.signatureText };
+    if ("ignoredLines" in value) {
+      return { text: value.text, ignored_lines: [...value.ignoredLines], parts: [...value.parts] };
     }
-    if ("status" in value) return { text: value.text, method: value.method, status: value.status };
+    if ("novelText" in value) {
+      return {
+        novel_text: value.novelText,
+        quoted_text: value.quotedText,
+        signature_text: value.signatureText,
+        has_share_container: value.hasShareContainer,
+      };
+    }
+    if ("status" in value) {
+      return { text: value.text, method: value.method, status: value.status, part_starts: [...value.partStarts] };
+    }
     if ("quoted" in value) return { content: value.content, quoted: value.quoted };
   }
   return value;

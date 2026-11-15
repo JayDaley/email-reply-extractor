@@ -292,7 +292,7 @@ blank lines left by removals collapse to one, and blank edges are trimmed.
 ### HTML as a structural oracle (optional `html_body`)
 
 When the caller passes the decoded `text/html` part, its structure is used in
-one of three ways. The resolved method makes the HTML source visible, so the
+one of four ways. The resolved method makes the HTML source visible, so the
 path a result took stays auditable.
 
 - **(a) HTML-only.** The plain body is missing or blank but an HTML part
@@ -314,6 +314,15 @@ path a result took stays auditable.
   container as the quote, and an author quoting a proposed sentence inline
   matches its verbatim copy in a real `<blockquote>`. Both would otherwise cost
   genuine content.
+- **(d) Share-sheet container.** The HTML holds an Apple Mail Share-sheet
+  container outside every quoted container (`HtmlParts.has_share_container`,
+  below) and its novel text is non-blank: path (a) is used instead of the plain
+  body, whatever the plain body holds. It is checked after (b) and before the
+  plain pipeline, so (c) does not run on such a message. Apple Mail's Share
+  sheet (text composed in another app and sent with Share → Mail) wraps the
+  author's own text in a `<blockquote type="cite">`, and the plain part
+  prefixes every line of it with `>`, so the plain pipeline removes it as
+  quoted. From generation 8 (see [generation-8.md](generation-8.md)).
 
 `html_text.py` provides the two functions this rests on, both pure,
 standard-library-only (`html.parser`), and guarded so malformed markup never
@@ -323,7 +332,8 @@ raises:
   as newlines (`<br>` and block-level open and close), skipping `script`,
   `style`, `head` and comments, unescaping references, and collapsing
   whitespace.
-- `split_html_parts(html)` renders the same text split into three streams.
+- `split_html_parts(html)` renders the same text split into three streams,
+  and reports whether the document holds a Share-sheet container.
   **Quoted** is everything inside a `<blockquote>`, an element whose `class`
   holds `gmail_attr`, `moz-cite-prefix` or `OutlookMessageHeader`, or an
   element whose `id` is `divRplyFwdMsg` or `appendonsend`; quoted containers
@@ -338,6 +348,43 @@ raises:
   container. A wrapper containing blockquotes carries the author's inline
   replies as direct children between them, so the wrapper itself is
   transparent: only its blockquotes and its attribution line are quoted.
+
+  A `<blockquote>` whose parent element carries the class token
+  `Apple-Mail-URLShareWrapperClass` is a Share-sheet container, not a quote: it
+  contributes no category of its own, so its direct text is novel (or quoted
+  or signature, when an enclosing container makes it so). The parent element
+  is the innermost element open when the blockquote's start tag is read; an
+  element between the wrapper and the blockquote (an unclosed `<p>`, a `<div>`)
+  makes the blockquote an ordinary quote. Every blockquote that is a direct
+  child of the wrapper is a container; a `<blockquote>` nested inside one is
+  quoted as usual. `HtmlParts.has_share_container` is true when such a
+  container opens outside every quoted container and outside `head`; a
+  Share-sheet message quoted in a later reply therefore does not set it.
+
+### Part boundaries
+
+`ExtractionResult.part_starts` lists the indices of the lines of `text` that
+begin a new *part*: a run of the author's text separated from the previous run
+by content stage 1 removed — a quoted block, an attribution line,
+parent-diff content or HTML-quote content. An inline reply written between
+quoted passages has one part per run; a top-posted reply has one part. The
+field does not affect `text`, `method` or `status`, and the corpus digest does
+not cover it.
+
+The boundaries are found after the text is final, by aligning it with the
+body it was derived from: the `text/plain` body, or for the `html-` paths the
+full `html_to_text` rendering (novel and quoted text). Both are normalized as
+in pre-normalization. Each non-blank line of `text`, in order, is matched to
+the first source line at or after the previous match whose stripped form is
+equal. A non-blank source line between two consecutive matches is removed
+content, and the second line begins a part. Blank lines never begin a part.
+
+When a line of `text` has no match, the alignment is abandoned and the text is
+reported as one part. The known cause is the scanner joining wrapped lines
+into one, which then has no counterpart in the body.
+Over 29,895 extractions sampled from the origin application, 11 were
+abandoned. The search only moves forward, so the cost is linear in the two
+line counts.
 
 ### What stage 1 does not do
 
@@ -362,6 +409,16 @@ verdict to AI 0.84, and removing a "Regards, / Name" sign-off nearly doubled
 another message's AI fraction, zeroing its "AI-assisted" share in both cases.
 These fragments are short, formulaic and human-written by construction, so
 leaving them in dilutes the signal a classifier is looking for.
+
+Passing the stage-1 `part_starts` as `clean_for_scoring(..., part_starts=...)`
+fills `CleanResult.parts`: the surviving lines of each stage-1 part, formatted
+as `text` is (right-stripped, blank runs collapsed, blank edges trimmed). A
+part that cleaning emptied — a greeting alone, a sign-off alone — is omitted.
+Indices outside `1 .. len(lines) - 1` are ignored, and the rest are used in
+ascending order without duplicates. Without `part_starts`, `parts` is
+`[text]`, or `[]` when `text` is empty. The non-blank lines of the parts, in
+order, are exactly those of `text`; `text` and `ignored_lines` do not depend on
+`part_starts`.
 
 ### The removal steps, in order
 
@@ -429,7 +486,7 @@ confidence, and the hand-labeled corpus keeps them.
 
 ## Where the rules are pinned
 
-`fixtures/` holds 27 hand-labeled messages (25 real, 2 synthetic) whose
+`fixtures/` holds 28 hand-labeled messages (25 real, 3 synthetic) whose
 expected files are the composite of both stages. `fixtures/README.md` records, per fixture,
 the behavior it pins and where raw `email-reply-parser` diverges from the
 ground truth — those divergences are exactly what the custom pass and the

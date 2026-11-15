@@ -135,6 +135,14 @@ _CASES: list[tuple[str, Callable[[], object]]] = [
     ("E2-clean", lambda: clean_for_scoring("hello\n" + "\n===\n" * 120000)),
     # custom_clean dropped leading blank lines one pop(0) at a time.
     ("custom_clean-leading-blanks", lambda: custom_clean("\n" * 1000000 + "hello")),
+    # Part boundaries: an inline reply of many short answers between quoted
+    # lines; the alignment must not rescan the source per line.
+    ("parts-extract", lambda: extract_new_text("a\n> q\n" * 100000)),
+    # Part grouping in stage 2 over many boundaries.
+    (
+        "parts-clean",
+        lambda: clean_for_scoring("a\n" * 200000, part_starts=range(1, 200000)),
+    ),
 ]
 
 

@@ -1,0 +1,49 @@
+From: Alice Example <alice@example.org>
+To: wg@example.org
+Cc: Carol Example <carol@example.org>
+Subject: Re: [wg] Allocation policy in the second revision
+Date: Fri, 13 Nov 2026 08:41:17 +0000
+Message-ID: <synthetic-share-sheet-01@example.org>
+In-Reply-To: <synthetic-allocation-01@example.org>
+References: <synthetic-allocation-01@example.org>
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="synthetic-boundary-02"
+
+--synthetic-boundary-02
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+> Hi Carol,
+>
+> Thank you for the review. The second revision states the allocation
+> policy in the "Registry model" section, and the expiry rule now sits
+> in its own subsection so that the profile can reference it directly.
+>
+> I have kept the open question about renewal out of this revision. It
+> needs input from the operators, and I will raise it at the interim
+> meeting.
+>
+> Best,
+> Alice
+>
+>> On 10 Nov 2026, at 16:02, Carol Example <carol@example.org> wrote:
+>>
+>> Alice, does the second revision say where the allocation policy is
+>> defined? I could not find it in the registry section.
+>>
+>> Carol
+
+
+
+--synthetic-boundary-02
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+<html aria-label="message body"><head><meta http-equiv="content-type" content="text/html; charset=utf-8"></head><body style="overflow-wrap: break-word; -webkit-nbsp-mode: space; line-break: after-white-space;"><div dir="auto" style="overflow-wrap: break-word; -webkit-nbsp-mode: space; line-break: after-white-space;"><div class="Apple-Mail-URLShareUserContentTopClass"><br></div><div class="Apple-Mail-URLShareWrapperClass" style="position: relative !important;"><blockquote type="cite" style="border-left-style: none; color: inherit; padding: inherit; margin: inherit;">
+
+Hi Carol,<br><br>Thank you for the review. The second revision states the allocation policy in the "Registry model" section, and the expiry rule now sits in its own subsection so that the profile can reference it directly.<br><br>I have kept the open question about renewal out of this revision. It needs input from the operators, and I will raise it at the interim meeting.<br><br>Best,<br>Alice<br><br><div>On 10 Nov 2026, at 16:02, Carol Example &lt;carol@example.org&gt; wrote:</div><blockquote type="cite"><div>Alice, does the second revision say where the allocation policy is defined? I could not find it in the registry section.<br><br>Carol</div></blockquote>
+
+</blockquote></div><br><br>
+<br></body></html>
+
+--synthetic-boundary-02--

@@ -75,7 +75,9 @@ is how stored extractions are recognized as derived by an older routine.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from bisect import bisect_right
+from collections.abc import Sequence
+from dataclasses import dataclass, field
 
 from .extraction import (
     _dollar_line,
@@ -99,10 +101,17 @@ class CleanResult:
       of every **non-blank** line the clean pass removed. A consumer can use
       these to grey out the corresponding lines of the extracted text; the
       contract is fixed (indices into ``extracted_text.split("\\n")``).
+    - ``parts``: ``text`` divided at the stage-1 part boundaries passed as
+      ``part_starts`` (see :attr:`~extraction.ExtractionResult.part_starts`).
+      Each part holds the surviving lines of one stage-1 part, formatted as
+      ``text`` is; a part that cleaning emptied is omitted. Without
+      ``part_starts`` it is ``[text]``, or ``[]`` when ``text`` is empty. The
+      non-blank lines of the parts, in order, are exactly those of ``text``.
     """
 
     text: str
     ignored_lines: list[int]
+    parts: list[str] = field(default_factory=list)
 
 
 # --- signature delimiter ------------------------------------------------------
@@ -631,7 +640,12 @@ def _clean_pass(
 _MAX_CLEAN_PASSES = 4
 
 
-def clean_for_scoring(extracted_text: str, html_signature_text: str | None = None) -> CleanResult:
+def clean_for_scoring(
+    extracted_text: str,
+    html_signature_text: str | None = None,
+    *,
+    part_starts: Sequence[int] = (),
+) -> CleanResult:
     """Strip formulaic furniture from stage-1 ``extracted_text`` for scoring.
 
     Pure and never raises. Returns a :class:`CleanResult` with the scored
@@ -646,6 +660,12 @@ def clean_for_scoring(extracted_text: str, html_signature_text: str | None = Non
     signature container (see :func:`~html_text.split_html_parts`); its non-blank
     lines become a per-line drop hint (step 8 above). Lines it removes are
     reported in ``ignored_lines`` like any other furniture.
+
+    ``part_starts`` is the stage-1 result's
+    :attr:`~extraction.ExtractionResult.part_starts`. Indices outside
+    ``1 .. len(lines) - 1`` are ignored, and the rest are used in ascending
+    order without duplicates. It changes only ``parts``, never ``text`` or
+    ``ignored_lines``.
     """
     hint_norms = frozenset(
         norm
@@ -667,11 +687,30 @@ def clean_for_scoring(extracted_text: str, html_signature_text: str | None = Non
     kept_indices = {idx for idx, _line in pairs}
     ignored_lines = [i for i, line in enumerate(original) if line.strip() and i not in kept_indices]
 
-    # Final formatting: rstrip each survivor, collapse runs of 2+ blank lines to
-    # one, and trim blank edges (matching extraction's tail handling).
-    lines = [line.rstrip() for _idx, line in pairs]
+    text = _format_lines([line for _idx, line in pairs])
+
+    starts = sorted({s for s in part_starts if 0 < s < len(original)})
+    if not text:
+        parts: list[str] = []
+    elif not starts:
+        parts = [text]
+    else:
+        groups: list[list[str]] = [[] for _ in range(len(starts) + 1)]
+        for idx, line in pairs:
+            groups[bisect_right(starts, idx)].append(line)
+        parts = [part for part in (_format_lines(group) for group in groups) if part]
+
+    return CleanResult(text=text, ignored_lines=ignored_lines, parts=parts)
+
+
+def _format_lines(lines: list[str]) -> str:
+    """Final formatting of surviving lines.
+
+    Right-strip each line, collapse runs of 2+ blank lines to one, and trim
+    blank edges (matching extraction's tail handling).
+    """
     collapsed: list[str] = []
-    for line in lines:
+    for line in (line.rstrip() for line in lines):
         if not line and collapsed and not collapsed[-1]:
             continue
         collapsed.append(line)
@@ -679,5 +718,4 @@ def clean_for_scoring(extracted_text: str, html_signature_text: str | None = Non
         collapsed.pop(0)
     while collapsed and not collapsed[-1]:
         collapsed.pop()
-
-    return CleanResult(text="\n".join(collapsed), ignored_lines=ignored_lines)
+    return "\n".join(collapsed)

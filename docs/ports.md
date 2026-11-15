@@ -201,6 +201,17 @@ reproduces the answers exactly; the data structures are the port's choice.
   `"[" + label in parent_body` and
   `re.search(r"(?<!\w)" + re.escape(name) + r"(?!\w)", head)`, with `\w` as
   above. Labels and names are at most 20 code points.
+- **Part boundaries, `_part_starts`.** Lines are compared by `str.strip()`
+  (the `str.isspace()` set above), after the source is normalized by
+  `normalize_body`. `part_starts` holds indices into `text.split("\n")`,
+  counted in lines, not characters. The search pointer only moves forward;
+  an unmatched line returns an empty list, not a partial one. For the `html-`
+  paths the source is `html_to_text(html_body)`, and an error while rendering
+  it yields an empty source (one part), never a failed extraction.
+- **Parts grouping, `clean_for_scoring`.** The boundaries are filtered to
+  `0 < s < len(lines)`, de-duplicated and sorted; a surviving line belongs to
+  the part `bisect_right(starts, index)`. Each part is formatted by the same
+  steps as `text`, and empty parts are dropped.
 - **No map iteration order.** No result depends on the order in which a
   hash map or set is iterated.
 

@@ -41,15 +41,38 @@ fn strs<'a>(args: &'a Value, name: &str) -> Vec<&'a str> {
         .unwrap_or_default()
 }
 
+/// A list of integers, absent as empty; negative values are dropped, as the
+/// reference ignores them (`part_starts`).
+fn indices(args: &Value, name: &str) -> Vec<usize> {
+    args.get(name)
+        .and_then(Value::as_array)
+        .map(|a| {
+            a.iter()
+                .filter_map(Value::as_i64)
+                .filter_map(|v| usize::try_from(v).ok())
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
 fn call(name: &str, a: &Value) -> Value {
     let result = match name {
         "extract_new_text" => {
             let r = extract_new_text(opt(a, "body"), opt(a, "parent_body"), opt(a, "html_body"));
-            json!({"text": r.text, "method": r.method, "status": r.status.as_str()})
+            json!({
+                "text": r.text,
+                "method": r.method,
+                "status": r.status.as_str(),
+                "part_starts": r.part_starts,
+            })
         }
         "clean_for_scoring" => {
-            let r = clean_for_scoring(s(a, "extracted_text"), opt(a, "html_signature_text"));
-            json!({"text": r.text, "ignored_lines": r.ignored_lines})
+            let r = clean_for_scoring_with_parts(
+                s(a, "extracted_text"),
+                opt(a, "html_signature_text"),
+                &indices(a, "part_starts"),
+            );
+            json!({"text": r.text, "ignored_lines": r.ignored_lines, "parts": r.parts})
         }
         "strip_parent_content" => json!(strip_parent_content(
             s(a, "text"),
@@ -59,7 +82,12 @@ fn call(name: &str, a: &Value) -> Value {
         "html_to_text" => json!(html_to_text(s(a, "html"))),
         "split_html_parts" => {
             let p = split_html_parts(s(a, "html"));
-            json!({"novel_text": p.novel_text, "quoted_text": p.quoted_text, "signature_text": p.signature_text})
+            json!({
+                "novel_text": p.novel_text,
+                "quoted_text": p.quoted_text,
+                "signature_text": p.signature_text,
+                "has_share_container": p.has_share_container,
+            })
         }
         "tolerant_lines" => json!(tolerant_lines(s(a, "text"))),
         "texts_equivalent" => json!(texts_equivalent(s(a, "a"), s(a, "b"))),

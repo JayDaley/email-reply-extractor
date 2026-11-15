@@ -33,12 +33,27 @@ export interface CleanResult {
    * line the clean pass removed.
    */
   readonly ignoredLines: readonly number[];
+  /**
+   * `text` divided at the stage-1 part boundaries passed as
+   * `options.partStarts` (see `ExtractionResult.partStarts`). Each part holds
+   * the surviving lines of one stage-1 part, formatted as `text` is; a part
+   * that cleaning emptied is omitted. Without `partStarts` it is `[text]`, or
+   * `[]` when `text` is empty. The non-blank lines of the parts, in order, are
+   * exactly those of `text`.
+   */
+  readonly parts: readonly string[];
 }
 
 /** Options of {@link cleanForScoring}. */
 export interface CleanOptions {
   /** The visible text of the message's HTML signature container (`splitHtmlParts(html).signatureText`). */
   readonly htmlSignatureText?: string | null;
+  /**
+   * The stage-1 result's `partStarts`. Indices outside `1 .. lines - 1` are
+   * ignored, and the rest are used in ascending order without duplicates. It
+   * changes only `parts`, never `text` or `ignoredLines`.
+   */
+  readonly partStarts?: readonly number[] | null;
 }
 
 // --- signature delimiter ------------------------------------------------------
@@ -446,6 +461,35 @@ export function cleanForScoring(extractedText: string, options: CleanOptions = {
     if (!isBlank(line) && !keptIndices.has(i)) ignoredLines.push(i);
   });
 
-  const text = collapseAndTrim(pairs.map(([, line]) => pyRstrip(line)));
-  return Object.freeze({ text, ignoredLines: Object.freeze(ignoredLines) });
+  const text = formatLines(pairs.map(([, line]) => line));
+
+  const starts = [...new Set(options.partStarts ?? [])]
+    .filter((s) => Number.isInteger(s) && s > 0 && s < original.length)
+    .sort((a, b) => a - b);
+  let parts: string[];
+  if (!text) {
+    parts = [];
+  } else if (starts.length === 0) {
+    parts = [text];
+  } else {
+    // Pairs are in ascending index order, so one forward pointer assigns each
+    // line to its group (the reference's bisect_right).
+    const groups: string[][] = Array.from({ length: starts.length + 1 }, () => []);
+    let g = 0;
+    for (const [idx, line] of pairs) {
+      while (g < starts.length && (starts[g] as number) <= idx) g++;
+      (groups[g] as string[]).push(line);
+    }
+    parts = groups.map(formatLines).filter((part) => part !== "");
+  }
+
+  return Object.freeze({ text, ignoredLines: Object.freeze(ignoredLines), parts: Object.freeze(parts) });
+}
+
+/**
+ * Final formatting of surviving lines: right-strip each line, collapse runs of
+ * 2+ blank lines to one, and trim blank edges.
+ */
+function formatLines(lines: readonly string[]): string {
+  return collapseAndTrim(lines.map(pyRstrip));
 }

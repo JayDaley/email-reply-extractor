@@ -158,6 +158,14 @@ const CASES: [string, () => unknown][] = [
   // Leading blank lines (sliced off at once in this port; popping them one by
   // one from the front was quadratic in the reference).
   ["customClean-leading-blanks", () => customClean(`${"\n".repeat(1000000)}hello`)],
+  // Part boundaries: an inline reply of many short answers between quoted
+  // lines; the alignment must not rescan the source per line.
+  ["parts-extract", () => extractNewText("a\n> q\n".repeat(100000))],
+  // Part grouping in stage 2 over many boundaries.
+  [
+    "parts-clean",
+    () => cleanForScoring("a\n".repeat(200000), { partStarts: Array.from({ length: 199999 }, (_, k) => k + 1) }),
+  ],
 ];
 
 // [finding id, input builder, call]. The input is built before timing starts.

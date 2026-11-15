@@ -16,6 +16,11 @@ signature, and what is genuinely new:
 - Several messages mark quoted/signature regions with the well-known
   ``gmail_quote`` / ``gmail_signature`` / ``OutlookMessageHeader`` / ``WordSection``
   class hooks even where no ``>`` marker survives.
+- Apple Mail's Share sheet (text composed in another app and sent with Share →
+  Mail) wraps the author's own text in a ``<blockquote type="cite">`` whose
+  parent carries the class ``Apple-Mail-URLShareWrapperClass``, and the plain
+  part renders it with ``>`` on every line. The HTML marker is the only evidence
+  that the "quote" is the author's text (see :data:`_SHARE_WRAPPER_CLASSES`).
 - A number of stored messages are HTML-only and otherwise unscoreable, because
   stage 1 has no plain body to work from.
 
@@ -136,6 +141,17 @@ _SIGNATURE_CLASSES = frozenset(
 )
 #: ``id`` value Outlook uses for its signature ``<div>``.
 _SIGNATURE_ID = "Signature"
+#: ``class`` tokens of Apple Mail's Share-sheet wrapper. The Share sheet places
+#: the text the author composed in another app inside a ``<blockquote
+#: type="cite">`` that is a direct child of an element carrying one of these
+#: tokens, and the ``text/plain`` alternative prefixes every line of it with
+#: ``>``. A ``<blockquote>`` whose parent element (the innermost open element
+#: when its start tag is read) carries one of these tokens is a *share
+#: container*: it contributes no category of its own, so its direct text is
+#: novel. A ``<blockquote>`` nested inside it is a different element and is
+#: quoted as usual. Text the author typed in Mail itself sits outside the
+#: wrapper and is unaffected.
+_SHARE_WRAPPER_CLASSES = frozenset({"Apple-Mail-URLShareWrapperClass"})
 
 
 @dataclass(frozen=True)
@@ -149,11 +165,18 @@ class HtmlParts:
     - ``quoted_text``: everything inside a quoted container (nesting included).
     - ``signature_text``: everything inside a signature container that is not
       itself inside a quoted container.
+    - ``has_share_container``: ``True`` when the document holds an Apple Mail
+      Share-sheet container (see :data:`_SHARE_WRAPPER_CLASSES`) that is not
+      inside a quoted container or a skipped (``head``) region — that is, when
+      the author's own text was sent through the Share sheet, so the plain part
+      marks it as quoted. It defaults to ``False``, so the three-argument
+      construction is unchanged.
     """
 
     novel_text: str
     quoted_text: str
     signature_text: str
+    has_share_container: bool = False
 
 
 # --- parser -------------------------------------------------------------------
@@ -195,8 +218,8 @@ class _Segmenter(HTMLParser):
 
     def __init__(self, interleaved_wrappers: frozenset[int] = frozenset()) -> None:
         super().__init__(convert_charrefs=True)
-        # Each entry: (tag, category-or-None, is_skip).
-        self._stack: list[tuple[str, str | None, bool]] = []
+        # Each entry: (tag, category-or-None, is_skip, is_share_wrapper).
+        self._stack: list[tuple[str, str | None, bool, bool]] = []
         #: Number of frames on ``_stack`` per tag (see :func:`_close_frame`).
         self._open_counts: dict[str, int] = {}
         self._quoted_depth = 0
@@ -207,6 +230,9 @@ class _Segmenter(HTMLParser):
         #: :data:`_GMAIL_WRAPPER_CLASSES`); computed by :func:`_interleaved_wrappers`.
         self._interleaved_wrappers = interleaved_wrappers
         self._wrapper_count = 0
+        #: Set when a share container opens outside any quoted container and
+        #: outside a skipped region (see :data:`_SHARE_WRAPPER_CLASSES`).
+        self.has_share_container = False
         #: ``("nl",)`` or ``("text", category, string)``.
         self.segments: list[tuple[str, ...]] = []
 
@@ -219,10 +245,14 @@ class _Segmenter(HTMLParser):
             return _SIGNATURE
         return _NOVEL
 
-    def _container_category(self, tag: str, attrs: list[tuple[str, str | None]]) -> str | None:
-        d = dict(attrs)
-        classes = (d.get("class") or "").split()
-        el_id = d.get("id") or ""
+    def _container_category(self, tag: str, classes: list[str], el_id: str) -> str | None:
+        if tag == "blockquote" and self._stack and self._stack[-1][3]:
+            # A Share-sheet container: the blockquote is the author's own text,
+            # not a quote. Only the blockquote whose parent is the wrapper is
+            # exempt; one nested inside it is quoted by the branch below.
+            if self._quoted_depth == 0 and self._skip_depth == 0:
+                self.has_share_container = True
+            return None
         if (
             tag == "blockquote"
             or any(c in _QUOTED_CLASSES for c in classes)
@@ -246,15 +276,19 @@ class _Segmenter(HTMLParser):
         tag = tag.lower()
         if tag in _SKIP_TAGS:
             self._skip_depth += 1
-            self._stack.append((tag, None, True))
+            self._stack.append((tag, None, True, False))
             _count_open(self._open_counts, tag, 1)
             return
         if tag in _VOID_TAGS:
             if tag == "br" and self._skip_depth == 0:
                 self.segments.append(("nl",))
             return
-        category = self._container_category(tag, attrs)
-        self._stack.append((tag, category, False))
+        d = dict(attrs)
+        classes = (d.get("class") or "").split()
+        el_id = d.get("id") or ""
+        category = self._container_category(tag, classes, el_id)
+        is_share_wrapper = any(c in _SHARE_WRAPPER_CLASSES for c in classes)
+        self._stack.append((tag, category, False, is_share_wrapper))
         _count_open(self._open_counts, tag, 1)
         if category == _QUOTED:
             self._quoted_depth += 1
@@ -275,7 +309,7 @@ class _Segmenter(HTMLParser):
         if idx is None:
             return
         # Pop that frame and any unclosed inner frames, adjusting the counters.
-        for frame_tag, category, is_skip in self._stack[idx:]:
+        for frame_tag, category, is_skip, _is_share_wrapper in self._stack[idx:]:
             _count_open(self._open_counts, frame_tag, -1)
             if is_skip:
                 self._skip_depth -= 1
@@ -404,15 +438,19 @@ def _interleaved_wrappers(html: str) -> frozenset[int]:
     return frozenset(scanner.interleaved)
 
 
-def _segment(html: str) -> list[tuple[str, ...]]:
-    """Parse ``html`` into category-tagged segments; never raise on bad markup."""
+def _segment(html: str) -> _Segmenter:
+    """Parse ``html`` into category-tagged segments; never raise on bad markup.
+
+    Returns the parser, whose ``segments`` and ``has_share_container`` hold the
+    result.
+    """
     parser = _Segmenter(interleaved_wrappers=_interleaved_wrappers(html))
     try:
         parser.feed(html)
         parser.close()
     except Exception:  # noqa: BLE001 - html.parser is lenient, but stay defensive
         pass
-    return parser.segments
+    return parser
 
 
 # --- public API ---------------------------------------------------------------
@@ -430,7 +468,7 @@ def html_to_text(html: str) -> str:
     """
     if not html or not html.strip():
         return ""
-    return _render(_segment(html), None)
+    return _render(_segment(html).segments, None)
 
 
 def split_html_parts(html: str) -> HtmlParts:
@@ -448,7 +486,10 @@ def split_html_parts(html: str) -> HtmlParts:
       holds no ``<blockquote>`` (the forward shape); a wrapper holding
       blockquotes carries the author's inline replies as direct children, so
       only its blockquotes and attribution line are quoted, not the wrapper
-      itself.
+      itself. A ``<blockquote>`` whose parent element carries the class
+      ``Apple-Mail-URLShareWrapperClass`` (Apple Mail's Share sheet) is not a
+      quoted container: it holds the author's own text. Blockquotes nested
+      inside it are quoted.
     - **Signature** — everything inside an element whose ``class`` list contains
       ``gmail_signature``, ``moz-signature`` or ``Signature`` (Outlook's
       ``<div id="Signature">`` matches on the id) — but only when it is **not**
@@ -456,13 +497,19 @@ def split_html_parts(html: str) -> HtmlParts:
       the quote.
     - **Novel** — everything else.
 
-    Never raises on malformed HTML; empty/blank input yields three empty strings.
+    ``has_share_container`` reports whether such a Share-sheet container
+    opened outside every quoted container (and outside ``head``).
+
+    Never raises on malformed HTML; empty/blank input yields three empty strings
+    and ``has_share_container=False``.
     """
     if not html or not html.strip():
         return HtmlParts(novel_text="", quoted_text="", signature_text="")
-    segments = _segment(html)
+    parser = _segment(html)
+    segments = parser.segments
     return HtmlParts(
         novel_text=_render(segments, _NOVEL),
         quoted_text=_render(segments, _QUOTED),
         signature_text=_render(segments, _SIGNATURE),
+        has_share_container=parser.has_share_container,
     )

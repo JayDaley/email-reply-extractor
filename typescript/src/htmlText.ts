@@ -78,6 +78,14 @@ const QUOTED_IDS: ReadonlySet<string> = new Set(["divRplyFwdMsg", "appendonsend"
 const SIGNATURE_CLASSES: ReadonlySet<string> = new Set(["gmail_signature", "moz-signature", "Signature"]);
 /** `id` value Outlook uses for its signature `<div>`. */
 const SIGNATURE_ID = "Signature";
+/**
+ * `class` tokens of Apple Mail's Share-sheet wrapper. A `<blockquote>` whose
+ * parent element (the innermost open element when its start tag is read)
+ * carries one of these tokens is a share container: it contributes no category
+ * of its own, so its direct text is novel. A `<blockquote>` nested inside it is
+ * quoted as usual (see the reference's `_SHARE_WRAPPER_CLASSES`).
+ */
+const SHARE_WRAPPER_CLASSES: ReadonlySet<string> = new Set(["Apple-Mail-URLShareWrapperClass"]);
 
 /** The visible text of an HTML part split by container category. */
 export interface HtmlParts {
@@ -87,6 +95,11 @@ export interface HtmlParts {
   readonly quotedText: string;
   /** Everything inside a signature container that is not itself inside a quoted one. */
   readonly signatureText: string;
+  /**
+   * Whether the document holds an Apple Mail Share-sheet container that is not
+   * inside a quoted container or a skipped (`head`) region.
+   */
+  readonly hasShareContainer: boolean;
 }
 
 /** `dict(attrs)`: the last value of a duplicated attribute wins. */
@@ -134,15 +147,21 @@ type Segment = { readonly kind: "nl" } | { readonly kind: "text"; readonly categ
 
 const NL: Segment = Object.freeze({ kind: "nl" });
 
+/** A segmenter stack frame: `[tag, category-or-null, isSkip, isShareWrapper]`. */
+type Frame = [string, Category | null, boolean, boolean];
+
 /** Collect category-tagged text/newline segments from an HTML document. */
 class Segmenter extends HtmlParser {
-  private readonly stack: [string, Category | null, boolean][] = [];
+  /** Each entry: `[tag, category-or-null, isSkip, isShareWrapper]`. */
+  private readonly stack: Frame[] = [];
   /** Number of frames on `stack` per tag (see {@link closeFrame}). */
   private readonly openCounts = new Map<string, number>();
   private quotedDepth = 0;
   private signatureDepth = 0;
   private skipDepth = 0;
   private wrapperCount = 0;
+  /** Set when a share container opens outside any quoted container and skipped region. */
+  hasShareContainer = false;
   readonly segments: Segment[] = [];
 
   constructor(private readonly interleavedWrappers: ReadonlySet<number>) {
@@ -155,8 +174,14 @@ class Segmenter extends HtmlParser {
     return NOVEL;
   }
 
-  private containerCategory(tag: string, attrs: readonly Attr[]): Category | null {
-    const [classes, elId] = classesAndId(attrs);
+  private containerCategory(tag: string, classes: readonly string[], elId: string): Category | null {
+    if (tag === "blockquote" && this.stack.length > 0 && (this.stack[this.stack.length - 1] as Frame)[3]) {
+      // A Share-sheet container: the blockquote is the author's own text, not
+      // a quote. Only the blockquote whose parent is the wrapper is exempt; one
+      // nested inside it is quoted by the branch below.
+      if (this.quotedDepth === 0 && this.skipDepth === 0) this.hasShareContainer = true;
+      return null;
+    }
     if (tag === "blockquote" || classes.some((c) => QUOTED_CLASSES.has(c)) || QUOTED_IDS.has(elId)) {
       return QUOTED;
     }
@@ -173,7 +198,7 @@ class Segmenter extends HtmlParser {
     const tag = tagName.toLowerCase();
     if (SKIP_TAGS.has(tag)) {
       this.skipDepth++;
-      this.stack.push([tag, null, true]);
+      this.stack.push([tag, null, true, false]);
       countOpen(this.openCounts, tag, 1);
       return;
     }
@@ -181,8 +206,10 @@ class Segmenter extends HtmlParser {
       if (tag === "br" && this.skipDepth === 0) this.segments.push(NL);
       return;
     }
-    const category = this.containerCategory(tag, attrs);
-    this.stack.push([tag, category, false]);
+    const [classes, elId] = classesAndId(attrs);
+    const category = this.containerCategory(tag, classes, elId);
+    const isShareWrapper = classes.some((c) => SHARE_WRAPPER_CLASSES.has(c));
+    this.stack.push([tag, category, false, isShareWrapper]);
     countOpen(this.openCounts, tag, 1);
     if (category === QUOTED) this.quotedDepth++;
     else if (category === SIGNATURE) this.signatureDepth++;
@@ -197,7 +224,7 @@ class Segmenter extends HtmlParser {
     if (idx < 0) return;
     // Pop that frame and any unclosed inner frames, adjusting the counters.
     for (let i = idx; i < this.stack.length; i++) {
-      const [frameTag, category, isSkip] = this.stack[i] as [string, Category | null, boolean];
+      const [frameTag, category, isSkip] = this.stack[i] as Frame;
       countOpen(this.openCounts, frameTag, -1);
       if (isSkip) this.skipDepth--;
       else if (category === QUOTED) this.quotedDepth--;
@@ -312,14 +339,15 @@ function interleavedWrappers(html: string): ReadonlySet<number> {
   return scanner.interleaved;
 }
 
-function segment(html: string): Segment[] {
+/** Parse `html`; the returned parser's `segments` and `hasShareContainer` hold the result. */
+function segment(html: string): Segmenter {
   const parser = new Segmenter(interleavedWrappers(html));
   try {
     parser.parse(html);
   } catch {
     // Keep the segments collected before the error, as the reference does.
   }
-  return parser.segments;
+  return parser;
 }
 
 // --- public API ---------------------------------------------------------------
@@ -335,7 +363,7 @@ function segment(html: string): Segment[] {
  */
 export function htmlToText(html: string): string {
   if (!html || isBlank(html)) return "";
-  return render(segment(html), null);
+  return render(segment(html).segments, null);
 }
 
 /**
@@ -343,17 +371,23 @@ export function htmlToText(html: string): string {
  *
  * Rendering rules match {@link htmlToText}; each stream keeps the text whose
  * innermost enclosing container has that category (see the reference's
- * `split_html_parts` for the container rules). Never throws on malformed HTML;
- * empty or blank input yields three empty strings.
+ * `split_html_parts` for the container rules). A `<blockquote>` whose parent
+ * element carries the class `Apple-Mail-URLShareWrapperClass` (Apple Mail's
+ * Share sheet) holds the author's own text and is not a quoted container;
+ * `hasShareContainer` reports whether one opened outside every quoted container
+ * (and outside `head`). Never throws on malformed HTML; empty or blank input
+ * yields three empty strings and `hasShareContainer: false`.
  */
 export function splitHtmlParts(html: string): HtmlParts {
   if (!html || isBlank(html)) {
-    return Object.freeze({ novelText: "", quotedText: "", signatureText: "" });
+    return Object.freeze({ novelText: "", quotedText: "", signatureText: "", hasShareContainer: false });
   }
-  const segments = segment(html);
+  const parser = segment(html);
+  const segments = parser.segments;
   return Object.freeze({
     novelText: render(segments, NOVEL),
     quotedText: render(segments, QUOTED),
     signatureText: render(segments, SIGNATURE),
+    hasShareContainer: parser.hasShareContainer,
   });
 }

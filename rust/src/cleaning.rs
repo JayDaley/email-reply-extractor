@@ -32,12 +32,21 @@ use crate::pystr;
 /// - `text`: the furniture-free text.
 /// - `ignored_lines`: 0-based indices into the input text's `split('\n')` of
 ///   every non-blank line the clean pass removed, ascending.
+/// - `parts`: `text` divided at the stage-1 part boundaries passed to
+///   [`clean_for_scoring_with_parts`] (see
+///   [`crate::ExtractionResult::part_starts`]). Each part holds the surviving
+///   lines of one stage-1 part, formatted as `text` is; a part that cleaning
+///   emptied is omitted. Without boundaries it is `[text]`, or empty when
+///   `text` is empty. The non-blank lines of the parts, in order, are exactly
+///   those of `text`.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
 pub struct CleanResult {
     /// The cleaned text.
     pub text: String,
     /// Indices of the removed non-blank input lines.
     pub ignored_lines: Vec<usize>,
+    /// The cleaned text divided into the stage-1 parts.
+    pub parts: Vec<String>,
 }
 
 // --- signature delimiter ------------------------------------------------------
@@ -513,7 +522,9 @@ const MAX_CLEAN_PASSES: usize = 4;
 /// (two or more words, or a digit, `@` or URL).
 ///
 /// Never panics. When there is nothing to clean, `text` is the trimmed input
-/// and `ignored_lines` is empty.
+/// and `ignored_lines` is empty. `parts` is `[text]`, or empty when `text` is
+/// empty; [`clean_for_scoring_with_parts`] divides it at stage-1 part
+/// boundaries.
 ///
 /// ```
 /// use email_reply_extractor::clean_for_scoring;
@@ -522,6 +533,31 @@ const MAX_CLEAN_PASSES: usize = 4;
 /// assert_eq!(cleaned.ignored_lines, vec![0, 4, 5]);
 /// ```
 pub fn clean_for_scoring(extracted_text: &str, html_signature_text: Option<&str>) -> CleanResult {
+    clean_for_scoring_with_parts(extracted_text, html_signature_text, &[])
+}
+
+/// [`clean_for_scoring`] with the reference's keyword argument `part_starts`.
+///
+/// `part_starts` is the stage-1 result's
+/// [`crate::ExtractionResult::part_starts`]. Indices outside
+/// `1 ..= lines - 1` (where `lines` is the number of lines of
+/// `extracted_text.split('\n')`) are ignored, and the rest are used in
+/// ascending order without duplicates. It changes only
+/// [`CleanResult::parts`], never `text` or `ignored_lines`.
+///
+/// ```
+/// use email_reply_extractor::{clean_for_scoring_with_parts, extract_new_text};
+/// let body = "Yes.\n\n> Second question?\n\nNo.\n\nThanks,\nAnn";
+/// let stage1 = extract_new_text(Some(body), None, None);
+/// assert_eq!(stage1.part_starts, vec![2]);
+/// let cleaned = clean_for_scoring_with_parts(&stage1.text, None, &stage1.part_starts);
+/// assert_eq!(cleaned.parts, vec!["Yes.", "No."]);
+/// ```
+pub fn clean_for_scoring_with_parts(
+    extracted_text: &str,
+    html_signature_text: Option<&str>,
+    part_starts: &[usize],
+) -> CleanResult {
     let hint_norms: HashSet<String> = html_signature_text
         .unwrap_or("")
         .split('\n')
@@ -547,8 +583,32 @@ pub fn clean_for_scoring(extracted_text: &str, html_signature_text: Option<&str>
         .map(|(i, _)| i)
         .collect();
     let text = collapse_and_trim(pairs.iter().map(|(_, l)| pystr::rstrip(l)));
+
+    let mut starts: Vec<usize> = part_starts
+        .iter()
+        .copied()
+        .filter(|&s| 0 < s && s < original.len())
+        .collect();
+    starts.sort_unstable();
+    starts.dedup();
+    let parts = if text.is_empty() {
+        Vec::new()
+    } else if starts.is_empty() {
+        vec![text.clone()]
+    } else {
+        let mut groups: Vec<Vec<&str>> = vec![Vec::new(); starts.len() + 1];
+        for (idx, line) in &pairs {
+            groups[starts.partition_point(|&s| s <= *idx)].push(line);
+        }
+        groups
+            .iter()
+            .map(|g| collapse_and_trim(g.iter().map(|l| pystr::rstrip(l))))
+            .filter(|p| !p.is_empty())
+            .collect()
+    };
     CleanResult {
         text,
         ignored_lines,
+        parts,
     }
 }

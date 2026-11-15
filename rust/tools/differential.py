@@ -49,7 +49,7 @@ REFERENCE = {
         a.get("body"), a.get("parent_body"), a.get("html_body")
     ),
     "clean_for_scoring": lambda a: ere.clean_for_scoring(
-        a["extracted_text"], a.get("html_signature_text")
+        a["extracted_text"], a.get("html_signature_text"), part_starts=a.get("part_starts", ())
     ),
     "strip_parent_content": lambda a: ere.strip_parent_content(
         a["text"], a["parent_body"], continuation=a.get("continuation", False)
@@ -1190,6 +1190,9 @@ def cases(
             args = {"extracted_text": src}
             if rng.random() < 0.3:
                 args["html_signature_text"] = text_source()
+            if rng.random() < 0.4:
+                n = len(src.split("\n"))
+                args["part_starts"] = [rng.randint(-1, n + 1) for _ in range(rng.randint(0, 4))]
             out.append({"fn": "clean_for_scoring", "args": args})
         elif r < 0.50:
             base = rng.choice(bodies)

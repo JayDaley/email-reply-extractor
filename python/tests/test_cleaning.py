@@ -488,3 +488,43 @@ def test_signature_corporate_contact_fixture_drops_contact_block():
     assert "M9W 4Y8" not in composite
     assert "www.winmagic.com" not in composite
     assert tolerant_lines(composite) == tolerant_lines(expected_text(stem))
+
+
+# --- parts ----------------------------------------------------------------------
+
+
+def test_parts_default_to_the_whole_text():
+    assert clean_for_scoring("The plan works.\n\nSecond line.").parts == [
+        "The plan works.\n\nSecond line."
+    ]
+    assert clean_for_scoring("").parts == []
+    assert clean_for_scoring("\n\n").parts == []
+
+
+def test_parts_split_at_part_starts():
+    text = "First answer.\n\nSecond answer.\nstill second.\n\nThird answer."
+    result = clean_for_scoring(text, part_starts=(2, 5))
+    assert result.parts == ["First answer.", "Second answer.\nstill second.", "Third answer."]
+    assert result.text == text
+
+
+def test_parts_ignore_out_of_range_duplicate_and_unordered_starts():
+    text = "a\nb\nc"
+    expected = ["a", "b\nc"]
+    assert clean_for_scoring(text, part_starts=(1,)).parts == expected
+    assert clean_for_scoring(text, part_starts=(0, 1, 1, 3, 99, -1)).parts == expected
+    assert clean_for_scoring("a\nb\nc", part_starts=(2, 1)).parts == ["a", "b", "c"]
+
+
+def test_a_part_emptied_by_cleaning_is_omitted():
+    # The greeting is stage-2 furniture; its part has nothing left.
+    text = "Hi Bob,\n\nThe actual answer is here.\n\nAnother answer is here."
+    result = clean_for_scoring(text, part_starts=(2, 4))
+    assert result.text == "The actual answer is here.\n\nAnother answer is here."
+    assert result.parts == ["The actual answer is here.", "Another answer is here."]
+
+
+def test_parts_lose_trailing_signoff_with_the_text():
+    text = "Answer one.\n\nAnswer two.\n\nThanks!\nDhruv"
+    result = clean_for_scoring(text, part_starts=(2,))
+    assert result.parts == ["Answer one.", "Answer two."]

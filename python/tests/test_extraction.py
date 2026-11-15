@@ -38,6 +38,7 @@ from email_reply_extractor.extraction import (
     strip_attribution_lines,
     strip_parent_content,
 )
+from email_reply_extractor.html_text import split_html_parts
 
 INTERLEAVED_STEMS = [s for s in ALL_STEMS if s.startswith("interleaved-")]
 
@@ -86,10 +87,21 @@ def test_fixture_matches_expected(stem):
 
 
 def test_every_result_ok_status():
-    """No fixture body should extract to empty or failed."""
+    """No fixture should extract to empty or failed.
+
+    The plain body alone must yield text too, except for an Apple Mail
+    Share-sheet message, whose plain part marks the author's whole text as
+    quoted; only its HTML part recovers it.
+    """
     for stem in ALL_STEMS:
-        result = extract_new_text(fixture_body(stem))
+        html = fixture_html(stem)
+        result = extract_new_text(fixture_body(stem), html_body=html)
         assert result.status == "ok", f"{stem}: {result.status}"
+        plain = extract_new_text(fixture_body(stem))
+        if html is not None and split_html_parts(html).has_share_container:
+            assert plain.status == "empty", f"{stem}: {plain.status}"
+        else:
+            assert plain.status == "ok", f"{stem}: {plain.status}"
 
 
 # --- pinned exact composite output for the two trickiest interleaved fixtures --
@@ -1018,6 +1030,173 @@ def test_html_body_none_is_identical_to_no_argument():
     assert extract_new_text(body, html_body=None) == extract_new_text(body)
 
 
+# --- unit tests: Apple Mail Share-sheet container (path (d)) -------------------
+
+_SHARE_PROSE = (
+    "The registry proposal in the second draft keeps the allocation policy unchanged.",
+    "I suggest we move the open question about expiry to the next interim meeting.",
+)
+
+
+def _share_html(inner: str, before: str = "", after: str = "") -> str:
+    """An HTML body shaped like Apple Mail's Share sheet around ``inner``."""
+    return (
+        '<html><head><meta charset="utf-8"></head><body><div dir="auto">'
+        f'<div class="Apple-Mail-URLShareUserContentTopClass">{before}<br></div>'
+        '<div class="Apple-Mail-URLShareWrapperClass" style="position: relative !important;">'
+        '<blockquote type="cite" style="border-left-style: none; color: inherit;">'
+        f"{inner}</blockquote></div>{after}<br><br></body></html>"
+    )
+
+
+def _cite(lines: list[str]) -> str:
+    """The text/plain rendering of a Share-sheet body: every line ``>``-prefixed."""
+    return "\n".join(f"> {line}" if line else ">" for line in lines) + "\n"
+
+
+def test_share_container_recovers_text_the_plain_part_quotes():
+    lines = ["Carol,", "", *_SHARE_PROSE, "", "Alice"]
+    html = _share_html("<br>".join(lines))
+    body = _cite(lines)
+    assert extract_new_text(body).status == "empty"  # the plain part alone
+    result = extract_new_text(body, html_body=html)
+    assert result.status == "ok"
+    assert result.method == "html-erp"
+    assert result.text == "Carol,\n\n" + "\n".join(_SHARE_PROSE) + "\n\nAlice"
+
+
+def test_share_container_keeps_text_typed_outside_the_wrapper_in_order():
+    html = _share_html(
+        "<br>".join(_SHARE_PROSE),
+        before="Forwarding my notes from the review.",
+        after="<div>Sent from my phone</div>",
+    )
+    body = (
+        "Forwarding my notes from the review.\n\n"
+        + _cite(list(_SHARE_PROSE))
+        + "\nSent from my phone\n"
+    )
+    result = extract_new_text(body, html_body=html)
+    assert result.method.startswith("html-")
+    lines = [ln for ln in result.text.split("\n") if ln.strip()]
+    assert lines == ["Forwarding my notes from the review.", *_SHARE_PROSE, "Sent from my phone"]
+
+
+def test_share_container_nested_blockquote_is_removed():
+    html = _share_html(
+        "<br>".join(_SHARE_PROSE)
+        + '<blockquote type="cite">An earlier message that this one quotes in full.</blockquote>'
+    )
+    body = _cite([*_SHARE_PROSE, "", "> An earlier message that this one quotes in full."])
+    result = extract_new_text(body, html_body=html)
+    assert result.method.startswith("html-")
+    assert result.text == "\n".join(_SHARE_PROSE)
+
+
+def test_share_container_attribution_and_quoted_lines_are_removed_by_the_core_path():
+    # The author composed a reply in another app, with an attribution line and
+    # ">"-quoted text, and shared it: inside the container they are text, and
+    # the stage-1 pipeline removes them as it would in a plain body.
+    inner = "<br>".join(
+        [
+            _SHARE_PROSE[0],
+            "",
+            "On Mon, 2 Nov 2026 at 10:00, Bob Example <bob@example.org> wrote:",
+            "&gt; The allocation policy should change in the next revision.",
+            "&gt; Expiry also needs discussion.",
+            "",
+            _SHARE_PROSE[1],
+        ]
+    )
+    html = _share_html(inner)
+    body = _cite(
+        [
+            _SHARE_PROSE[0],
+            "",
+            "On Mon, 2 Nov 2026 at 10:00, Bob Example <bob@example.org> wrote:",
+            "> The allocation policy should change in the next revision.",
+            "> Expiry also needs discussion.",
+            "",
+            _SHARE_PROSE[1],
+        ]
+    )
+    result = extract_new_text(body, html_body=html)
+    assert result.status == "ok"
+    assert result.method.startswith("html-")
+    assert "wrote:" not in result.text
+    assert "allocation policy should change" not in result.text
+    assert [ln for ln in result.text.split("\n") if ln.strip()] == list(_SHARE_PROSE)
+
+
+def test_share_container_passes_the_parent_to_the_core_path():
+    parent = "\n".join(
+        [
+            "Here is the agenda for the interim meeting next week.",
+            "Item one covers the registry and its allocation policy in detail.",
+            "Item two covers expiry and the remaining open questions from Prague.",
+        ]
+    )
+    inner = "<br>".join([_SHARE_PROSE[0], "", *parent.split("\n")])
+    html = _share_html(inner)
+    body = _cite([_SHARE_PROSE[0], "", *parent.split("\n")])
+    result = extract_new_text(body, parent_body=parent, html_body=html)
+    assert result.method == "html-erp+parent-diff"
+    assert result.text == _SHARE_PROSE[0]
+
+
+def test_share_sheet_fixture_derives_text_from_html():
+    stem = "toppost-share-sheet-synthetic-01"
+    result = extract_new_text(fixture_body(stem), html_body=fixture_html(stem))
+    assert result.method == "html-erp+custom"
+    assert result.text.startswith("Hi Carol,\n\nThank you for the review.")
+    assert result.text.endswith("Best,\nAlice")
+    assert "wrote:" not in result.text
+    assert "I could not find it" not in result.text
+
+
+def test_ordinary_cite_blockquote_does_not_take_the_share_path():
+    html = (
+        "<div>My reply to the agenda, written below the quote.</div>"
+        '<blockquote type="cite">' + "<br>".join(_SHARE_PROSE) + "</blockquote>"
+    )
+    body = "My reply to the agenda, written below the quote.\n\n" + _cite(list(_SHARE_PROSE))
+    result = extract_new_text(body, html_body=html)
+    assert not result.method.startswith("html-")
+    assert result.text == "My reply to the agenda, written below the quote."
+
+
+def test_share_container_with_blank_novel_text_keeps_the_plain_path():
+    html = _share_html("<br>")
+    body = _cite(list(_SHARE_PROSE))
+    result = extract_new_text(body, html_body=html)
+    assert result == extract_new_text(body)
+    assert result.status == "empty"
+    assert not result.method.startswith("html-")
+
+
+def test_share_shaped_plain_body_without_html_is_unchanged():
+    body = _cite(list(_SHARE_PROSE))
+    result = extract_new_text(body)
+    assert result.status == "empty"
+    assert extract_new_text(body, html_body=None) == result
+
+
+def test_reply_quoting_a_share_sheet_message_keeps_the_plain_path():
+    # The share container sits inside this reply's own quote, so the HTML
+    # reports no share container and the plain pipeline runs as before.
+    reply = "I agree with both points and will update the draft this week."
+    html = (
+        f"<div>{reply}</div>"
+        '<blockquote type="cite"><div>On Mon, 2 Nov 2026, Bob Example wrote:</div>'
+        + _share_html("<br>".join(_SHARE_PROSE))
+        + "</blockquote>"
+    )
+    body = f"{reply}\n\nOn Mon, 2 Nov 2026, Bob Example wrote:\n\n" + _cite(list(_SHARE_PROSE))
+    result = extract_new_text(body, html_body=html)
+    assert not result.method.startswith("html-")
+    assert result.text == reply
+
+
 # --- unit tests: parent-diff assist -------------------------------------------
 
 
@@ -1229,3 +1408,125 @@ def test_parent_diff_no_removal_leaves_text_and_method_untouched():
     assert "+parent-diff" not in with_parent.method
     # An empty parent body (a stored row with raw_body = "") is the same no-op.
     assert extract_new_text(body, "") == without_parent
+
+
+# --- part boundaries ------------------------------------------------------------
+
+_INLINE_REPLY = (
+    "Hi Gyan,\n"
+    "\n"
+    "I am the Document Shepherd. Thanks for your review.\n"
+    "\n"
+    "On Thu, Oct 23, 2025 at 2:19 AM Gyan Mishra <gyan@example.com> wrote:\n"
+    "\n"
+    "> First question about the draft.\n"
+    ">\n"
+    "Dhruv: This sentence\n"
+    "\n"
+    "> A quoted sentence from the draft.\n"
+    "\n"
+    "simply clarifies that the new metric types are not limited.\n"
+    "\n"
+    "\n"
+    "> Second question about section 5.2.\n"
+    ">\n"
+    "\n"
+    "Dhruv: Section 5.2 only restates the existing number space.\n"
+    "\n"
+    "Thanks!\n"
+    "Dhruv\n"
+    "\n"
+    "> Trailing quoted text.\n"
+)
+
+
+def test_inline_reply_has_one_part_per_answer():
+    result = extract_new_text(_INLINE_REPLY)
+    lines = result.text.split("\n")
+    assert [lines[i] for i in result.part_starts] == [
+        "Dhruv: This sentence",
+        "simply clarifies that the new metric types are not limited.",
+        "Dhruv: Section 5.2 only restates the existing number space.",
+    ]
+
+
+def test_inline_reply_parts_survive_cleaning():
+    result = extract_new_text(_INLINE_REPLY)
+    cleaned = clean_for_scoring(result.text, part_starts=result.part_starts)
+    assert cleaned.parts == [
+        "I am the Document Shepherd. Thanks for your review.",
+        "Dhruv: This sentence",
+        "simply clarifies that the new metric types are not limited.",
+        "Dhruv: Section 5.2 only restates the existing number space.",
+    ]
+    # The text itself is unaffected by the part boundaries.
+    assert cleaned.text == clean_for_scoring(result.text).text
+
+
+def test_top_posted_reply_is_one_part():
+    body = (
+        "First paragraph of the reply.\n"
+        "\n"
+        "Second paragraph of the reply.\n"
+        "\n"
+        "On Mon, Jan 5, 2026 at 9:00 AM A Person <a@example.com> wrote:\n"
+        "> quoted\n"
+    )
+    result = extract_new_text(body)
+    assert result.status == "ok"
+    assert result.part_starts == ()
+    assert clean_for_scoring(result.text, part_starts=result.part_starts).parts == [result.text]
+
+
+def test_blank_lines_alone_never_begin_a_part():
+    result = extract_new_text("One.\n\n\n\nTwo.\n")
+    assert result.part_starts == ()
+
+
+def test_parent_diff_removal_begins_a_part():
+    parent = (
+        "The working group should adopt the proposal as written today.\n"
+        "\n"
+        "There are two open issues that need resolution before last call.\n"
+    )
+    body = (
+        "The working group should adopt the proposal as written today.\n"
+        "\n"
+        "I agree with adopting it.\n"
+        "\n"
+        "There are two open issues that need resolution before last call.\n"
+        "\n"
+        "Both issues are already tracked.\n"
+    )
+    result = extract_new_text(body, parent)
+    assert "+parent-diff" in result.method
+    lines = result.text.split("\n")
+    assert [lines[i] for i in result.part_starts] == ["Both issues are already tracked."]
+
+
+def test_html_inline_reply_parts_come_from_the_full_rendering():
+    html = (
+        "<div>Answer one here.</div>"
+        "<blockquote type=cite><div>quoted question one</div></blockquote>"
+        "<div>Answer two here.</div>"
+        "<blockquote><div>quoted question two</div></blockquote>"
+        "<div>Answer three here.</div>"
+    )
+    result = extract_new_text(None, html_body=html)
+    assert result.method.startswith("html-")
+    lines = result.text.split("\n")
+    assert [lines[i] for i in result.part_starts] == ["Answer two here.", "Answer three here."]
+
+
+def test_unaligned_text_is_one_part():
+    # The scanner joins a wrapped attribution onto one line, which then has no
+    # counterpart in the body; the alignment is abandoned.
+    body = "Reply text.\n\nOn Tue, Jan 28, 2025 at 10:38 AM\nSomeone <s@example.com> wrote:\n> q\n"
+    result = extract_new_text(body)
+    assert result.status == "ok"
+    assert result.part_starts == ()
+
+
+def test_empty_and_failed_results_have_no_parts():
+    assert extract_new_text("").part_starts == ()
+    assert extract_new_text("> only quoted\n").part_starts == ()

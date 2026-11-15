@@ -45,7 +45,9 @@ top-level `"format": 1`. A harness should refuse a `format` it does not know.
   - `ExtractionResult`: `{"text", "method", "status"}`
   - `CleanResult`: `{"text", "ignored_lines"}` (`ignored_lines` is an array of
     integers)
-  - `HtmlParts`: `{"novel_text", "quoted_text", "signature_text"}`
+  - `HtmlParts`: `{"novel_text", "quoted_text", "signature_text",
+    "has_share_container"}` (`has_share_container` is a boolean, from
+    generation 8)
   - `Fragment` (internal): `{"content", "quoted"}`
 
   A port compares its own result type field by field under these snake_case
@@ -87,7 +89,7 @@ conformance test.
 ## digest.json
 
 ```
-{"format": 1, "extraction_version": 7, "digest": "<64 lowercase hex digits>"}
+{"format": 1, "extraction_version": 8, "digest": "<64 lowercase hex digits>"}
 ```
 
 This file is the single recorded value of the corpus digest for all three
@@ -138,6 +140,7 @@ changed without a generation bump. The rules for incrementing are in
 | 5 | `2f36f0168c2769b122a0f74c0cfa63a714da3c89f2cd1f90d0f5e072f32d6fb3` | v1.1.0. |
 | 6 | `6ccdd626b598da3948b4119ae383ae02f587855c7ea1cb946ff21984dbb1a0d8` | v1.2.0: localized quote-header blocks and dividers, with the two French fixtures added. |
 | 7 | `b4fc24eee6a5a2daaeac57d87fca6245663f3f25a1a1f495874fd7427a65e9f6` | v1.3.0: the linear parent-diff assist, with the synthetic repeated-signature fixture added. Over the 26 earlier fixtures the output is unchanged; the digest moved with the added fixture. |
+| 8 | `e003451394561ba2bd1270e6be5a2bbbef50f247df7466eb77235871f8663450` | v1.4.0: Apple Mail Share-sheet containers, with the synthetic Share-sheet fixture added. Over the 27 earlier fixtures the digested output is unchanged; the digest moved with the added fixture. `split_html_parts` results gained the `has_share_container` field. |
 
 ## vectors/
 

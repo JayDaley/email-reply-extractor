@@ -60,11 +60,20 @@ function encode(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(encode);
   if (value !== null && typeof value === "object") {
     const o = value as Record<string, unknown>;
-    if ("ignoredLines" in o) return { text: o.text, ignored_lines: [...(o.ignoredLines as number[])] };
-    if ("novelText" in o) {
-      return { novel_text: o.novelText, quoted_text: o.quotedText, signature_text: o.signatureText };
+    if ("ignoredLines" in o) {
+      return { text: o.text, ignored_lines: [...(o.ignoredLines as number[])], parts: [...(o.parts as string[])] };
     }
-    if ("status" in o) return { text: o.text, method: o.method, status: o.status };
+    if ("novelText" in o) {
+      return {
+        novel_text: o.novelText,
+        quoted_text: o.quotedText,
+        signature_text: o.signatureText,
+        has_share_container: o.hasShareContainer,
+      };
+    }
+    if ("status" in o) {
+      return { text: o.text, method: o.method, status: o.status, part_starts: [...(o.partStarts as number[])] };
+    }
     if ("quoted" in o) return { content: o.content, quoted: o.quoted };
   }
   return value;
@@ -76,7 +85,11 @@ type Call = (args: Record<string, Json>) => unknown;
 
 const PUBLIC: Record<string, Call> = {
   extract_new_text: (a) => extractNewText(a.body, { parentBody: a.parent_body ?? null, htmlBody: a.html_body ?? null }),
-  clean_for_scoring: (a) => cleanForScoring(a.extracted_text, { htmlSignatureText: a.html_signature_text ?? null }),
+  clean_for_scoring: (a) =>
+    cleanForScoring(a.extracted_text, {
+      htmlSignatureText: a.html_signature_text ?? null,
+      partStarts: a.part_starts ?? [],
+    }),
   strip_parent_content: (a) => stripParentContent(a.text, a.parent_body, { continuation: a.continuation ?? false }),
   html_to_text: (a) => htmlToText(a.html),
   split_html_parts: (a) => splitHtmlParts(a.html),

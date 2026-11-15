@@ -4,7 +4,7 @@ Hand-labeled corpus for the new-text extraction quality tests. Each fixture is
 a raw RFC 5322 message from the **public** IETF mail archive
 (<https://mailarchive.ietf.org>), promoted from the Phase 0 extraction spike
 (`docs/findings/extraction.md`). Including these verbatim is fine — they are
-public-archive list mail. Two fixtures (marked in the table) are synthetic;
+public-archive list mail. Three fixtures (marked in the table) are synthetic;
 their rows record why.
 
 ## Layout
@@ -95,6 +95,7 @@ guards.
 | `toppost-french-quoteheader-regext-01` | top-post | Mohamed Boucadair (regext) — **reconstructed from the delivered list copy** | https://mailarchive.ietf.org/arch/msg/regext/3_r9On9jgpOxj1lmuuzqy85S1pk | **French Outlook quote header** (`De :` / `Envoyé :` / `À :` / `Cc :` / `Objet :`, space before the colon) below a "Cheers, / Med" sign-off, introducing the whole quoted message with no `>` markers. Before generation 6 the block was not recognized and the quoted message (including the parent author's `[ML]` answers) shipped as new text. The stacked "Thank you." above the sign-off is removed by stage 2's second pass. `multipart/alternative`. Headers trimmed to the non-transport fields; the decoded `text/plain` and `text/html` parts are byte-identical to the stored copy. |
 | `toppost-french-originalmsg-divider-regext-01` | top-post | Mohamed Boucadair (regext) — **reconstructed from the delivered list copy** | https://mailarchive.ietf.org/arch/msg/regext/c4-zK5sWlu6rGf7KScK7JRYc85o | **French forward**: `-----Message d'origine-----` divider, then `De : / Envoyé : / À : / Objet :` with U+00A0 before each colon, then the forwarded I-D announcement. Pins the localized divider and the no-break-space colon spacing. `text/plain` (`iso-8859-1`, quoted-printable). Headers trimmed to the non-transport fields; the decoded body is byte-identical to the stored copy. |
 | `toppost-repeated-signature-synthetic-01` | top-post | — **synthetic** (generation-7 alignment shape) | — (constructed; reproduces the shape of stored messages whose output changed in generation 7) | Top-posted reply above an unmarked quoted message. The plain part carries the quoted author's three-line signature block twice (after the quoted agenda and after the closing paragraph); the HTML `<blockquote>` holds it once, after the closing paragraph, which is a single line there and wrapped in the plain part. The HTML quoted-text oracle removes the quote. Through generation 6 the `difflib` alignment matched one copy of the signature block and the other shipped as new text; from generation 7 both copies match the HTML copy, which lies after the longest common run (the agenda) in both texts. `multipart/alternative`. |
+| `toppost-share-sheet-synthetic-01` | top-post | — **synthetic** (generation-8 Share-sheet shape) | — (constructed; reproduces the markup of stored messages sent through Apple Mail's Share sheet, with invented names and text) | **Apple Mail Share sheet**: the author's whole reply, an attribution line and a nested quoted message sit inside a `<blockquote type="cite">` whose parent `<div>` carries the class `Apple-Mail-URLShareWrapperClass`. The `text/plain` part prefixes every line with `>` (the nested quote with `>>`), so the plain pipeline yields an empty extraction. From generation 8 the share container's text is novel and the text is derived from the HTML part; the nested blockquote stays quoted and the attribution line is removed by the custom pass. `multipart/alternative`. |
 | `bottompost-clean-quic-01` | bottom-post | Olivier Bonaventure (quic) | https://mailarchive.ietf.org/arch/msg/quic/DRgTBE4FMhivJpOQ5B61TmpQuQw | Clean bottom-post: greeting + digest quote + reply + "Olivier" sign-off. ERP correct. |
 | `bottompost-confidentiality-sig-lastcall-01` | bottom-post | Brian Campbell (last-call) | https://mailarchive.ietf.org/arch/msg/last-call/RLYSMc1S5Ct6cMnUR1nP3FypTro | One-line reply below quote, followed by a `-- ` confidentiality-notice signature that must be stripped. `multipart/alternative`. ERP correct (strips the notice). |
 | `bottompost-multipart-alt-ietf-01` | bottom-post | Nicolas Giard (ietf) | https://mailarchive.ietf.org/arch/msg/ietf/7TjZy8W_EFYr8QbmQsoHefsSbNw | `multipart/alternative` bottom-post; "Nick" sign-off. ERP correct. |
@@ -112,14 +113,14 @@ guards.
 | Category | Count | Fixtures |
 |---|---:|---|
 | interleaved | 6 | pointbypoint, greeting, elision, bom, indented-quotes, deep-thread |
-| top-post | 10 | ps-after-signature, flowed, plain-part-only, multipart-alt, outlook-quoteheader, signoff-unquoted, originalmsg-divider, french-quoteheader, french-originalmsg-divider, repeated-signature |
+| top-post | 11 | ps-after-signature, flowed, plain-part-only, multipart-alt, outlook-quoteheader, signoff-unquoted, originalmsg-divider, french-quoteheader, french-originalmsg-divider, repeated-signature, share-sheet |
 | bottom-post | 3 | clean, confidentiality-sig, multipart-alt |
 | signature-heavy | 3 | pgp-german-attribution, corporate-contact, identifier-links |
 | no-quote / thread-starter | 3 | noquote-prose-signature, threadstarter-announcement, threadstarter-rfc2047-header |
 | digest (dashed-separator) | 2 | dashsep-nomcom, github-multipart |
-| **Total** | **27** | (11 promoted from the spike + 8 added for category coverage + 1 Phase 7.2 defect + 4 extraction/cleaning defects reported from live runs + 2 generation-6 French quote-header defects + 1 synthetic generation-7 alignment shape) |
+| **Total** | **28** | (11 promoted from the spike + 8 added for category coverage + 1 Phase 7.2 defect + 4 extraction/cleaning defects reported from live runs + 2 generation-6 French quote-header defects + 1 synthetic generation-7 alignment shape + 1 synthetic generation-8 Share-sheet shape) |
 
-Cross-cutting coverage: `multipart/alternative` (10 fixtures), `multipart/signed`
+Cross-cutting coverage: `multipart/alternative` (11 fixtures), `multipart/signed`
 (3), `format=flowed` (2), RFC 2047-encoded headers (1 dedicated + several with
 encoded `[List]` Subject prefixes), leading BOM (1), non-English attribution (1),
 localized (French) quote header or divider (2),

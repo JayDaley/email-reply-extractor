@@ -42,7 +42,7 @@ reproduce it. [docs/ports.md](docs/ports.md) is the contract between them.
 `conformance/` holds language-neutral test data generated from the Python
 implementation:
 
-- `corpus.json` — the decoded bodies of the 27 hand-labeled fixture messages
+- `corpus.json` — the decoded bodies of the 28 hand-labeled fixture messages
   in `fixtures/`, with the reference output of every public function for each;
 - `vectors/` — call-level vectors (arguments and result) recorded while the
   Python unit tests run, one file per function;
@@ -77,6 +77,8 @@ The formats and the digest algorithm are specified in
   scanner changes.
 - [docs/generation-7.md](docs/generation-7.md) — generation 7: the linear
   parent-diff assist and its new aligned-run rule.
+- [docs/generation-8.md](docs/generation-8.md) — generation 8: Apple Mail
+  Share-sheet containers.
 - [conformance/README.md](conformance/README.md) — the conformance data.
 - [fixtures/README.md](fixtures/README.md) — the fixture corpus and its
   provenance.

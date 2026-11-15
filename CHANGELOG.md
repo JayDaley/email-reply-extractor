@@ -39,6 +39,24 @@ Any other line (headings above level 2, blank lines, prose in this Format
 section) is not part of a release record and can be ignored. Outside fenced
 code blocks, no release section appears before the first `## [` header.
 
+## [1.4.0] - 2026-11-15
+
+Summary: Generation 8: text sent through Apple Mail's Share sheet, which the plain part marks as quoted, is read from the HTML part; extraction results report the boundaries between the separate runs of an inline reply.
+
+- Bump `EXTRACTION_VERSION` to 8 and re-record the corpus digest.
+- `split_html_parts` treats a `<blockquote>` whose parent element carries the class `Apple-Mail-URLShareWrapperClass` as a Share-sheet container: its direct text is not quoted; a `<blockquote>` nested inside it is quoted as before.
+- Added the field `has_share_container` to `HtmlParts` (default `False`): true when a Share-sheet container opens outside every quoted container and outside `head`.
+- `extract_new_text` derives the text from the HTML part's novel text, with the `html-` method prefix, whenever the HTML holds a Share-sheet container and its novel text is not blank (path (d)).
+- Over 99 stored messages of the origin application that carry the Share-sheet marker, all 76 empty and all 10 below-floor extractions yield text.
+- Added the synthetic fixture `toppost-share-sheet-synthetic-01`: a reply sent through the Share sheet, with an attribution line and a nested quoted message inside the container.
+- Added `docs/generation-8.md`.
+- Added the field `part_starts` to `ExtractionResult` (default empty): the indices of the lines of `text` that begin a new part, where content removed by stage 1 (a quoted block, an attribution, parent-diff or HTML-quote content) separated two runs of the author's text.
+- Part boundaries are found by aligning each non-blank line of `text`, in order, with the body it was derived from (the full `html_to_text` rendering for the `html-` paths); a line with no counterpart abandons the alignment and the text is reported as one part.
+- Added the keyword argument `part_starts` to `clean_for_scoring` (`partStarts` in the TypeScript options; the new function `clean_for_scoring_with_parts` in Rust) and the field `parts` to `CleanResult`: the cleaned text divided at those boundaries, omitting parts that cleaning emptied.
+- The Rust differential example reports `has_share_container`, `part_starts` and `parts`.
+- `part_starts` and `parts` do not alter `text`, `method`, `status` or `ignored_lines`; the corpus digest is unchanged by them.
+- Over 29,895 stage-1 extractions sampled from the origin application, the alignment succeeds for all but 11, and 26% of the extractions have more than one part.
+
 ## [1.3.0] - 2026-11-14
 
 Summary: Generation 7: the parent-diff assist runs in time linear in its input, with a new aligned-run rule; the fragment scanner inserts the collapsed attribution header literally.

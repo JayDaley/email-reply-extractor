@@ -27,6 +27,7 @@ regular expressions.
 - [Usage](#usage)
   - [Quickstart](#quickstart)
   - [Thread parent and HTML part](#thread-parent-and-html-part)
+  - [Parts of an inline reply](#parts-of-an-inline-reply)
 - [API reference](#api-reference)
   - [Argument convention](#argument-convention)
   - [Status values](#status-values)
@@ -130,7 +131,8 @@ const withParent = extractNewText(body, { parentBody });
 
 // The message's decoded text/html part. Used as a structural oracle: as the
 // body when there is no usable plain part, as a replacement for a flattened
-// plain part, or to remove a quoted message leaked unmarked into the plain part.
+// plain part or for the plain part of an Apple Mail Share-sheet message, or to
+// remove a quoted message leaked unmarked into the plain part.
 const withHtml = extractNewText(body, { htmlBody });
 ```
 
@@ -148,40 +150,67 @@ const cleaned = cleanForScoring(result.text, { htmlSignatureText: parts.signatur
 The package does not parse MIME. Its functions take decoded strings: the
 `text/plain` body, the `text/html` body and the parent's body.
 
+### Parts of an inline reply
+
+An inline reply interleaves the author's answers with quoted passages. Stage 1
+removes the quoted passages and joins the answers into one text;
+`ExtractionResult.partStarts` records where each separate run of the author's
+text begins, as indices into `result.text.split("\n")`. Passing it to
+`cleanForScoring` divides the cleaned text at the same boundaries:
+
+```ts
+const result = extractNewText(body);
+const cleaned = cleanForScoring(result.text, { partStarts: result.partStarts });
+cleaned.text; // the whole cleaned text, unchanged by partStarts
+cleaned.parts; // one string per run of the author's text
+```
+
+A top-posted reply, or any text written as one run, has an empty `partStarts`
+and a single part. The boundaries are found by aligning the text with the body
+it was derived from; when a line cannot be aligned (the scanner joins a
+wrapped attribution onto one line, for example), the text is reported as one
+part. Indices outside `1` to the input's line count minus one are ignored;
+`partStarts` changes only `parts`, never `text` or `ignoredLines`. `parts` is
+`[text]` without `partStarts`, `[]` when `text` is empty, and omits a part
+that cleaning emptied.
+
 ## API reference
 
-| Name                                                      | What it is                                                                            |
-| --------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `extractNewText(body, { parentBody?, htmlBody? })`        | Stage 1; returns an `ExtractionResult`. `body` may be `null` or `undefined`.          |
-| `ExtractionResult`                                        | `{ text, method, status }`.                                                           |
-| `STATUS_OK`, `STATUS_EMPTY`, `STATUS_FAILED`              | The three `status` values; the `ExtractionStatus` type is their union.                |
-| `EXTRACTION_VERSION`                                      | Integer generation stamp of the text-deriving routine.                                |
-| `cleanForScoring(extractedText, { htmlSignatureText? })`  | Stage 2; returns a `CleanResult`.                                                     |
-| `CleanResult`                                             | `{ text, ignoredLines }`.                                                             |
-| `htmlToText(html)`                                        | Visible text of an HTML part, block structure as newlines.                            |
-| `splitHtmlParts(html)`                                    | The same text split into `HtmlParts`.                                                 |
-| `HtmlParts`                                               | `{ novelText, quotedText, signatureText }`.                                           |
-| `stripParentContent(text, parentBody, { continuation? })` | Remove lines of `text` provably drawn from `parentBody`.                              |
-| `tolerantLines(text)`                                     | The non-blank lines of `text`, edge whitespace stripped and U+00A0 unified to spaces. |
-| `textsEquivalent(a, b)`                                   | `true` when `a` and `b` differ at most in whitespace.                                 |
-| `VERSION`                                                 | The package version.                                                                  |
+| Name                                                                  | What it is                                                                            |
+| --------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `extractNewText(body, { parentBody?, htmlBody? })`                    | Stage 1; returns an `ExtractionResult`. `body` may be `null` or `undefined`.          |
+| `ExtractionResult`                                                    | `{ text, method, status, partStarts }`.                                               |
+| `STATUS_OK`, `STATUS_EMPTY`, `STATUS_FAILED`                          | The three `status` values; the `ExtractionStatus` type is their union.                |
+| `EXTRACTION_VERSION`                                                  | Integer generation stamp of the text-deriving routine.                                |
+| `cleanForScoring(extractedText, { htmlSignatureText?, partStarts? })` | Stage 2; returns a `CleanResult`.                                                     |
+| `CleanResult`                                                         | `{ text, ignoredLines, parts }`.                                                      |
+| `htmlToText(html)`                                                    | Visible text of an HTML part, block structure as newlines.                            |
+| `splitHtmlParts(html)`                                                | The same text split into `HtmlParts`.                                                 |
+| `HtmlParts`                                                           | `{ novelText, quotedText, signatureText, hasShareContainer }`.                        |
+| `stripParentContent(text, parentBody, { continuation? })`             | Remove lines of `text` provably drawn from `parentBody`.                              |
+| `tolerantLines(text)`                                                 | The non-blank lines of `text`, edge whitespace stripped and U+00A0 unified to spaces. |
+| `textsEquivalent(a, b)`                                               | `true` when `a` and `b` differ at most in whitespace.                                 |
+| `VERSION`                                                             | The package version.                                                                  |
 
 The result types are frozen plain objects. Their fields are the Python
 package's fields in camelCase: `ignored_lines` is `ignoredLines`,
-`novel_text` is `novelText`.
+`part_starts` is `partStarts`, `novel_text` is `novelText`. Array fields
+(`partStarts`, `ignoredLines`, `parts`) are frozen arrays.
 
 ### Argument convention
 
 Required arguments are positional. Every optional argument of the Python API
-(`parent_body`, `html_body`, `html_signature_text`, `continuation`) is a
+(`parent_body`, `html_body`, `html_signature_text`, `part_starts`,
+`continuation`) is a
 property of an options object passed last, named in camelCase. An omitted
-property, `undefined` and `null` all mean the Python default (`None` or
-`False`).
+property, `undefined` and `null` all mean the Python default (`None`, `False`
+or, for `partStarts`, no boundaries).
 
 | Python                                                  | TypeScript                                                 |
 | ------------------------------------------------------- | ---------------------------------------------------------- |
 | `extract_new_text(body, parent_body=p, html_body=h)`    | `extractNewText(body, { parentBody: p, htmlBody: h })`     |
 | `clean_for_scoring(text, html_signature_text=s)`        | `cleanForScoring(text, { htmlSignatureText: s })`          |
+| `clean_for_scoring(text, part_starts=r.part_starts)`    | `cleanForScoring(text, { partStarts: r.partStarts })`      |
 | `strip_parent_content(text, parent, continuation=True)` | `stripParentContent(text, parent, { continuation: true })` |
 
 ### Status values
@@ -205,9 +234,10 @@ is one of:
 
 Three modifiers combine with the base value:
 
-- `html-` prefix — the text was derived from the HTML part, either because
-  there was no usable plain body or because a flattened plain body was
-  replaced (for example `html-erp+custom`).
+- `html-` prefix — the text was derived from the HTML part, because there
+  was no usable plain body, because a flattened plain body was replaced, or
+  because the HTML holds an Apple Mail Share-sheet container (for example
+  `html-erp+custom`).
 - `+parent-diff` suffix — the parent-diff assist removed content (for example
   `erp+parent-diff`).
 - `+html-quote` suffix — the HTML quoted-text oracle removed content from a
@@ -218,7 +248,7 @@ Three modifiers combine with the base value:
 `EXTRACTION_VERSION` is an integer identifying the generation of the routine
 that derives the text. It is independent of the package version, only ever
 increases, and is the same in the Python, TypeScript and Rust packages. It is
-currently **7**.
+currently **8**.
 
 An application that stores derived text stores `EXTRACTION_VERSION` alongside
 it and compares the stored stamp with the running constant using `<` to decide

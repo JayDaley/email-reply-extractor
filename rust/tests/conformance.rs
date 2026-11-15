@@ -70,6 +70,16 @@ impl Args<'_> {
     fn bool(&self, name: &str) -> bool {
         self.get(name).as_bool().expect("bool")
     }
+    /// A list of integers; negative values are dropped, as the reference
+    /// ignores them wherever this is used (`part_starts`).
+    fn indices(&self, name: &str) -> Vec<usize> {
+        self.get(name)
+            .as_array()
+            .expect("array")
+            .iter()
+            .filter_map(|v| usize::try_from(v.as_i64().expect("integer")).ok())
+            .collect()
+    }
     fn lines(&self, name: &str) -> Vec<&str> {
         self.get(name)
             .as_array()
@@ -81,15 +91,25 @@ impl Args<'_> {
 }
 
 fn extraction_json(r: &ExtractionResult) -> Value {
-    json!({"text": r.text, "method": r.method, "status": r.status.as_str()})
+    json!({
+        "text": r.text,
+        "method": r.method,
+        "status": r.status.as_str(),
+        "part_starts": r.part_starts,
+    })
 }
 
 fn clean_json(r: &CleanResult) -> Value {
-    json!({"text": r.text, "ignored_lines": r.ignored_lines})
+    json!({"text": r.text, "ignored_lines": r.ignored_lines, "parts": r.parts})
 }
 
 fn parts_json(p: &HtmlParts) -> Value {
-    json!({"novel_text": p.novel_text, "quoted_text": p.quoted_text, "signature_text": p.signature_text})
+    json!({
+        "novel_text": p.novel_text,
+        "quoted_text": p.quoted_text,
+        "signature_text": p.signature_text,
+        "has_share_container": p.has_share_container,
+    })
 }
 
 /// Run one vector; `Err(())` when the port signalled an error.
@@ -100,9 +120,10 @@ fn call(module: &str, function: &str, a: &Args) -> Option<Result<Value, ()>> {
             a.opt("parent_body"),
             a.opt("html_body"),
         ))),
-        ("cleaning", "clean_for_scoring") => Ok(clean_json(&clean_for_scoring(
+        ("cleaning", "clean_for_scoring") => Ok(clean_json(&clean_for_scoring_with_parts(
             a.str("extracted_text"),
             a.opt("html_signature_text"),
+            &a.indices("part_starts"),
         ))),
         ("extraction", "strip_parent_content") => Ok(json!(strip_parent_content(
             a.str("text"),

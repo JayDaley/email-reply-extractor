@@ -82,7 +82,7 @@ diverges from hand-labeled ground truth:
 HTML as a structural oracle (optional ``html_body``)
 ----------------------------------------------------
 When the caller passes the decoded ``text/html`` part, its structure (see
-:mod:`html_text`) is used three ways. The resolved method makes the HTML source
+:mod:`html_text`) is used four ways. The resolved method makes the HTML source
 visible so it is auditable downstream:
 
 a. **HTML-only** — the plain body is missing or blank but an HTML part exists:
@@ -105,9 +105,29 @@ c. **Oracle assist** — the plain body is fine: the normal plain pipeline runs,
    *interleaved* author replies inside the same ``gmail_quote`` container as the
    quote, and an author quoting a proposed sentence inline matches its verbatim
    copy in a real ``<blockquote>`` — both would otherwise cost genuine content).
+d. **Share-sheet container** — the HTML holds an Apple Mail Share-sheet
+   container (:attr:`~html_text.HtmlParts.has_share_container`) and its novel
+   text is non-blank: the HTML path (a) is used instead of the plain body,
+   whatever the plain body holds. It is checked after (b) and before the plain
+   pipeline, so (c) never runs on such a message. The Share sheet wraps the
+   author's own text in a ``<blockquote type="cite">`` and the plain part
+   prefixes every line of it with ``>``, so the plain pipeline removes it as
+   quoted; the HTML segmenter treats that blockquote as novel. The
+   ``toppost-share-sheet-synthetic-01`` fixture triggers this.
 
 A word-count "too short" gate is deliberately **not** applied here — that is a
 consumer's decision, and it belongs on the stage-2 *cleaned* text.
+
+Part boundaries
+---------------
+:attr:`ExtractionResult.part_starts` lists the lines of the final text that
+begin a new part: a run of the author's text separated from the previous run by
+content stage 1 removed (a quoted block, an attribution, parent-diff or
+HTML-quote content). It is found after the text is final by aligning the text
+with the body it was derived from (:func:`_part_starts`), so it never affects
+the text, the method or the status; an alignment that fails reports one part.
+:func:`cleaning.clean_for_scoring` divides the cleaned text at the same
+boundaries when given them.
 
 Generation stamp (:data:`EXTRACTION_VERSION`)
 ---------------------------------------------
@@ -140,7 +160,9 @@ mailing-list-ai-check); **6** Latin-script localized quote-header blocks and
 "Original message" dividers, with the inline-reply exception (v1.2.0); **7**
 the parent-diff aligned-run rule aligns around the longest common run of lines
 instead of ``difflib.SequenceMatcher``, and the vendored scanner inserts the
-collapsed attribution header literally (v1.3.0).
+collapsed attribution header literally (v1.3.0); **8** a ``<blockquote>`` whose
+parent carries Apple Mail's ``Apple-Mail-URLShareWrapperClass`` is novel, not
+quoted, and a message holding one derives its text from the HTML part (v1.4.0).
 """
 
 from __future__ import annotations
@@ -149,7 +171,7 @@ import re
 from dataclasses import dataclass
 
 from ._fragments import read_fragments
-from .html_text import split_html_parts
+from .html_text import html_to_text, split_html_parts
 
 # --- generation stamp -----------------------------------------------------------
 
@@ -157,7 +179,7 @@ from .html_text import split_html_parts
 #: :mod:`html_text` and :mod:`._fragments` together). Hand-incremented; see the
 #: module docstring for when and why. Consumers stamp stored derived text with
 #: it and compare with ``<``, so it must only ever increase.
-EXTRACTION_VERSION: int = 7
+EXTRACTION_VERSION: int = 8
 
 # --- result -------------------------------------------------------------------
 
@@ -186,17 +208,28 @@ class ExtractionResult:
       pass on the whole body), or ``"failed"``. When a thread parent was supplied
       and the parent-diff assist removed content, ``"+parent-diff"`` is appended
       to whichever of the above produced the text (e.g. ``"erp+parent-diff"``).
-      When the text was derived from the HTML part (HTML-only or degenerate-plain
-      fallback) the method is **prefixed** ``"html-"`` (e.g. ``"html-erp+custom"``);
+      When the text was derived from the HTML part (HTML-only, degenerate-plain
+      fallback or Share-sheet container) the method is **prefixed** ``"html-"``
+      (e.g. ``"html-erp+custom"``);
       when the HTML quoted-text oracle removed content from a plain extraction,
       ``"+html-quote"`` is appended.
     - ``status``: one of :data:`STATUS_OK`, :data:`STATUS_EMPTY`,
       :data:`STATUS_FAILED`.
+    - ``part_starts``: the 0-based indices into ``text.split("\n")`` of the
+      lines that begin a new *part* — a run of the author's text separated
+      from the previous run by content that stage 1 removed (a quoted block, an
+      attribution, parent-diff or HTML-quote content). An inline reply written
+      between quoted passages has one part per answer. Empty when the text is a
+      single part, when it is empty, and when the text could not be aligned
+      with its source (see :func:`_part_starts`). The text itself does not
+      depend on this field; pass it to :func:`cleaning.clean_for_scoring` to
+      get the cleaned text divided into the same parts.
     """
 
     text: str
     method: str
     status: str
+    part_starts: tuple[int, ...] = ()
 
 
 # --- pre-normalization --------------------------------------------------------
@@ -1754,9 +1787,9 @@ def extract_new_text(
     ``"+parent-diff"`` to the method. The default ``None`` is a behavioral no-op.
 
     When ``html_body`` (the decoded ``text/html`` part) is supplied, the HTML
-    structure serves as an oracle in one of three ways — HTML-only, degenerate
-    plain fallback, or quoted-text oracle assist — described in the module
-    docstring. The default ``None`` leaves the plain-only behavior unchanged, so
+    structure serves as an oracle in one of four ways — HTML-only, degenerate
+    plain fallback, Share-sheet container, or quoted-text oracle assist —
+    described in the module docstring. The default ``None`` leaves the plain-only behavior unchanged, so
     every existing caller and the whole no-HTML corpus are unaffected.
     """
     try:
@@ -1768,13 +1801,19 @@ def extract_new_text(
         if body is None or not body.strip():
             if parts is not None and parts.novel_text.strip():
                 text, method = _core_extract(parts.novel_text, parent_body)
-                return _result("html-" + method, text)
+                return _result("html-" + method, text, _html_source(html_body))
             return ExtractionResult(text="", method="none", status=STATUS_EMPTY)
 
         # (b) Degenerate plain: a flattened plain body the HTML can replace.
         if parts is not None and _is_degenerate_plain(body, parts.novel_text):
             text, method = _core_extract(parts.novel_text, parent_body)
-            return _result("html-" + method, text)
+            return _result("html-" + method, text, _html_source(html_body))
+
+        # (d) Share-sheet container: the plain part marks the author's own text
+        # as quoted; the HTML's novel text holds it.
+        if parts is not None and parts.has_share_container and parts.novel_text.strip():
+            text, method = _core_extract(parts.novel_text, parent_body)
+            return _result("html-" + method, text, _html_source(html_body))
 
         # Normal plain path.
         text, method = _core_extract(body, parent_body)
@@ -1793,17 +1832,84 @@ def extract_new_text(
                 text = assisted
                 method += "+html-quote"
 
-        return _result(method, text)
+        return _result(method, text, body)
     except Exception:  # noqa: BLE001 - never let one message stall the pipeline
         return ExtractionResult(text="", method="failed", status=STATUS_FAILED)
 
 
-def _result(method: str, text: str) -> ExtractionResult:
+def _result(method: str, text: str, source: str) -> ExtractionResult:
     """Wrap resolved ``(method, text)`` in a result with the right empty status.
 
     A legitimately empty extraction (e.g. an exact re-send of the parent) keeps
-    its resolved ``method`` but reports :data:`STATUS_EMPTY`.
+    its resolved ``method`` but reports :data:`STATUS_EMPTY`. ``source`` is the
+    body the text was derived from — the ``text/plain`` body, or the full
+    :func:`~html_text.html_to_text` rendering for the ``html-`` paths — and is
+    used only to locate the part boundaries (:func:`_part_starts`).
     """
     if not text.strip():
         return ExtractionResult(text="", method=method, status=STATUS_EMPTY)
-    return ExtractionResult(text=text, method=method, status=STATUS_OK)
+    return ExtractionResult(
+        text=text,
+        method=method,
+        status=STATUS_OK,
+        part_starts=_safe_part_starts(text, source),
+    )
+
+
+def _html_source(html_body: str) -> str:
+    """The full rendering of ``html_body`` (novel and quoted text); ``""`` on error.
+
+    An empty source leaves the alignment unmatched, so the text is one part.
+    """
+    try:
+        return html_to_text(html_body)
+    except Exception:  # noqa: BLE001 - boundaries are advisory
+        return ""
+
+
+def _safe_part_starts(text: str, source: str) -> tuple[int, ...]:
+    """:func:`_part_starts` over the normalized ``source``; ``()`` on any error.
+
+    The part boundaries never decide the text or the status, so a failure here
+    must not turn an extraction into :data:`STATUS_FAILED`.
+    """
+    try:
+        return _part_starts(text, normalize_body(source))
+    except Exception:  # noqa: BLE001 - boundaries are advisory
+        return ()
+
+
+def _part_starts(text: str, source: str) -> tuple[int, ...]:
+    """Return the indices of the lines of ``text`` that begin a new part.
+
+    ``source`` is the normalized body ``text`` was derived from. Every non-blank
+    line of ``text`` is matched, in order, to the first source line at or after
+    the previous match whose stripped form is equal. A non-blank source line
+    lying between two consecutive matches is content stage 1 removed, and the
+    second line then begins a new part. Blank lines never begin a part.
+
+    The rule is deliberately conservative: when a line of ``text`` has no match
+    (the scanner's attribution collapse can join lines; a parent-diff assist
+    can reflow none, but a future rule might), the alignment is abandoned and
+    an empty tuple — a single part — is returned. The search pointer only moves
+    forward and each gap is inspected once, so the cost is linear in the two
+    line counts.
+    """
+    src = [line.strip() for line in source.split("\n")]
+    starts: list[int] = []
+    pos = 0
+    prev = -1
+    for i, line in enumerate(text.split("\n")):
+        key = line.strip()
+        if not key:
+            continue
+        j = pos
+        while j < len(src) and src[j] != key:
+            j += 1
+        if j == len(src):
+            return ()
+        if prev >= 0 and any(src[k] for k in range(prev + 1, j)):
+            starts.append(i)
+        prev = j
+        pos = j + 1
+    return tuple(starts)

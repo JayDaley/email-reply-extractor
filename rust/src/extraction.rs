@@ -9,9 +9,10 @@
 //! quote-header blocks (English, German labels, Chinese, and Latin-script
 //! localized blocks), "Original message" dividers, the over-strip guard, and
 //! the optional parent-diff assist. The optional HTML part serves as a
-//! structural oracle in three ways: HTML-only bodies, a degenerate
-//! (flattened) plain body, and removal of plain-body content present in the
-//! HTML's quoted text.
+//! structural oracle in four ways: HTML-only bodies, a degenerate
+//! (flattened) plain body, an Apple Mail Share-sheet container (whose text
+//! the plain part marks as quoted), and removal of plain-body content present
+//! in the HTML's quoted text.
 //!
 //! Stage 1 keeps the author's own furniture (greetings, sign-offs, signature
 //! blocks, list footers, mobile taglines); stage 2 ([`crate::clean_for_scoring`])
@@ -21,7 +22,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::LazyLock;
 
 use crate::fragments::read_fragments;
-use crate::html_text::split_html_parts;
+use crate::html_text::{html_to_text, split_html_parts};
 use crate::pyre::{Re, IGNORECASE};
 use crate::pystr;
 
@@ -31,7 +32,7 @@ use crate::pystr;
 /// `html_text` and `fragments` together). Consumers stamp stored derived
 /// text with it and compare with `<`; it only ever increases. It is
 /// independent of the package version.
-pub const EXTRACTION_VERSION: u32 = 7;
+pub const EXTRACTION_VERSION: u32 = 8;
 
 // --- result -------------------------------------------------------------------
 
@@ -81,6 +82,15 @@ impl std::fmt::Display for Status {
 ///   text came from the HTML part, and a `"+parent-diff"` or `"+html-quote"`
 ///   suffix when those assists removed content.
 /// - `status`: [`Status::Ok`], [`Status::Empty`] or [`Status::Failed`].
+/// - `part_starts`: the 0-based indices into `text.split('\n')` of the lines
+///   that begin a new *part*: a run of the author's text separated from the
+///   previous run by content that stage 1 removed (a quoted block, an
+///   attribution, parent-diff or HTML-quote content). An inline reply written
+///   between quoted passages has one part per answer. Empty when the text is
+///   a single part, when it is empty, and when the text could not be aligned
+///   with its source. The text does not depend on this field; pass it to
+///   [`crate::clean_for_scoring_with_parts`] to divide the cleaned text into
+///   the same parts.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ExtractionResult {
     /// The extracted text.
@@ -89,6 +99,8 @@ pub struct ExtractionResult {
     pub method: String,
     /// The outcome.
     pub status: Status,
+    /// Indices of the lines of `text` that begin a new part, ascending.
+    pub part_starts: Vec<usize>,
 }
 
 // --- pre-normalization --------------------------------------------------------
@@ -1859,19 +1871,80 @@ fn is_degenerate_plain(body: &str, html_novel: &str) -> bool {
     nonblank_line_count(html_novel) >= 3 * lines.len()
 }
 
-fn result(method: String, text: String) -> ExtractionResult {
+/// Wrap a resolved `(method, text)` in a result with the right empty status.
+///
+/// `source` is the body the text was derived from: the `text/plain` body, or
+/// the full [`html_to_text`] rendering for the `html-` paths. It is used only
+/// to locate the part boundaries ([`part_starts`]).
+fn result(method: String, text: String, source: &str) -> ExtractionResult {
     if !pystr::has_content(&text) {
         return ExtractionResult {
             text: String::new(),
             method,
             status: Status::Empty,
+            part_starts: Vec::new(),
         };
     }
+    let part_starts = safe_part_starts(&text, source);
     ExtractionResult {
         text,
         method,
         status: Status::Ok,
+        part_starts,
     }
+}
+
+/// The full rendering of `html_body` (novel and quoted text).
+fn html_source(html_body: Option<&str>) -> String {
+    html_to_text(html_body.unwrap_or(""))
+}
+
+/// [`part_starts`] over the normalized `source`; empty on any internal error.
+///
+/// The part boundaries never decide the text or the status, so a failure here
+/// must not turn an extraction into [`Status::Failed`].
+fn safe_part_starts(text: &str, source: &str) -> Vec<usize> {
+    std::panic::catch_unwind(|| part_starts(text, &normalize_body(source))).unwrap_or_default()
+}
+
+/// The indices of the lines of `text` that begin a new part.
+///
+/// `source` is the normalized body `text` was derived from. Every non-blank
+/// line of `text` is matched, in order, to the first source line at or after
+/// the previous match whose stripped form is equal. A non-blank source line
+/// lying between two consecutive matches is content stage 1 removed, and the
+/// second line then begins a new part. Blank lines never begin a part. When a
+/// line of `text` has no match, the alignment is abandoned and the result is
+/// empty (a single part). The search position only moves forward and each
+/// gap is inspected once, so the cost is linear in the two line counts.
+fn part_starts(text: &str, source: &str) -> Vec<usize> {
+    let src: Vec<&str> = source.split('\n').map(pystr::strip).collect();
+    let mut starts = Vec::new();
+    let mut pos = 0;
+    let mut matched_before = false;
+    for (i, line) in text.split('\n').enumerate() {
+        let key = pystr::strip(line);
+        if key.is_empty() {
+            continue;
+        }
+        // `pos` is one past the previous match, so the lines skipped here are
+        // exactly the gap between the two matches.
+        let mut gap = false;
+        let mut j = pos;
+        while j < src.len() && src[j] != key {
+            gap |= !src[j].is_empty();
+            j += 1;
+        }
+        if j == src.len() {
+            return Vec::new();
+        }
+        if matched_before && gap {
+            starts.push(i);
+        }
+        matched_before = true;
+        pos = j + 1;
+    }
+    starts
 }
 
 fn extract(
@@ -1891,13 +1964,14 @@ fn extract(
             if let Some(p) = &parts {
                 if pystr::has_content(&p.novel_text) {
                     let (text, method) = core_extract(&p.novel_text, parent_body);
-                    return result(format!("html-{method}"), text);
+                    return result(format!("html-{method}"), text, &html_source(html_body));
                 }
             }
             return ExtractionResult {
                 text: String::new(),
                 method: "none".to_string(),
                 status: Status::Empty,
+                part_starts: Vec::new(),
             };
         }
     };
@@ -1906,7 +1980,16 @@ fn extract(
     if let Some(p) = &parts {
         if is_degenerate_plain(body, &p.novel_text) {
             let (text, method) = core_extract(&p.novel_text, parent_body);
-            return result(format!("html-{method}"), text);
+            return result(format!("html-{method}"), text, &html_source(html_body));
+        }
+    }
+
+    // (d) Share-sheet container: the plain part marks the author's own text
+    // as quoted; the HTML's novel text holds it.
+    if let Some(p) = &parts {
+        if p.has_share_container && pystr::has_content(&p.novel_text) {
+            let (text, method) = core_extract(&p.novel_text, parent_body);
+            return result(format!("html-{method}"), text, &html_source(html_body));
         }
     }
 
@@ -1924,7 +2007,7 @@ fn extract(
             }
         }
     }
-    result(method, text)
+    result(method, text, body)
 }
 
 /// Extract the author's newly written text from a decoded `text/plain` body.
@@ -1938,10 +2021,12 @@ fn extract(
 ///   provably came from the parent is removed after the primary pass
 ///   (method suffix `"+parent-diff"`);
 /// - `html_body`: the decoded `text/html` part, used as a structural oracle
-///   (HTML-only bodies, a flattened plain body, quoted-text removal).
+///   (HTML-only bodies, a flattened plain body, a Share-sheet container,
+///   quoted-text removal).
 ///
 /// Never panics and never fails: an internal error yields
-/// `ExtractionResult { text: "", method: "failed", status: Status::Failed }`.
+/// `ExtractionResult { text: "", method: "failed", status: Status::Failed,
+/// part_starts: vec![] }`.
 ///
 /// ```
 /// use email_reply_extractor::{extract_new_text, Status};
@@ -1963,6 +2048,7 @@ pub fn extract_new_text(
             text: String::new(),
             method: "failed".to_string(),
             status: Status::Failed,
+            part_starts: Vec::new(),
         },
     }
 }
@@ -2367,5 +2453,213 @@ mod tests {
         assert!(!any_author_tag(&l("Med"), "\u{e9}Med", None));
         assert!(!any_author_tag(&l("Med"), "Med\u{663}", None));
         assert!(any_author_tag(&l("\u{e9}d"), "x \u{e9}d", Some("[\u{e9}")));
+    }
+}
+
+#[cfg(test)]
+mod share_sheet_tests {
+    //! The Apple Mail Share-sheet container, path (d) (generation 8),
+    //! mirroring the Share-sheet tests of the reference's
+    //! `tests/test_extraction.py`. The fixture
+    //! `toppost-share-sheet-synthetic-01` is covered by the conformance
+    //! corpus test.
+
+    use super::*;
+
+    const SHARE_PROSE: [&str; 2] = [
+        "The registry proposal in the second draft keeps the allocation policy unchanged.",
+        "I suggest we move the open question about expiry to the next interim meeting.",
+    ];
+
+    /// An HTML body shaped like Apple Mail's Share sheet around `inner`.
+    fn share_html(inner: &str, before: &str, after: &str) -> String {
+        format!(
+            "<html><head><meta charset=\"utf-8\"></head><body><div dir=\"auto\">\
+             <div class=\"Apple-Mail-URLShareUserContentTopClass\">{before}<br></div>\
+             <div class=\"Apple-Mail-URLShareWrapperClass\" style=\"position: relative !important;\">\
+             <blockquote type=\"cite\" style=\"border-left-style: none; color: inherit;\">\
+             {inner}</blockquote></div>{after}<br><br></body></html>"
+        )
+    }
+
+    /// The text/plain rendering of a Share-sheet body: every line `>`-prefixed.
+    fn cite(lines: &[&str]) -> String {
+        let quoted: Vec<String> = lines
+            .iter()
+            .map(|l| {
+                if l.is_empty() {
+                    ">".to_string()
+                } else {
+                    format!("> {l}")
+                }
+            })
+            .collect();
+        quoted.join("\n") + "\n"
+    }
+
+    fn nonblank(text: &str) -> Vec<&str> {
+        text.split('\n').filter(|l| pystr::has_content(l)).collect()
+    }
+
+    #[test]
+    fn share_container_recovers_text_the_plain_part_quotes() {
+        let lines = ["Carol,", "", SHARE_PROSE[0], SHARE_PROSE[1], "", "Alice"];
+        let html = share_html(&lines.join("<br>"), "", "");
+        let body = cite(&lines);
+        assert_eq!(
+            extract_new_text(Some(&body), None, None).status,
+            Status::Empty
+        );
+        let r = extract_new_text(Some(&body), None, Some(&html));
+        assert_eq!(r.status, Status::Ok);
+        assert_eq!(r.method, "html-erp");
+        assert_eq!(
+            r.text,
+            format!("Carol,\n\n{}\n\nAlice", SHARE_PROSE.join("\n"))
+        );
+    }
+
+    #[test]
+    fn share_container_keeps_text_typed_outside_the_wrapper_in_order() {
+        let html = share_html(
+            &SHARE_PROSE.join("<br>"),
+            "Forwarding my notes from the review.",
+            "<div>Sent from my phone</div>",
+        );
+        let body = format!(
+            "Forwarding my notes from the review.\n\n{}\nSent from my phone\n",
+            cite(&SHARE_PROSE)
+        );
+        let r = extract_new_text(Some(&body), None, Some(&html));
+        assert!(r.method.starts_with("html-"));
+        assert_eq!(
+            nonblank(&r.text),
+            [
+                "Forwarding my notes from the review.",
+                SHARE_PROSE[0],
+                SHARE_PROSE[1],
+                "Sent from my phone"
+            ]
+        );
+    }
+
+    #[test]
+    fn share_container_nested_blockquote_is_removed() {
+        let html = share_html(
+            &format!(
+                "{}<blockquote type=\"cite\">An earlier message that this one quotes in full.</blockquote>",
+                SHARE_PROSE.join("<br>")
+            ),
+            "",
+            "",
+        );
+        let body = cite(&[
+            SHARE_PROSE[0],
+            SHARE_PROSE[1],
+            "",
+            "> An earlier message that this one quotes in full.",
+        ]);
+        let r = extract_new_text(Some(&body), None, Some(&html));
+        assert!(r.method.starts_with("html-"));
+        assert_eq!(r.text, SHARE_PROSE.join("\n"));
+    }
+
+    #[test]
+    fn share_container_attribution_and_quoted_lines_are_removed_by_the_core_path() {
+        let attribution = "On Mon, 2 Nov 2026 at 10:00, Bob Example <bob@example.org> wrote:";
+        let inner = [
+            SHARE_PROSE[0],
+            "",
+            attribution,
+            "&gt; The allocation policy should change in the next revision.",
+            "&gt; Expiry also needs discussion.",
+            "",
+            SHARE_PROSE[1],
+        ]
+        .join("<br>");
+        let html = share_html(&inner, "", "");
+        let body = cite(&[
+            SHARE_PROSE[0],
+            "",
+            attribution,
+            "> The allocation policy should change in the next revision.",
+            "> Expiry also needs discussion.",
+            "",
+            SHARE_PROSE[1],
+        ]);
+        let r = extract_new_text(Some(&body), None, Some(&html));
+        assert_eq!(r.status, Status::Ok);
+        assert!(r.method.starts_with("html-"));
+        assert!(!r.text.contains("wrote:"));
+        assert!(!r.text.contains("allocation policy should change"));
+        assert_eq!(nonblank(&r.text), SHARE_PROSE);
+    }
+
+    #[test]
+    fn share_container_passes_the_parent_to_the_core_path() {
+        let parent_lines = [
+            "Here is the agenda for the interim meeting next week.",
+            "Item one covers the registry and its allocation policy in detail.",
+            "Item two covers expiry and the remaining open questions from Prague.",
+        ];
+        let parent = parent_lines.join("\n");
+        let mut lines = vec![SHARE_PROSE[0], ""];
+        lines.extend(parent_lines);
+        let html = share_html(&lines.join("<br>"), "", "");
+        let body = cite(&lines);
+        let r = extract_new_text(Some(&body), Some(&parent), Some(&html));
+        assert_eq!(r.method, "html-erp+parent-diff");
+        assert_eq!(r.text, SHARE_PROSE[0]);
+    }
+
+    #[test]
+    fn ordinary_cite_blockquote_does_not_take_the_share_path() {
+        let html = format!(
+            "<div>My reply to the agenda, written below the quote.</div>\
+             <blockquote type=\"cite\">{}</blockquote>",
+            SHARE_PROSE.join("<br>")
+        );
+        let body = format!(
+            "My reply to the agenda, written below the quote.\n\n{}",
+            cite(&SHARE_PROSE)
+        );
+        let r = extract_new_text(Some(&body), None, Some(&html));
+        assert!(!r.method.starts_with("html-"));
+        assert_eq!(r.text, "My reply to the agenda, written below the quote.");
+    }
+
+    #[test]
+    fn share_container_with_blank_novel_text_keeps_the_plain_path() {
+        let html = share_html("<br>", "", "");
+        let body = cite(&SHARE_PROSE);
+        let r = extract_new_text(Some(&body), None, Some(&html));
+        assert_eq!(r, extract_new_text(Some(&body), None, None));
+        assert_eq!(r.status, Status::Empty);
+        assert!(!r.method.starts_with("html-"));
+    }
+
+    #[test]
+    fn share_shaped_plain_body_without_html_is_unchanged() {
+        let body = cite(&SHARE_PROSE);
+        assert_eq!(
+            extract_new_text(Some(&body), None, None).status,
+            Status::Empty
+        );
+    }
+
+    #[test]
+    fn reply_quoting_a_share_sheet_message_keeps_the_plain_path() {
+        let reply = "I agree with both points and will update the draft this week.";
+        let html = format!(
+            "<div>{reply}</div><blockquote type=\"cite\"><div>On Mon, 2 Nov 2026, Bob Example wrote:</div>{}</blockquote>",
+            share_html(&SHARE_PROSE.join("<br>"), "", "")
+        );
+        let body = format!(
+            "{reply}\n\nOn Mon, 2 Nov 2026, Bob Example wrote:\n\n{}",
+            cite(&SHARE_PROSE)
+        );
+        let r = extract_new_text(Some(&body), None, Some(&html));
+        assert!(!r.method.starts_with("html-"));
+        assert_eq!(r.text, reply);
     }
 }

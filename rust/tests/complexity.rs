@@ -25,7 +25,9 @@ use email_reply_extractor::internal::{
     custom_clean, find_quote_header_block, is_attribution_line, read_fragments,
     strip_after_original_message_divider, strip_attribution_lines,
 };
-use email_reply_extractor::{clean_for_scoring, extract_new_text, split_html_parts};
+use email_reply_extractor::{
+    clean_for_scoring, clean_for_scoring_with_parts, extract_new_text, split_html_parts,
+};
 use email_reply_extractor::{strip_parent_content, Status};
 
 /// Time each call may take.
@@ -170,6 +172,24 @@ fn a7_list_footer() {
 #[test]
 fn e2_custom_signature_divider() {
     bounded(|| clean_for_scoring(&format!("hello\n{}", "\n===\n".repeat(20000)), None));
+}
+
+#[test]
+fn parts_extract() {
+    // Part boundaries: an inline reply of many short answers between quoted
+    // lines; the alignment must not rescan the source per line.
+    let text = "a\n> q\n".repeat(50_000);
+    let r = bounded(|| extract_new_text(body(&text), None, None));
+    assert_eq!(r.part_starts.len(), 49_999);
+}
+
+#[test]
+fn parts_clean() {
+    // Part grouping in stage 2 over many boundaries.
+    let text = "a\n".repeat(100_000);
+    let starts: Vec<usize> = (1..100_000).collect();
+    let r = bounded(|| clean_for_scoring_with_parts(&text, None, &starts));
+    assert_eq!(r.parts.len(), 100_000);
 }
 
 #[test]

@@ -55,16 +55,16 @@ commit and release. Never edit the JSON under `conformance/` by hand.
   holds `EXTRACTION_VERSION`, `LICENSE` copy)
 - `rust/` — the Rust port (`Cargo.toml`, `src/extraction.rs` holds
   `EXTRACTION_VERSION`, `LICENSE` copy)
-- `fixtures/` — the hand-labeled corpus of 27 messages (`<stem>.eml`,
+- `fixtures/` — the hand-labeled corpus of 28 messages (`<stem>.eml`,
   `expected/<stem>.txt`, `README.md`), shared by all ports
 - `conformance/` — generated, committed test data: `corpus.json`,
   `digest.json` (the single recorded corpus digest), `vectors/`; its
   `README.md` specifies the formats and the digest algorithm
 - `docs/` — `extraction.md` (the rules of both stages), `versioning.md` (the
   `EXTRACTION_VERSION` contract), `ports.md` (the port contract and the
-  semantic hazards a porter must respect), `generation-5.md` and
-  `generation-7.md` (the output changes of those generations, with their
-  measured effect)
+  semantic hazards a porter must respect), `generation-5.md`,
+  `generation-7.md` and `generation-8.md` (the output changes of those
+  generations, with their measured effect)
 - `Makefile` — run from the root: `make test`, `make lint`, `make vectors`,
   `make check-vectors`, `make check-sync`, and per-port
   `make test-python|test-typescript|test-rust` and `lint-…` targets
@@ -90,7 +90,7 @@ measurements and rationale plainly.
 
 ## Extraction version
 
-`EXTRACTION_VERSION` (an integer, currently 7) identifies the generation of
+`EXTRACTION_VERSION` (an integer, currently 8) identifies the generation of
 the routine that derives an extraction's text: `extraction.py`, `cleaning.py`,
 `html_text.py` and `_fragments.py` taken together, and their counterparts in
 the ports. It is independent of the package version and is incremented
@@ -101,7 +101,8 @@ of them to agree.
 
 - Increment it by one, by hand, in every port, in the same commit as any
   change to those modules that could alter the extracted text, the cleaned
-  text, or an extraction's status — a whitespace-only difference included. Do
+  text, or an extraction's status — a whitespace-only difference included —
+  or the part boundaries (`part_starts` / `parts`) of an unchanged text. Do
   not increment it for comments, docstrings, type annotations or refactors
   that keep every output byte identical.
 - It only ever increases. Consumers compare a stored stamp with the running
@@ -118,15 +119,18 @@ of them to agree.
 - Adding or removing a fixture moves the digest without changing the routine:
   `make vectors` re-records the digest and leaves the generation where it is.
   An edited `.eml` needs `python python/tools/conformance.py --rerecord-digest`.
-- Seven generations exist: **1** (initial release of the origin
+- Eight generations exist: **1** (initial release of the origin
   application), **2** (from its v1.2.0), **3** (from v1.11.0), **4** (from
   v1.15.0, the generation this package's v1.0.0 shipped), **5** (this
   package's v1.1.0: fragment edges kept, Outlook-boundary fix uncapped), **6**
-  (v1.2.0: Latin-script localized quote-header blocks and dividers) and **7**
+  (v1.2.0: Latin-script localized quote-header blocks and dividers), **7**
   (v1.3.0: the parent-diff aligned-run rule aligns around the longest common
   run instead of `difflib`, the parent-diff assist is linear, and the scanner
   inserts the collapsed attribution header literally; see
-  `docs/generation-7.md`). The digest of each is listed in
+  `docs/generation-7.md`) and **8** (v1.4.0: a `<blockquote>` whose parent
+  carries Apple Mail's `Apple-Mail-URLShareWrapperClass` is the author's own
+  text, and a message holding one derives its text from the HTML part; see
+  `docs/generation-8.md`). The digest of each is listed in
   `conformance/README.md`.
 
 ## The vendored scanner
@@ -150,7 +154,7 @@ re-record.
 ## Versioning
 
 The packages use [semantic versioning](https://semver.org/); the current
-version is **1.3.0**. The three ports always carry the same version. The
+version is **1.4.0**. The three ports always carry the same version. The
 sources are `__version__` in `python/src/email_reply_extractor/__init__.py`
 (`python/pyproject.toml` reads it dynamically), `version` in
 `typescript/package.json`, and `version` in `rust/Cargo.toml`; `make

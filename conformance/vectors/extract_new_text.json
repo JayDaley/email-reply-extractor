@@ -29,7 +29,8 @@
    "result": {
     "text": "   Count    |      Bytes     |  Who\n\n------------+----------------+-------\n 12 ( 100%) | 356501 ( 100%) | Total\n  2 (16.7%) |  11728 ( 3.3%) | NomCom Chair 2026 <nomcom-chair-2026@ietf.org>\n  2 (16.7%) |   7870 ( 2.2%) | S Moonesamy <sm+ietf@elandsys.com>\n  1 ( 8.3%) | 254437 (71.4%) | Job Snijders <job@bsd.nl>\n  1 ( 8.3%) |  23845 ( 6.7%) | Mallory Knodel <mallory.knodel@nyu.edu>\n  1 ( 8.3%) |  13289 ( 3.7%) | Warren Kumari <warren@kumari.net>\n  1 ( 8.3%) |  11235 ( 3.2%) | Roman Danyliw <rdd@cert.org>\n  1 ( 8.3%) |  10521 ( 3.0%) | Nicolas Giard <nick@staff.ietf.org>\n  1 ( 8.3%) |  10460 ( 2.9%) | Brian Campbell <bcampbell@pingidentity.com>\n  1 ( 8.3%) |   9829 ( 2.8%) | Jen Linkova <furry13@gmail.com>\n  1 ( 8.3%) |   3287 ( 0.9%) | NomCom Chair 2025 <nomcom-chair-2025@ietf.org>",
     "method": "erp+custom",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -39,7 +40,8 @@
    "result": {
     "text": "   Count    |      Bytes     |  Who\n\n------------+----------------+-------\n 12 ( 100%) | 356501 ( 100%) | Total\n  2 (16.7%) |  11728 ( 3.3%) | NomCom Chair 2026 <nomcom-chair-2026@ietf.org>\n  2 (16.7%) |   7870 ( 2.2%) | S Moonesamy <sm+ietf@elandsys.com>\n  1 ( 8.3%) | 254437 (71.4%) | Job Snijders <job@bsd.nl>\n  1 ( 8.3%) |  23845 ( 6.7%) | Mallory Knodel <mallory.knodel@nyu.edu>\n  1 ( 8.3%) |  13289 ( 3.7%) | Warren Kumari <warren@kumari.net>\n  1 ( 8.3%) |  11235 ( 3.2%) | Roman Danyliw <rdd@cert.org>\n  1 ( 8.3%) |  10521 ( 3.0%) | Nicolas Giard <nick@staff.ietf.org>\n  1 ( 8.3%) |  10460 ( 2.9%) | Brian Campbell <bcampbell@pingidentity.com>\n  1 ( 8.3%) |   9829 ( 2.8%) | Jen Linkova <furry13@gmail.com>\n  1 ( 8.3%) |   3287 ( 0.9%) | NomCom Chair 2025 <nomcom-chair-2025@ietf.org>",
     "method": "erp+custom",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -49,7 +51,139 @@
    "result": {
     "text": "",
     "method": "none",
-    "status": "empty"
+    "status": "empty",
+    "part_starts": []
+   }
+  },
+  {
+   "args": {
+    "body": ""
+   },
+   "result": {
+    "text": "",
+    "method": "none",
+    "status": "empty",
+    "part_starts": []
+   }
+  },
+  {
+   "args": {
+    "body": "> Carol,\n>\n> The registry proposal in the second draft keeps the allocation policy unchanged.\n> I suggest we move the open question about expiry to the next interim meeting.\n>\n> Alice\n",
+    "html_body": "<html><head><meta charset=\"utf-8\"></head><body><div dir=\"auto\"><div class=\"Apple-Mail-URLShareUserContentTopClass\"><br></div><div class=\"Apple-Mail-URLShareWrapperClass\" style=\"position: relative !important;\"><blockquote type=\"cite\" style=\"border-left-style: none; color: inherit;\">Carol,<br><br>The registry proposal in the second draft keeps the allocation policy unchanged.<br>I suggest we move the open question about expiry to the next interim meeting.<br><br>Alice</blockquote></div><br><br></body></html>"
+   },
+   "result": {
+    "text": "Carol,\n\nThe registry proposal in the second draft keeps the allocation policy unchanged.\nI suggest we move the open question about expiry to the next interim meeting.\n\nAlice",
+    "method": "html-erp",
+    "status": "ok",
+    "part_starts": []
+   }
+  },
+  {
+   "args": {
+    "body": "> Carol,\n>\n> The registry proposal in the second draft keeps the allocation policy unchanged.\n> I suggest we move the open question about expiry to the next interim meeting.\n>\n> Alice\n"
+   },
+   "result": {
+    "text": "",
+    "method": "erp",
+    "status": "empty",
+    "part_starts": []
+   }
+  },
+  {
+   "args": {
+    "body": "> Hi Carol,\n>\n> Thank you for the review. The second revision states the allocation\n> policy in the \"Registry model\" section, and the expiry rule now sits\n> in its own subsection so that the profile can reference it directly.\n>\n> I have kept the open question about renewal out of this revision. It\n> needs input from the operators, and I will raise it at the interim\n> meeting.\n>\n> Best,\n> Alice\n>\n>> On 10 Nov 2026, at 16:02, Carol Example <carol@example.org> wrote:\n>>\n>> Alice, does the second revision say where the allocation policy is\n>> defined? I could not find it in the registry section.\n>>\n>> Carol\n\n\n",
+    "html_body": "<html aria-label=\"message body\"><head><meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\"></head><body style=\"overflow-wrap: break-word; -webkit-nbsp-mode: space; line-break: after-white-space;\"><div dir=\"auto\" style=\"overflow-wrap: break-word; -webkit-nbsp-mode: space; line-break: after-white-space;\"><div class=\"Apple-Mail-URLShareUserContentTopClass\"><br></div><div class=\"Apple-Mail-URLShareWrapperClass\" style=\"position: relative !important;\"><blockquote type=\"cite\" style=\"border-left-style: none; color: inherit; padding: inherit; margin: inherit;\">\n\nHi Carol,<br><br>Thank you for the review. The second revision states the allocation policy in the \"Registry model\" section, and the expiry rule now sits in its own subsection so that the profile can reference it directly.<br><br>I have kept the open question about renewal out of this revision. It needs input from the operators, and I will raise it at the interim meeting.<br><br>Best,<br>Alice<br><br><div>On 10 Nov 2026, at 16:02, Carol Example &lt;carol@example.org&gt; wrote:</div><blockquote type=\"cite\"><div>Alice, does the second revision say where the allocation policy is defined? I could not find it in the registry section.<br><br>Carol</div></blockquote>\n\n</blockquote></div><br><br>\n<br></body></html>\n"
+   },
+   "result": {
+    "text": "Hi Carol,\n\nThank you for the review. The second revision states the allocation policy in the \"Registry model\" section, and the expiry rule now sits in its own subsection so that the profile can reference it directly.\n\nI have kept the open question about renewal out of this revision. It needs input from the operators, and I will raise it at the interim meeting.\n\nBest,\nAlice",
+    "method": "html-erp+custom",
+    "status": "ok",
+    "part_starts": []
+   }
+  },
+  {
+   "args": {
+    "body": "> Hi Carol,\n>\n> Thank you for the review. The second revision states the allocation\n> policy in the \"Registry model\" section, and the expiry rule now sits\n> in its own subsection so that the profile can reference it directly.\n>\n> I have kept the open question about renewal out of this revision. It\n> needs input from the operators, and I will raise it at the interim\n> meeting.\n>\n> Best,\n> Alice\n>\n>> On 10 Nov 2026, at 16:02, Carol Example <carol@example.org> wrote:\n>>\n>> Alice, does the second revision say where the allocation policy is\n>> defined? I could not find it in the registry section.\n>>\n>> Carol\n\n\n"
+   },
+   "result": {
+    "text": "",
+    "method": "erp",
+    "status": "empty",
+    "part_starts": []
+   }
+  },
+  {
+   "args": {
+    "body": "> The registry proposal in the second draft keeps the allocation policy unchanged.\n> I suggest we move the open question about expiry to the next interim meeting.\n",
+    "html_body": "<html><head><meta charset=\"utf-8\"></head><body><div dir=\"auto\"><div class=\"Apple-Mail-URLShareUserContentTopClass\"><br></div><div class=\"Apple-Mail-URLShareWrapperClass\" style=\"position: relative !important;\"><blockquote type=\"cite\" style=\"border-left-style: none; color: inherit;\"><br></blockquote></div><br><br></body></html>"
+   },
+   "result": {
+    "text": "",
+    "method": "erp",
+    "status": "empty",
+    "part_starts": []
+   }
+  },
+  {
+   "args": {
+    "body": "> The registry proposal in the second draft keeps the allocation policy unchanged.\n> I suggest we move the open question about expiry to the next interim meeting.\n",
+    "html_body": null
+   },
+   "result": {
+    "text": "",
+    "method": "erp",
+    "status": "empty",
+    "part_starts": []
+   }
+  },
+  {
+   "args": {
+    "body": "> The registry proposal in the second draft keeps the allocation policy unchanged.\n> I suggest we move the open question about expiry to the next interim meeting.\n"
+   },
+   "result": {
+    "text": "",
+    "method": "erp",
+    "status": "empty",
+    "part_starts": []
+   }
+  },
+  {
+   "args": {
+    "body": "> The registry proposal in the second draft keeps the allocation policy unchanged.\n> I suggest we move the open question about expiry to the next interim meeting.\n>\n> > An earlier message that this one quotes in full.\n",
+    "html_body": "<html><head><meta charset=\"utf-8\"></head><body><div dir=\"auto\"><div class=\"Apple-Mail-URLShareUserContentTopClass\"><br></div><div class=\"Apple-Mail-URLShareWrapperClass\" style=\"position: relative !important;\"><blockquote type=\"cite\" style=\"border-left-style: none; color: inherit;\">The registry proposal in the second draft keeps the allocation policy unchanged.<br>I suggest we move the open question about expiry to the next interim meeting.<blockquote type=\"cite\">An earlier message that this one quotes in full.</blockquote></blockquote></div><br><br></body></html>"
+   },
+   "result": {
+    "text": "The registry proposal in the second draft keeps the allocation policy unchanged.\nI suggest we move the open question about expiry to the next interim meeting.",
+    "method": "html-erp",
+    "status": "ok",
+    "part_starts": []
+   }
+  },
+  {
+   "args": {
+    "body": "> The registry proposal in the second draft keeps the allocation policy unchanged.\n>\n> Here is the agenda for the interim meeting next week.\n> Item one covers the registry and its allocation policy in detail.\n> Item two covers expiry and the remaining open questions from Prague.\n",
+    "parent_body": "Here is the agenda for the interim meeting next week.\nItem one covers the registry and its allocation policy in detail.\nItem two covers expiry and the remaining open questions from Prague.",
+    "html_body": "<html><head><meta charset=\"utf-8\"></head><body><div dir=\"auto\"><div class=\"Apple-Mail-URLShareUserContentTopClass\"><br></div><div class=\"Apple-Mail-URLShareWrapperClass\" style=\"position: relative !important;\"><blockquote type=\"cite\" style=\"border-left-style: none; color: inherit;\">The registry proposal in the second draft keeps the allocation policy unchanged.<br><br>Here is the agenda for the interim meeting next week.<br>Item one covers the registry and its allocation policy in detail.<br>Item two covers expiry and the remaining open questions from Prague.</blockquote></div><br><br></body></html>"
+   },
+   "result": {
+    "text": "The registry proposal in the second draft keeps the allocation policy unchanged.",
+    "method": "html-erp+parent-diff",
+    "status": "ok",
+    "part_starts": []
+   }
+  },
+  {
+   "args": {
+    "body": "> The registry proposal in the second draft keeps the allocation policy unchanged.\n>\n> On Mon, 2 Nov 2026 at 10:00, Bob Example <bob@example.org> wrote:\n> > The allocation policy should change in the next revision.\n> > Expiry also needs discussion.\n>\n> I suggest we move the open question about expiry to the next interim meeting.\n",
+    "html_body": "<html><head><meta charset=\"utf-8\"></head><body><div dir=\"auto\"><div class=\"Apple-Mail-URLShareUserContentTopClass\"><br></div><div class=\"Apple-Mail-URLShareWrapperClass\" style=\"position: relative !important;\"><blockquote type=\"cite\" style=\"border-left-style: none; color: inherit;\">The registry proposal in the second draft keeps the allocation policy unchanged.<br><br>On Mon, 2 Nov 2026 at 10:00, Bob Example <bob@example.org> wrote:<br>&gt; The allocation policy should change in the next revision.<br>&gt; Expiry also needs discussion.<br><br>I suggest we move the open question about expiry to the next interim meeting.</blockquote></div><br><br></body></html>"
+   },
+   "result": {
+    "text": "The registry proposal in the second draft keeps the allocation policy unchanged.\n\nI suggest we move the open question about expiry to the next interim meeting.",
+    "method": "html-erp",
+    "status": "ok",
+    "part_starts": [
+     2
+    ]
    }
   },
   {
@@ -59,7 +193,19 @@
    "result": {
     "text": "",
     "method": "erp",
-    "status": "empty"
+    "status": "empty",
+    "part_starts": []
+   }
+  },
+  {
+   "args": {
+    "body": "> only quoted\n"
+   },
+   "result": {
+    "text": "",
+    "method": "erp",
+    "status": "empty",
+    "part_starts": []
    }
   },
   {
@@ -70,7 +216,8 @@
    "result": {
     "text": "My genuinely new reply text here today.",
     "method": "erp",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -80,7 +227,8 @@
    "result": {
     "text": "My genuinely new reply text here today.",
     "method": "erp",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -91,7 +239,8 @@
    "result": {
     "text": "My genuinely new reply text here.",
     "method": "erp",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -101,7 +250,8 @@
    "result": {
     "text": "My genuinely new reply text here.",
     "method": "erp",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -112,7 +262,8 @@
    "result": {
     "text": "All,\n\nThree quick questions for everyone, since the thread is working through where the artifacts sit:\n\n1) How does your work function without identity? If identity was a part of something else, how would this work?\n\n2) Can this work validate external scope, or does it define its own?\n\n3) How would this work in an open market with available web traffic and development?\n\nOne note of point, this thread feels more like an application design as opposed to a standards review.\n\nChris",
     "method": "html-erp+custom",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -122,7 +273,8 @@
    "result": {
     "text": "All,Three quick questions for everyone, since the thread is working through where the artifacts sit:1) How does your work function without identity? If identity was a part of something else, how would this work?2) Can this work validate external scope, or does it define its own?3) How would this work in an open market with available web traffic and development?One note of point, this thread feels more like an application design as opposed to a standards review.\u00a0Chris",
     "method": "erp+custom",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -133,7 +285,8 @@
    "result": {
     "text": "Dear Community,\n\nI hereby initiate a Recall Petition pursuant to § 7.1.1 of\nRFC 8713 against SEC AD Deb Cooley, regarding a significant\nbreach in confidentiality of communication.\n\nWhile her technical competence within the Security Area is\nrecognized without a doubt, the NomCom MAY consider to verify the\ntrustworthiness of the named SEC AD based on the documented\nprocedural infractions.\n\nTo safeguard the fundamental integrity of the IETF standards\nprocess, the technical evidence regarding this unauthorized\nbackchannel disclosure is provided below.\n\nTECHNICAL EVIDENCE OF SECURITY LACK\n\n1. My Private Notice to SEC AD Deb Cooley's officially in\nDatatracker regisered Mailaddress\nMessage-ID: <3c967485-b5d2-4e93-84f6-632f81bc803d@alice-dsl.net>\nDate: Tue, 12 May 2026 10:15:36 +0200\nMIME-Version: 1.0\nUser-Agent: Mozilla Thunderbird\nContent-Language: en-US, de-DE\nFrom: Timo Gerke <timo.gerke@alice-dsl.net>\nTo: \"Deb Cooley (IETF, AD Security Area)\" <debcooley1@gmail.com>\nSubject: Notice: Operational Analysis & Cluster C430 Deadlock\n(TLS/UTA)\n\n2. SEC AD Deb Cooley's response\nReferences: <3c967485-b5d2-4e93-84f6-632f81bc803d@alice-dsl.net>\nIn-Reply-To: <3c967485-b5d2-4e93-84f6-632f81bc803d@alice-dsl.net>\nFrom: Deb Cooley <debcooley1@gmail.com>\nDate: Wed, 13 May 2026 06:42:16 +0100\nSubject: Re: Notice: Operational Analysis & Cluster C430 Deadlock\n(TLS/UTA)\nTo: Timo Gerke <timo.gerke@alice-dsl.net>\nCc: Eric Rescorla <ekr@rtfm.com>, uta-chairs@ietf.org\n\n\nBest regards,\n\nTimo Gerke",
     "method": "erp",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -143,7 +296,8 @@
    "result": {
     "text": "Dear Community,\n\nI hereby initiate a Recall Petition pursuant to § 7.1.1 of\nRFC 8713 against SEC AD Deb Cooley, regarding a significant\nbreach in confidentiality of communication.\n\nWhile her technical competence within the Security Area is\nrecognized without a doubt, the NomCom MAY consider to verify the\ntrustworthiness of the named SEC AD based on the documented\nprocedural infractions.\n\nTo safeguard the fundamental integrity of the IETF standards\nprocess, the technical evidence regarding this unauthorized\nbackchannel disclosure is provided below.\n\nTECHNICAL EVIDENCE OF SECURITY LACK\n\n1. My Private Notice to SEC AD Deb Cooley's officially in\nDatatracker regisered Mailaddress\nMessage-ID: <3c967485-b5d2-4e93-84f6-632f81bc803d@alice-dsl.net>\nDate: Tue, 12 May 2026 10:15:36 +0200\nMIME-Version: 1.0\nUser-Agent: Mozilla Thunderbird\nContent-Language: en-US, de-DE\nFrom: Timo Gerke <timo.gerke@alice-dsl.net>\nTo: \"Deb Cooley (IETF, AD Security Area)\" <debcooley1@gmail.com>\nSubject: Notice: Operational Analysis & Cluster C430 Deadlock\n(TLS/UTA)\n\n2. SEC AD Deb Cooley's response\nReferences: <3c967485-b5d2-4e93-84f6-632f81bc803d@alice-dsl.net>\nIn-Reply-To: <3c967485-b5d2-4e93-84f6-632f81bc803d@alice-dsl.net>\nFrom: Deb Cooley <debcooley1@gmail.com>\nDate: Wed, 13 May 2026 06:42:16 +0100\nSubject: Re: Notice: Operational Analysis & Cluster C430 Deadlock\n(TLS/UTA)\nTo: Timo Gerke <timo.gerke@alice-dsl.net>\nCc: Eric Rescorla <ekr@rtfm.com>, uta-chairs@ietf.org\n\n\nBest regards,\n\nTimo Gerke",
     "method": "erp",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -154,7 +308,8 @@
    "result": {
     "text": "First authored paragraph here.\n\n\nSecond authored paragraph here.",
     "method": "erp",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -165,7 +320,8 @@
    "result": {
     "text": "First authored paragraph here.\n\n\nSecond authored paragraph here.",
     "method": "erp",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -176,7 +332,19 @@
    "result": {
     "text": "First authored paragraph here.\n\n\nSecond authored paragraph here.",
     "method": "erp",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
+   }
+  },
+  {
+   "args": {
+    "body": "First paragraph of the reply.\n\nSecond paragraph of the reply.\n\nOn Mon, Jan 5, 2026 at 9:00 AM A Person <a@example.com> wrote:\n> quoted\n"
+   },
+   "result": {
+    "text": "First paragraph of the reply.\n\nSecond paragraph of the reply.",
+    "method": "erp",
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -187,7 +355,8 @@
    "result": {
     "text": "First point about the draft.\n\nSecond structured line here.\n\nThird structured line here.\n\nFourth structured line here.",
     "method": "html-erp",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -197,7 +366,20 @@
    "result": {
     "text": "First point.\n\n----------\nSecond point after an author-drawn rule.\nRegards,\nWei Zhang",
     "method": "erp+custom",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
+   }
+  },
+  {
+   "args": {
+    "body": "Forwarding my notes from the review.\n\n> The registry proposal in the second draft keeps the allocation policy unchanged.\n> I suggest we move the open question about expiry to the next interim meeting.\n\nSent from my phone\n",
+    "html_body": "<html><head><meta charset=\"utf-8\"></head><body><div dir=\"auto\"><div class=\"Apple-Mail-URLShareUserContentTopClass\">Forwarding my notes from the review.<br></div><div class=\"Apple-Mail-URLShareWrapperClass\" style=\"position: relative !important;\"><blockquote type=\"cite\" style=\"border-left-style: none; color: inherit;\">The registry proposal in the second draft keeps the allocation policy unchanged.<br>I suggest we move the open question about expiry to the next interim meeting.</blockquote></div><div>Sent from my phone</div><br><br></body></html>"
+   },
+   "result": {
+    "text": "Forwarding my notes from the review.\n\nThe registry proposal in the second draft keeps the allocation policy unchanged.\nI suggest we move the open question about expiry to the next interim meeting.\n\nSent from my phone",
+    "method": "html-erp",
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -207,7 +389,8 @@
    "result": {
     "text": "Header row of a report\n\n----------+----------\ndata row 0\ndata row 1\ndata row 2\ndata row 3\ndata row 4\ndata row 5\ndata row 6\ndata row 7\ndata row 8\ndata row 9",
     "method": "erp",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -218,7 +401,8 @@
    "result": {
     "text": "Hi Authors, all,\n\nI hope you are doing well. I am new to the list. It is amazing to see such\ngood work going on in the AI Agent domain. A little background on where my\ncomments come from: I work on on-device threat defense and enterprise\nidentity at Samsung Research America, and previously worked on Universal\nLogout at Okta. My comments revolve around revocation and the\nhuman-in-the-loop section, and build in part on Yaron's review of the\n2026-06-01 editor's copy.\n\n1) I see a possible tension between Section 8 and Section 11 on revocation\n\nSection 8 states that short-lived credentials provide \"an alternative to\nexplicit revocation mechanisms.\"\nSection 11 states that recipients of SSF/CAEP/RISC signals \"MUST ensure\nthat revoked or downgraded authorization is enforced without undue delay,\"\nand that cached tokens \"MUST NOT continue to be used after a revocation or\nrisk notification is received.\"\n\nI may be misreading, but these seem to pull in different directions:\nSection 8 positions expiry as a substitute for revocation, while Section 11\ntreats revocation as a live, mandatory obligation. The distinction may be\nthreat-model dependent. Expiry works well for credential theft. It works\npoorly for a compromised agent - one that is correctly attested and holds\nan unexpired credential, but whose behavior has been subverted (e.g. via\nindirect prompt injection). In that case the credential remains valid and\ncorrect for its full lifetime while the agent acts outside its intended\nscope, and typical credential lifetimes exceed the time needed to act.\n\nWould it be worth either reconciling these two sections explicitly, or\nscoping Section 8's claim to the credential-exposure threat model rather\nthan compromise generally?\n\n2) Section 11 makes subscription optional but enforcement mandatory\n\nSection 11 says participants \"MAY subscribe\" to SSF with CAEP or RISC, but\nthat recipients \"MUST\" enforce on receipt. The MUST is therefore\nconditional on the MAY. A deployment that does not subscribe has no\nrevocation path at all, and silently falls back to the Section 8 expiry\nmodel without the document saying so.\n\nWould the working group consider whether subscription should be SHOULD, or\nMUST, for agents authorized to access sensitive resources? It is entirely\npossible this is deliberate deployment latitude, in which case it may still\nbe worth stating the consequence.\n\n3) Section 10.7: same-device deployments weaken the out-of-band property\n\nYaron notes in TECH-8 that CIBA assumes a push notification to a separate\ndevice, while the agent flow may already be running on a mobile device. I\nwould like to extend that from the device-security side, as it is where\nmost of my work sits.\n\nCIBA's value in Section 10.7 rests on the interaction being genuinely\nout-of-band - the approval channel is assumed to be independent of the\nrequesting client. When an on-device agent and the authenticator\napplication share a device, that independence is gone: a device compromise\ntakes both the agent and the approval channel, and the confirmation is\nin-band in all but name. This is not hypothetical - on-device agents\nrunning alongside the user's authenticator are becoming common.\n\nThis does not invalidate the CIBA guidance, but the assumption seems worth\nstating, along with what deployments can do when it does not hold (e.g.\nrelying on platform-level isolation for the approval path, or requiring a\ndistinct device for higher-risk operations).\n\n4) Section 10.7 Note: RFC 9470 as a possible input to the mid-execution case\n\nThe Note in the Human in the Loop section observes that CIBA only accounts\nfor client initiation and does not map well to User confirmation occurring\nmid-execution. Yaron's TECH-8 raises a related concern about the threat\nmodel. I do not see RFC 9470 (OAuth 2.0 Step Up Authentication Challenge)\nin Section 18, so offering it as a possible input rather than a correction:\n\n9470's model is resource-server-initiated - the RS inspects the\nauthentication context behind the presented token and returns\ninsufficient_user_authentication with acr_values / max_age. That addresses\nthe initiation direction the Note identifies, and it places the trigger at\nthe resource, where the sensitivity of the specific action is known. The\nobvious obstacle is that 9470 assumes the client can direct a user agent to\nthe AS, which an autonomous agent does not have. But 9470 is agnostic about\nthe grant used to satisfy the challenge, so a composition may be possible:\na 9470-style challenge from the resource server as the trigger, with CIBA\nas the out-of-band grant that satisfies it.\n\nOne wrinkle if this were pursued: 9470's acr and auth_time reflect the\noriginal user authentication event and do not change on token renewal,\nwhich may need thought for long-running agent sessions.\n\nWas 9470 considered for this case? If it was ruled out, I would find the\nreasoning useful, and would rather understand it than reopen settled ground.\n\n5) Section 14 and agent-specific threats\n\nSection 14 defers to the security considerations of each referenced\nspecification, plus OAuth BCP and FAPI 2.0. Given the goal in Section 1 of\nidentifying gaps to guide future standardization, is agent-specific threat\nanalysis in scope for this document - in particular the\ncompromised-but-attested agent, where posture assessment at issuance\n(Section 8) establishes what an agent is, but not what it is doing at\nrequest time? If that is in scope and useful, I would be glad to help draft\ntext.\n\nThanks for the document. The consolidation framing in Section 1 is very\nuseful, and the prior-art mapping is more complete than most work I have\nseen in this area.\n\nHappy to upload any of these as GitHub issues if the authors prefer.\n\nRegards,\nKunal Ghosh\nORCID: 0009-0007-4602-5624\nkghoshworkid.github.io",
     "method": "erp",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -228,7 +412,8 @@
    "result": {
     "text": "Hi Authors, all,\n\nI hope you are doing well. I am new to the list. It is amazing to see such\ngood work going on in the AI Agent domain. A little background on where my\ncomments come from: I work on on-device threat defense and enterprise\nidentity at Samsung Research America, and previously worked on Universal\nLogout at Okta. My comments revolve around revocation and the\nhuman-in-the-loop section, and build in part on Yaron's review of the\n2026-06-01 editor's copy.\n\n1) I see a possible tension between Section 8 and Section 11 on revocation\n\nSection 8 states that short-lived credentials provide \"an alternative to\nexplicit revocation mechanisms.\"\nSection 11 states that recipients of SSF/CAEP/RISC signals \"MUST ensure\nthat revoked or downgraded authorization is enforced without undue delay,\"\nand that cached tokens \"MUST NOT continue to be used after a revocation or\nrisk notification is received.\"\n\nI may be misreading, but these seem to pull in different directions:\nSection 8 positions expiry as a substitute for revocation, while Section 11\ntreats revocation as a live, mandatory obligation. The distinction may be\nthreat-model dependent. Expiry works well for credential theft. It works\npoorly for a compromised agent - one that is correctly attested and holds\nan unexpired credential, but whose behavior has been subverted (e.g. via\nindirect prompt injection). In that case the credential remains valid and\ncorrect for its full lifetime while the agent acts outside its intended\nscope, and typical credential lifetimes exceed the time needed to act.\n\nWould it be worth either reconciling these two sections explicitly, or\nscoping Section 8's claim to the credential-exposure threat model rather\nthan compromise generally?\n\n2) Section 11 makes subscription optional but enforcement mandatory\n\nSection 11 says participants \"MAY subscribe\" to SSF with CAEP or RISC, but\nthat recipients \"MUST\" enforce on receipt. The MUST is therefore\nconditional on the MAY. A deployment that does not subscribe has no\nrevocation path at all, and silently falls back to the Section 8 expiry\nmodel without the document saying so.\n\nWould the working group consider whether subscription should be SHOULD, or\nMUST, for agents authorized to access sensitive resources? It is entirely\npossible this is deliberate deployment latitude, in which case it may still\nbe worth stating the consequence.\n\n3) Section 10.7: same-device deployments weaken the out-of-band property\n\nYaron notes in TECH-8 that CIBA assumes a push notification to a separate\ndevice, while the agent flow may already be running on a mobile device. I\nwould like to extend that from the device-security side, as it is where\nmost of my work sits.\n\nCIBA's value in Section 10.7 rests on the interaction being genuinely\nout-of-band - the approval channel is assumed to be independent of the\nrequesting client. When an on-device agent and the authenticator\napplication share a device, that independence is gone: a device compromise\ntakes both the agent and the approval channel, and the confirmation is\nin-band in all but name. This is not hypothetical - on-device agents\nrunning alongside the user's authenticator are becoming common.\n\nThis does not invalidate the CIBA guidance, but the assumption seems worth\nstating, along with what deployments can do when it does not hold (e.g.\nrelying on platform-level isolation for the approval path, or requiring a\ndistinct device for higher-risk operations).\n\n4) Section 10.7 Note: RFC 9470 as a possible input to the mid-execution case\n\nThe Note in the Human in the Loop section observes that CIBA only accounts\nfor client initiation and does not map well to User confirmation occurring\nmid-execution. Yaron's TECH-8 raises a related concern about the threat\nmodel. I do not see RFC 9470 (OAuth 2.0 Step Up Authentication Challenge)\nin Section 18, so offering it as a possible input rather than a correction:\n\n9470's model is resource-server-initiated - the RS inspects the\nauthentication context behind the presented token and returns\ninsufficient_user_authentication with acr_values / max_age. That addresses\nthe initiation direction the Note identifies, and it places the trigger at\nthe resource, where the sensitivity of the specific action is known. The\nobvious obstacle is that 9470 assumes the client can direct a user agent to\nthe AS, which an autonomous agent does not have. But 9470 is agnostic about\nthe grant used to satisfy the challenge, so a composition may be possible:\na 9470-style challenge from the resource server as the trigger, with CIBA\nas the out-of-band grant that satisfies it.\n\nOne wrinkle if this were pursued: 9470's acr and auth_time reflect the\noriginal user authentication event and do not change on token renewal,\nwhich may need thought for long-running agent sessions.\n\nWas 9470 considered for this case? If it was ruled out, I would find the\nreasoning useful, and would rather understand it than reopen settled ground.\n\n5) Section 14 and agent-specific threats\n\nSection 14 defers to the security considerations of each referenced\nspecification, plus OAuth BCP and FAPI 2.0. Given the goal in Section 1 of\nidentifying gaps to guide future standardization, is agent-specific threat\nanalysis in scope for this document - in particular the\ncompromised-but-attested agent, where posture assessment at issuance\n(Section 8) establishes what an agent is, but not what it is doing at\nrequest time? If that is in scope and useful, I would be glad to help draft\ntext.\n\nThanks for the document. The consolidation framing in Section 1 is very\nuseful, and the prior-art mapping is more complete than most work I have\nseen in this area.\n\nHappy to upload any of these as GitHub issues if the authors prefer.\n\nRegards,\nKunal Ghosh\nORCID: 0009-0007-4602-5624\nkghoshworkid.github.io",
     "method": "erp",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -239,7 +424,8 @@
    "result": {
     "text": "Hi Bob,\n\nThanks, the agenda works for me. I will present the registry changes\nand can take the notes for the second half of the session.\n\nAlice",
     "method": "erp+html-quote",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -249,7 +435,8 @@
    "result": {
     "text": "Hi Bob,\n\nThanks, the agenda works for me. I will present the registry changes\nand can take the notes for the second half of the session.\n\nAlice\n\nHere is the draft agenda for the interim meeting:\n1. Agenda bashing (5 min)\n2. Refresh interval in section 4 (20 min)\n3. Registry changes (15 min)\n4. Next steps (5 min)\n\nBob Example\nCo-Chair - Example Platform Working Group\nCo-Chair - Example Metadata Access Working Group\n\nPlease send any additions to the agenda before Wednesday,\nso that the presenters have enough time to prepare slides.\n\nBob Example\nCo-Chair - Example Platform Working Group\nCo-Chair - Example Metadata Access Working Group",
     "method": "erp",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -260,7 +447,10 @@
    "result": {
     "text": "Hi Dennis,\n\nthanks for sharing. But this only reflects parts of the discussion.\n\nSince I too provide public mail listings for my users, I know, this is\na difficult issue.\n\nFrom my point of view, this IETF Web-based ML is dysfunctional because\nit is difficult to digest the important topics.\n\nSubscribers often express their oppinion not matching the topic\n(Subject). This is bad for readers and digesting.\n\nRegards.\n--eh.\n\n\n\n--\nDr. Erwin Hoffmann | www.fehcom.de\nPGP key-id: 36553F7F9C58D1CC\nPGP key-fingerprint:  950B 5555 0B08 5A2A 1C00 9594 3655 3F7F 9C58 D1CC",
     "method": "erp+custom",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": [
+     18
+    ]
    }
   },
   {
@@ -270,7 +460,25 @@
    "result": {
     "text": "Hi Dennis,\n\nthanks for sharing. But this only reflects parts of the discussion.\n\nSince I too provide public mail listings for my users, I know, this is\na difficult issue.\n\nFrom my point of view, this IETF Web-based ML is dysfunctional because\nit is difficult to digest the important topics.\n\nSubscribers often express their oppinion not matching the topic\n(Subject). This is bad for readers and digesting.\n\nRegards.\n--eh.\n\n\n\n--\nDr. Erwin Hoffmann | www.fehcom.de\nPGP key-id: 36553F7F9C58D1CC\nPGP key-fingerprint:  950B 5555 0B08 5A2A 1C00 9594 3655 3F7F 9C58 D1CC",
     "method": "erp+custom",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": [
+     18
+    ]
+   }
+  },
+  {
+   "args": {
+    "body": "Hi Gyan,\n\nI am the Document Shepherd. Thanks for your review.\n\nOn Thu, Oct 23, 2025 at 2:19 AM Gyan Mishra <gyan@example.com> wrote:\n\n> First question about the draft.\n>\nDhruv: This sentence\n\n> A quoted sentence from the draft.\n\nsimply clarifies that the new metric types are not limited.\n\n\n> Second question about section 5.2.\n>\n\nDhruv: Section 5.2 only restates the existing number space.\n\nThanks!\nDhruv\n\n> Trailing quoted text.\n"
+   },
+   "result": {
+    "text": "Hi Gyan,\n\nI am the Document Shepherd. Thanks for your review.\nDhruv: This sentence\n\nsimply clarifies that the new metric types are not limited.\n\nDhruv: Section 5.2 only restates the existing number space.\n\nThanks!\nDhruv",
+    "method": "erp",
+    "status": "ok",
+    "part_starts": [
+     3,
+     5,
+     7
+    ]
    }
   },
   {
@@ -281,7 +489,8 @@
    "result": {
     "text": "Hi Haisheng,\n\nForwarding to regext, fwiw.\n\nFeel free to share more context and your plans with this document :-)\n\nCheers,\nMed",
     "method": "erp+custom",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -291,7 +500,8 @@
    "result": {
     "text": "Hi Haisheng,\n\nForwarding to regext, fwiw.\n\nFeel free to share more context and your plans with this document :-)\n\nCheers,\nMed",
     "method": "erp+custom",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -302,7 +512,8 @@
    "result": {
     "text": "Hi Job,\n\nThis is definitely a bug.\nPlease create an issue on https://github.com/ietf-tools/red/issues and\ninclude the list of RFCs that have problems.\n\nFeel free to submit UI improvement suggestions there as well.\n\nNick",
     "method": "erp",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -312,7 +523,8 @@
    "result": {
     "text": "Hi Job,\n\nThis is definitely a bug.\nPlease create an issue on https://github.com/ietf-tools/red/issues and\ninclude the list of RFCs that have problems.\n\nFeel free to submit UI improvement suggestions there as well.\n\nNick",
     "method": "erp",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -323,7 +535,8 @@
    "result": {
     "text": "Hi John,\n\nJust a small correction: The slides of ANSI say \"higher confidence\"\nrather than \"high confidence\" when talking about ML-KEM which feels a\nbit different to me since \"higher\" seems to imply that it's relative to\nsomething else. Only FN-DSA seems to be classified as \"high confidence\"\nin the slides.\u00a0Just wanted to point that out for clarity. The reference\nyou provided is appreciated though!\n\n~ Christian Veenman (NCSC-NL)\n\nPs. I have been lurking this list since April and this is my first time\nreplying. I am still discovering a bit how everything works over here.\nPlease let me know if I do not follow proper etiquette.",
     "method": "erp+custom",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -333,7 +546,8 @@
    "result": {
     "text": "Hi John,\n\nJust a small correction: The slides of ANSI say \"higher confidence\"\nrather than \"high confidence\" when talking about ML-KEM which feels a\nbit different to me since \"higher\" seems to imply that it's relative to\nsomething else. Only FN-DSA seems to be classified as \"high confidence\"\nin the slides.\u00a0Just wanted to point that out for clarity. The reference\nyou provided is appreciated though!\n\n~ Christian Veenman (NCSC-NL)\n\nPs. I have been lurking this list since April and this is my first time\nreplying. I am still discovering a bit how everything works over here.\nPlease let me know if I do not follow proper etiquette.",
     "method": "erp+custom",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -344,7 +558,8 @@
    "result": {
     "text": "Hi Mario,\n\nThank you for sharing your thoughts on this.\n\nCheers,\nMed",
     "method": "erp+custom",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -355,7 +570,8 @@
    "result": {
     "text": "Hi Mario/Jim,\n\nThank you for sharing your thoughts on this.\n\nLet me remind that the reasoning for having such policy in the charter is to ensure that we are defining new mappings that are motivated by real operational needs.\n\nProcess-wise, consensus to adopt a document does not mean that the document will be necessary progressed to an RFC. Consensus to publish will typically be assessed during WGLC. Also, a WG may decide to adopt a doc, but decide later that it is better to park a spec , etc.\n\nNow back to this specific document, the information you shared below is a great info to record in the document writeup to demonstrate how it adheres to the deployment policy in the charter.\n\nFYI, we received comments during the IESG review of the QUIC draft on that same point. We managed to address it as I already had the required arguments gathered as part of my AD review (thanks to the authors).\n\nThank you.\n\nCheers,\nMed",
     "method": "erp+custom",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -365,7 +581,8 @@
    "result": {
     "text": "Hi Mario/Jim,\n\nThank you for sharing your thoughts on this.\n\nLet me remind that the reasoning for having such policy in the charter is to ensure that we are defining new mappings that are motivated by real operational needs.\n\nProcess-wise, consensus to adopt a document does not mean that the document will be necessary progressed to an RFC. Consensus to publish will typically be assessed during WGLC. Also, a WG may decide to adopt a doc, but decide later that it is better to park a spec , etc.\n\nNow back to this specific document, the information you shared below is a great info to record in the document writeup to demonstrate how it adheres to the deployment policy in the charter.\n\nFYI, we received comments during the IESG review of the QUIC draft on that same point. We managed to address it as I already had the required arguments gathered as part of my AD review (thanks to the authors).\n\nThank you.\n\nCheers,\nMed",
     "method": "erp+custom",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -376,7 +593,11 @@
    "result": {
     "text": "Hi Nat,\n\nThank you for the follow-up. Please see inline.\n\nCheers,\nMed\n\nDe : Nat Kao <nat@example.org>\nEnvoyé : vendredi 3 juillet 2026 04:16\nÀ : BOUCADAIR Mohamed <med@example.org>\nObjet : Re: review of draft-ietf-wg-example\n\n[Med] ACK\n\n[Med] I think this can be simplified further by citing the policy document alone.\n\nRegards,\nNat",
     "method": "erp+parent-diff",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": [
+     12,
+     14
+    ]
    }
   },
   {
@@ -386,7 +607,8 @@
    "result": {
     "text": "Hi Nat,\n\nThank you for the follow-up. Please see inline.\n\nCheers,\nMed\n\nDe : Nat Kao <nat@example.org>\nEnvoyé : vendredi 3 juillet 2026 04:16\nÀ : BOUCADAIR Mohamed <med@example.org>\nObjet : Re: review of draft-ietf-wg-example\n\nHi Med,\n\nMany thanks for the review. Please see our responses below.\n\n# Consider adding a pointer to the registry cited here in the introduction\n\nUpdated as suggested, with a pointer to the IANA registry group.\n[Med] ACK\n\n# Early allocation is mentioned but the policy text is outdated now\n\nUpdated. We have added a reference to the policy document as well.\n[Med] I think this can be simplified further by citing the policy document alone.\n\nRegards,\nNat",
     "method": "erp",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -396,7 +618,8 @@
    "result": {
     "text": "Hi Nat,\n\nThank you for the follow-up. Please see inline.\n\nCheers,\nMed",
     "method": "erp+custom",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -407,7 +630,11 @@
    "result": {
     "text": "Hi Roy,\n\nMinor nit:\n[...]\n\nWhen reading \"the Delegation Type RRsets and NSEC (or NSEC3) records can be replaced\", I was briefly confused regarding what about their RRSIGs.\n\nSuggest adding \"signed\" before \"Delegation Type RRsets\", or \"and their signatures\" after \"records\".\n\nCheers,\nPeter",
     "method": "erp",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": [
+     3,
+     5
+    ]
    }
   },
   {
@@ -417,7 +644,11 @@
    "result": {
     "text": "Hi Roy,\n\nMinor nit:\n[...]\n\nWhen reading \"the Delegation Type RRsets and NSEC (or NSEC3) records can be replaced\", I was briefly confused regarding what about their RRSIGs.\n\nSuggest adding \"signed\" before \"Delegation Type RRsets\", or \"and their signatures\" after \"records\".\n\nCheers,\nPeter",
     "method": "erp",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": [
+     3,
+     5
+    ]
    }
   },
   {
@@ -428,7 +659,8 @@
    "result": {
     "text": "Hi Thi, Karthik, all,\n\nThank you for spelling out the four possession-side rows. I agree that rows\n1-4 should remain a substrate and authorize nothing by themselves. I\nattached a short review and test-vector plan.\n\nThree corrections are important before treating the rows as a verifier\ncontract:\n\n   - Row 1 must be limited to attested inputs that are actually measured\n   and bound to the enrolled key and enrollment record. Key existence alone is\n   not evidence for every claimed input.\n   - Row 3 should enumerate the monitored conditions, detection timing, and\n   the governed key operations. Key erasure protects the next relevant key use\n   or agreement; an established connection still needs its own stated\n   management rule.\n   - Row 4 needs a re-assessment lease or expiry, delivery and clock\n   assumptions, and a grace policy. Non-delivery does not fail closed merely\n   by being called non-delivery; after the lease, the next governed key use\n   must fail because current status cannot be established.\n\nThe attached vectors cover enrollment binding, live possession, local\nfailure before and after a connection, lifecycle delivery, lease expiry,\nand replay/stale/wrong-device events. The proposed outcome labels are\nvector vocabulary only, not a request for new wire-level errors.\n\nBest,\nSongbo",
     "method": "erp+custom",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -438,7 +670,8 @@
    "result": {
     "text": "Hi Thi, Karthik, all,\n\nThank you for spelling out the four possession-side rows. I agree that rows\n1-4 should remain a substrate and authorize nothing by themselves. I\nattached a short review and test-vector plan.\n\nThree corrections are important before treating the rows as a verifier\ncontract:\n\n   - Row 1 must be limited to attested inputs that are actually measured\n   and bound to the enrolled key and enrollment record. Key existence alone is\n   not evidence for every claimed input.\n   - Row 3 should enumerate the monitored conditions, detection timing, and\n   the governed key operations. Key erasure protects the next relevant key use\n   or agreement; an established connection still needs its own stated\n   management rule.\n   - Row 4 needs a re-assessment lease or expiry, delivery and clock\n   assumptions, and a grace policy. Non-delivery does not fail closed merely\n   by being called non-delivery; after the lease, the next governed key use\n   must fail because current status cannot be established.\n\nThe attached vectors cover enrollment binding, live possession, local\nfailure before and after a connection, lifecycle delivery, lease expiry,\nand replay/stale/wrong-device events. The proposed outcome labels are\nvector vocabulary only, not a request for new wire-level errors.\n\nBest,\nSongbo",
     "method": "erp+custom",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -449,7 +682,8 @@
    "result": {
     "text": "Hi all,\n\nWe are running a project at the IETF 126 Hackathon (18-19 July, Vienna) on a minimal multicast extension for QUIC.\n\nMotivation: draft-navarre-quic-flexicast defines Flexicast QUIC, which supports multicast delivery, builds on Multipath QUIC, and requires changes across several parts of the stack. draft-jholland-quic-multicast takes a different approach, focusing on the security aspects of the extension. For the hackathon, we want to explore the lower bound of the design space: what is the smallest set of changes to QUIC that still yields working multicast delivery, and what do we give up to get there?\n\nWe expect the outcome to be multiple proof-of-concept extensions in multiple existing implementations, plus a clearer picture of which parts of Flexicast QUIC are essential and which are conveniences.\n\nProject repository:\nhttps://github.com/louisna/minimal-multicast-quic-ietf-126\n\nIf you are interested, please reach out or open an issue on the repo.\n\nRelevant drafts:\n- draft-navarre-quic-flexicast: https://datatracker.ietf.org/doc/draft-navarre-quic-flexicast/\n- draft-jholland-quic-multicast: https://datatracker.ietf.org/doc/draft-jholland-quic-multicast/\nScientific paper:\nTaking the Best of Multicast and Unicast with Flexicast QUIC: https://dl.acm.org/doi/pdf/10.1145/3750832.3750834\n\nBest regards,\nLouis Navarre, UCLouvain",
     "method": "erp",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -459,7 +693,8 @@
    "result": {
     "text": "Hi all,\n\nWe are running a project at the IETF 126 Hackathon (18-19 July, Vienna) on a minimal multicast extension for QUIC.\n\nMotivation: draft-navarre-quic-flexicast defines Flexicast QUIC, which supports multicast delivery, builds on Multipath QUIC, and requires changes across several parts of the stack. draft-jholland-quic-multicast takes a different approach, focusing on the security aspects of the extension. For the hackathon, we want to explore the lower bound of the design space: what is the smallest set of changes to QUIC that still yields working multicast delivery, and what do we give up to get there?\n\nWe expect the outcome to be multiple proof-of-concept extensions in multiple existing implementations, plus a clearer picture of which parts of Flexicast QUIC are essential and which are conveniences.\n\nProject repository:\nhttps://github.com/louisna/minimal-multicast-quic-ietf-126\n\nIf you are interested, please reach out or open an issue on the repo.\n\nRelevant drafts:\n- draft-navarre-quic-flexicast: https://datatracker.ietf.org/doc/draft-navarre-quic-flexicast/\n- draft-jholland-quic-multicast: https://datatracker.ietf.org/doc/draft-jholland-quic-multicast/\nScientific paper:\nTaking the Best of Multicast and Unicast with Flexicast QUIC: https://dl.acm.org/doi/pdf/10.1145/3750832.3750834\n\nBest regards,\nLouis Navarre, UCLouvain",
     "method": "erp",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -470,7 +705,8 @@
    "result": {
     "text": "Hi,\n\nIs there a thread to discuss the merits of the two PQ + T signature drafts\nin comparison? (I think the email you sent for agenda meant to reference\n[2] and [3])\n\nApologies for not being around live for that session,\n—Daniel",
     "method": "erp",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -480,7 +716,8 @@
    "result": {
     "text": "Hi,\n\nIs there a thread to discuss the merits of the two PQ + T signature drafts\nin comparison? (I think the email you sent for agenda meant to reference\n[2] and [3])\n\nApologies for not being around live for that session,\n—Daniel",
     "method": "erp",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -491,7 +728,14 @@
    "result": {
     "text": "Hi,\n\n(..)\n\n\nThis is Ok. Note that here the term \"random bit generator\" (RBG) is used.\nOf course we wouldn't expect a RBG to give any information about other\noutputs or the state, since it is a RBG (see below), but it may as well be\nmentioned.\n\n\nObviously the mentioned reveal also applies to hybrids such as\nX25519MLKEM768 as well ( the hybrid key derivation is not a black box to\nthe recipient. )\n\n\nHere the text talks of a \"raw random number generator\" which it\nabbreviates refers\nto as PRNG (\"P\" is for pseudo.). This is not a well defined term, and I\nagree with Quynh that it is better adjusted as  “The disclosure of the\noutput(s) of an insecure random number generator (RNG) when used in TLS and\nother protocols can be used in an attack to compromise the state of the\ninsecure RNG itself as described in [DUALEC-TLS].\"\n\n\nThe term \"raw RNG\" here seems ok -- it is undefined but I guess it means\n\"insecure RNG.\"\n\n\nHere, the term PRNG makes a comeback. Perhaps change it to RNG for\nconsistency. FIPS 203 does not offer PRNG guidance, but RBG guidance. An\nRBG may or may not be deterministic.\n\n\nTo recap: RNG is an incredibly vague term as it implies no clearly defined\nsecurity properties -- but this is what the IETF has been using. As noted,\nFIPS land talks of RBGs (and defines what they are), as does a part of the\nCC land. CC also uses the AIS 20/31 terminology and classification, in\nwhich RNG is essentially a catch-all, and protection profiles impose\nadditional, more detailed requirements for entropy generation and\npost-processing.\n\n\nFIPS 203 actually asks for an RBG, which implies:\n\n- seeding from a sufficient amount of entropy, and also\n\n- cryptographically secure post-processing where any number of output bits\ndo not offer an advantage in predicting or determining unrevealed output\nbits, assuming cryptographic security of SHA2 or AES, etc.\n\n\nThe more casual mathematical term PRNG implies neither cryptographic\nsecurity nor sufficient entropy seeding — simply determinism. Often PRNGs\nare distinguished from RNGs specifically because they do not have\nsufficient seeding.\n\n\nAmerican standard terminology has a class of RBGs called DRBGs\n(Deterministic Random Bit Generators). Because DRBGs are deteministic,\ntechnically they are PRNGs, but they are also RBGs -- when instantiated,\nthe standards (and testing labs) require adequate seeding and an\nappropriate level of security in post-processing components (for example, a\nDRBG based on AES-128 is not sufficient for a 256-bit security level).\n\nThere is also the \"CRA land\" in Europe, and ECCG & ENISA is searching for a\nsuitable compromise for entropy in lower-assurance products (non-CC.). But\nat this point acceptable DRBGs are listed in the ACM (they all have\ncryptographically secure post-processing). It has been of course proposed\nthat, e.g., Linux Random would be considered ok as an entropy source for\nconsumer products, for obvious practical reasons.\n\n\nBest Regards,\n-markku\n\nDr. Markku-Juhani O. Saarinen <mjos@iki.fi>",
     "method": "erp",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": [
+     2,
+     5,
+     16,
+     25,
+     29
+    ]
    }
   },
   {
@@ -501,7 +745,14 @@
    "result": {
     "text": "Hi,\n\n(..)\n\n\nThis is Ok. Note that here the term \"random bit generator\" (RBG) is used.\nOf course we wouldn't expect a RBG to give any information about other\noutputs or the state, since it is a RBG (see below), but it may as well be\nmentioned.\n\n\nObviously the mentioned reveal also applies to hybrids such as\nX25519MLKEM768 as well ( the hybrid key derivation is not a black box to\nthe recipient. )\n\n\nHere the text talks of a \"raw random number generator\" which it\nabbreviates refers\nto as PRNG (\"P\" is for pseudo.). This is not a well defined term, and I\nagree with Quynh that it is better adjusted as  “The disclosure of the\noutput(s) of an insecure random number generator (RNG) when used in TLS and\nother protocols can be used in an attack to compromise the state of the\ninsecure RNG itself as described in [DUALEC-TLS].\"\n\n\nThe term \"raw RNG\" here seems ok -- it is undefined but I guess it means\n\"insecure RNG.\"\n\n\nHere, the term PRNG makes a comeback. Perhaps change it to RNG for\nconsistency. FIPS 203 does not offer PRNG guidance, but RBG guidance. An\nRBG may or may not be deterministic.\n\n\nTo recap: RNG is an incredibly vague term as it implies no clearly defined\nsecurity properties -- but this is what the IETF has been using. As noted,\nFIPS land talks of RBGs (and defines what they are), as does a part of the\nCC land. CC also uses the AIS 20/31 terminology and classification, in\nwhich RNG is essentially a catch-all, and protection profiles impose\nadditional, more detailed requirements for entropy generation and\npost-processing.\n\n\nFIPS 203 actually asks for an RBG, which implies:\n\n- seeding from a sufficient amount of entropy, and also\n\n- cryptographically secure post-processing where any number of output bits\ndo not offer an advantage in predicting or determining unrevealed output\nbits, assuming cryptographic security of SHA2 or AES, etc.\n\n\nThe more casual mathematical term PRNG implies neither cryptographic\nsecurity nor sufficient entropy seeding — simply determinism. Often PRNGs\nare distinguished from RNGs specifically because they do not have\nsufficient seeding.\n\n\nAmerican standard terminology has a class of RBGs called DRBGs\n(Deterministic Random Bit Generators). Because DRBGs are deteministic,\ntechnically they are PRNGs, but they are also RBGs -- when instantiated,\nthe standards (and testing labs) require adequate seeding and an\nappropriate level of security in post-processing components (for example, a\nDRBG based on AES-128 is not sufficient for a 256-bit security level).\n\nThere is also the \"CRA land\" in Europe, and ECCG & ENISA is searching for a\nsuitable compromise for entropy in lower-assurance products (non-CC.). But\nat this point acceptable DRBGs are listed in the ACM (they all have\ncryptographically secure post-processing). It has been of course proposed\nthat, e.g., Linux Random would be considered ok as an entropy source for\nconsumer products, for obvious practical reasons.\n\n\nBest Regards,\n-markku\n\nDr. Markku-Juhani O. Saarinen <mjos@iki.fi>",
     "method": "erp",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": [
+     2,
+     5,
+     16,
+     25,
+     29
+    ]
    }
   },
   {
@@ -512,7 +763,11 @@
    "result": {
     "text": "Hi,\n\nSince this draft isn't tagged for any WG, not even gen-dispatch which seems appropriate, I'll post here, on one aspect only.\n\nAn IETF process document cannot define RPC duties. That would need a draft submitted to the RSWG, or rephrasing as the IETF's _expectations_ of the RPC.\n\nAlso:\n\nThat is already made clear at [1], points 1 and 3. It is not unknown for the RPC to discover poor grammar that conceals a technical ambiguity or technical error, so point 3 is not academic. Such late clarifications are to everyone's benefit. (I agree that they should be public knowledge, like everything that happens during AUTH48.)\n\n[1] https://www.rfc-editor.org/rfc/rfc9920.html#name-rpc-responsibilities\n\nRegards/Ngā mihi\n    Brian Carpenter",
     "method": "erp+custom",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": [
+     4,
+     8
+    ]
    }
   },
   {
@@ -522,7 +777,11 @@
    "result": {
     "text": "Hi,\n\nSince this draft isn't tagged for any WG, not even gen-dispatch which seems appropriate, I'll post here, on one aspect only.\n\nAn IETF process document cannot define RPC duties. That would need a draft submitted to the RSWG, or rephrasing as the IETF's _expectations_ of the RPC.\n\nAlso:\n\nThat is already made clear at [1], points 1 and 3. It is not unknown for the RPC to discover poor grammar that conceals a technical ambiguity or technical error, so point 3 is not academic. Such late clarifications are to everyone's benefit. (I agree that they should be public knowledge, like everything that happens during AUTH48.)\n\n[1] https://www.rfc-editor.org/rfc/rfc9920.html#name-rpc-responsibilities\n\nRegards/Ngā mihi\n    Brian Carpenter",
     "method": "erp+custom",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": [
+     4,
+     8
+    ]
    }
   },
   {
@@ -533,7 +792,10 @@
    "result": {
     "text": "Hi\nYou might also be interested in Marco and Marten's draft https://datatracker.ietf.org/doc/draft-munizaga-quic-alternative-server-address/",
     "method": "erp",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": [
+     1
+    ]
    }
   },
   {
@@ -543,7 +805,22 @@
    "result": {
     "text": "Hi\nYou might also be interested in Marco and Marten's draft https://datatracker.ietf.org/doc/draft-munizaga-quic-alternative-server-address/",
     "method": "erp",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": [
+     1
+    ]
+   }
+  },
+  {
+   "args": {
+    "body": "I agree with both points and will update the draft this week.\n\nOn Mon, 2 Nov 2026, Bob Example wrote:\n\n> The registry proposal in the second draft keeps the allocation policy unchanged.\n> I suggest we move the open question about expiry to the next interim meeting.\n",
+    "html_body": "<div>I agree with both points and will update the draft this week.</div><blockquote type=\"cite\"><div>On Mon, 2 Nov 2026, Bob Example wrote:</div><html><head><meta charset=\"utf-8\"></head><body><div dir=\"auto\"><div class=\"Apple-Mail-URLShareUserContentTopClass\"><br></div><div class=\"Apple-Mail-URLShareWrapperClass\" style=\"position: relative !important;\"><blockquote type=\"cite\" style=\"border-left-style: none; color: inherit;\">The registry proposal in the second draft keeps the allocation policy unchanged.<br>I suggest we move the open question about expiry to the next interim meeting.</blockquote></div><br><br></body></html></blockquote>"
+   },
+   "result": {
+    "text": "I agree with both points and will update the draft this week.",
+    "method": "erp",
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -554,7 +831,8 @@
    "result": {
     "text": "I have revised the entire draft to address every one of your review points.",
     "method": "erp+html-quote",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -565,7 +843,8 @@
    "result": {
     "text": "I have revised the entire draft to incorporate all of your suggestions.\nEvery reviewer concern is now tracked in the updated issue list online.",
     "method": "erp+parent-diff",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -576,7 +855,8 @@
    "result": {
     "text": "I moved the open issues to the end, since Carol joins late.",
     "method": "erp+parent-diff",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -587,7 +867,8 @@
    "result": {
     "text": "I strongly agree with the summary you posted to the list earlier today",
     "method": "erp+parent-diff",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -598,7 +879,8 @@
    "result": {
     "text": "I strongly agree with your point that follows below in the quoted thread.\nEach entry must include a stable reference and a short human readable summary.",
     "method": "erp",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -609,7 +891,20 @@
    "result": {
     "text": "Line one of my reply.\nLine two of my reply.\nLine three.\nLine four here.",
     "method": "erp",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
+   }
+  },
+  {
+   "args": {
+    "body": "My reply to the agenda, written below the quote.\n\n> The registry proposal in the second draft keeps the allocation policy unchanged.\n> I suggest we move the open question about expiry to the next interim meeting.\n",
+    "html_body": "<div>My reply to the agenda, written below the quote.</div><blockquote type=\"cite\">The registry proposal in the second draft keeps the allocation policy unchanged.<br>I suggest we move the open question about expiry to the next interim meeting.</blockquote>"
+   },
+   "result": {
+    "text": "My reply to the agenda, written below the quote.",
+    "method": "erp",
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -619,7 +914,8 @@
    "result": {
     "text": "My reply.",
     "method": "erp+custom",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -629,7 +925,8 @@
    "result": {
     "text": "My reply.",
     "method": "erp+custom",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -639,7 +936,8 @@
    "result": {
     "text": "My reply.",
     "method": "erp+custom",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -649,7 +947,8 @@
    "result": {
     "text": "My reply.",
     "method": "erp",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -659,7 +958,8 @@
    "result": {
     "text": "My reply.",
     "method": "erp",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -669,7 +969,8 @@
    "result": {
     "text": "My reply.",
     "method": "erp",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -679,7 +980,8 @@
    "result": {
     "text": "My reply.",
     "method": "erp+custom",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -689,7 +991,8 @@
    "result": {
     "text": "My reply.",
     "method": "erp+custom",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -700,7 +1003,8 @@
    "result": {
     "text": "Apologies, copy+paste mistake on my part there. It should say \"... about\nHPKE-4 and HPKE-6 inclusion ...\"\n\n--\n_CONFIDENTIALITY NOTICE: This email may contain confidential and privileged\nmaterial for the sole use of the intended recipient(s). Any review, use,\ndistribution or disclosure by others is strictly prohibited.\u00a0 If you have\nreceived this communication in error, please notify the sender immediately\nby e-mail and delete the message and any file attachments from your\ncomputer. Thank you._",
     "method": "erp+custom",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -710,7 +1014,30 @@
    "result": {
     "text": "Apologies, copy+paste mistake on my part there. It should say \"... about\nHPKE-4 and HPKE-6 inclusion ...\"\n\n--\n_CONFIDENTIALITY NOTICE: This email may contain confidential and privileged\nmaterial for the sole use of the intended recipient(s). Any review, use,\ndistribution or disclosure by others is strictly prohibited.\u00a0 If you have\nreceived this communication in error, please notify the sender immediately\nby e-mail and delete the message and any file attachments from your\ncomputer. Thank you._",
     "method": "erp+custom",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
+   }
+  },
+  {
+   "args": {
+    "body": "One.\n\n\n\nTwo.\n"
+   },
+   "result": {
+    "text": "One.\n\n\n\nTwo.",
+    "method": "erp",
+    "status": "ok",
+    "part_starts": []
+   }
+  },
+  {
+   "args": {
+    "body": "Reply text.\n\nOn Tue, Jan 28, 2025 at 10:38 AM\nSomeone <s@example.com> wrote:\n> q\n"
+   },
+   "result": {
+    "text": "Reply text.",
+    "method": "custom-fallback",
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -721,7 +1048,14 @@
    "result": {
     "text": "Some quick replies.\n\nThanks.\n\nThese would be different domains that don't connect to each other. You can run separate instances, especially when there are multicast group boundaries so the well-known groups stay disjoint.\n\nIf there are no group boundaries, then the packets go to all members of the well-known group but are dropped by the ones without common encryption keys.\n\nRight, a tradeoff between plug-and-play and secure communication.\n\nI thought we had something like that. I'll leave this for Mike and Stig to comment about.\n\nDino",
     "method": "erp",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": [
+     2,
+     4,
+     6,
+     8,
+     10
+    ]
    }
   },
   {
@@ -731,7 +1065,14 @@
    "result": {
     "text": "Some quick replies.\n\nThanks.\n\nThese would be different domains that don't connect to each other. You can run separate instances, especially when there are multicast group boundaries so the well-known groups stay disjoint.\n\nIf there are no group boundaries, then the packets go to all members of the well-known group but are dropped by the ones without common encryption keys.\n\nRight, a tradeoff between plug-and-play and secure communication.\n\nI thought we had something like that. I'll leave this for Mike and Stig to comment about.\n\nDino",
     "method": "erp",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": [
+     2,
+     4,
+     6,
+     8,
+     10
+    ]
    }
   },
   {
@@ -742,7 +1083,10 @@
    "result": {
     "text": "Stefano,\n\n\nThe best approach is to standardize a QUIC extension that indicates\nthat the server has several IP addresses. This would be an excellent\nuse case for\nhttps://datatracker.ietf.org/doc/html/draft-piraux-quic-additional-addresses-04\n\n\nOlivier",
     "method": "erp",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": [
+     3
+    ]
    }
   },
   {
@@ -752,7 +1096,10 @@
    "result": {
     "text": "Stefano,\n\n\nThe best approach is to standardize a QUIC extension that indicates\nthat the server has several IP addresses. This would be an excellent\nuse case for\nhttps://datatracker.ietf.org/doc/html/draft-piraux-quic-additional-addresses-04\n\n\nOlivier",
     "method": "erp",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": [
+     3
+    ]
    }
   },
   {
@@ -763,7 +1110,10 @@
    "result": {
     "text": "Thanks Iman, I see. Possession proven live; authorization carried as evidence bound to the action. And \"keys pinned out of band\" is the case — raw keys registered directly with the relying party, no CA. We reached the same no-stranger model from the user side.\n\nI agree on your recommendation: signalling first, token second. A combined token can stay combined as long as the event names the row it revokes. That is deployable now, without reissuing anyone.\nBtw, your \"possession no longer proven\" event is the endpoint-presence signal I have proposed in the Shared Signals WG. So we are converging. The row-scoped signal I want is the possession row of your model.\n\nAnd, a row-scoped signal lets the relying party remove trust on the possession row. It cannot prove it. A copied bearer token still presents as valid possession, because the token cannot show it is live. So the signal handles the deployed token world — it removes the wrong. Proving the possession row right, at the moment of use, needs a key that is live and exists in only one place.\n\nNow to the idea the possession row can carry users and agents, not just workloads.\nBecause the row is not about who the actor is. It is about where the key lives. If the key is live and nowhere else, then whoever is bound to it is provably present. The actor slot is pluggable:\nWorkload: the key is the platform's. Possession means the workload is live. This is mTLS today.\n\nHuman: the human is verified into the platform. The platform's live key then stands for \"this verified human is present.\" Same row.\nAgent: the agent runs on the platform and acts for a human verified into it. Possession means the agent is live and the human it acts for is present. Two actors, one platform, one key.\n\nThere is also a place where this row meets your gravest risk directly. You name rendering faithfulness as the thing cryptography cannot prove — the human signs a hash believing it is action X when it is Y — and your mitigation is a second surface on hardware the operator does not author. That surface is the endpoint. So the possession row does not only sit beside EP; the platform that proves live possession can also be the trusted display your receipt needs. The signature proves a key signed; the endpoint can help prove the human saw the true action.\n\nWe call this LIT — Live Identity in Transaction. The key is live: it exists only while its conditions hold — the right user present, the device sound — and is gone the moment any condition fails. So its presence is its validity. If the handshake completes, the conditions are met; nothing separate to check. And the key exists in one place only, so no copy is off somewhere staying alive when the user is not.\nUnderneath is a fuller definition of identity: not one thing, proven once, but three things, proven live — who is acting, on which platform, under which conditions. The industry proves the first, at one moment. LIT proves all three, in the channel, continuously.\n\nIn WIMSE this appears as a profile, under the precise term — condition-bounded credential. LIT is the general name for the same idea.\n\nYour EP receipt sits on the authorization row; LIT sits on the possession row. Together they are your two rows, each proven on its own terms.\nYou asked why the human binds into the platform. The core is in the possession row above — the human is verified into the platform, and the platform's live key then stands for that verified human being present. The rest — how the agent case composes two actors on one platform, and how the trusted-rendering piece works — needs more room than a mail. Happy to walk the group through it. Vienna would be ideal — I may not make it in person, but I can do it remotely, or on a call whenever it suits the WG.\n\nthi.nh@winmagic.com<mailto:thi.nh@winmagic.com> |  www.winmagic.com<http://www.winmagic.com/>\n\nWinMagic Corp. | 11-80 Galaxy Blvd.\nToronto, ON  |  M9W 4Y8 |  Canada | www.winmagic.com<http://www.winmagic.com/>",
     "method": "erp+custom+html-quote",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": [
+     24
+    ]
    }
   },
   {
@@ -773,7 +1123,8 @@
    "result": {
     "text": "Thanks Iman, I see. Possession proven live; authorization carried as evidence bound to the action. And \"keys pinned out of band\" is the case — raw keys registered directly with the relying party, no CA. We reached the same no-stranger model from the user side.\n\nI agree on your recommendation: signalling first, token second. A combined token can stay combined as long as the event names the row it revokes. That is deployable now, without reissuing anyone.\nBtw, your \"possession no longer proven\" event is the endpoint-presence signal I have proposed in the Shared Signals WG. So we are converging. The row-scoped signal I want is the possession row of your model.\n\nAnd, a row-scoped signal lets the relying party remove trust on the possession row. It cannot prove it. A copied bearer token still presents as valid possession, because the token cannot show it is live. So the signal handles the deployed token world — it removes the wrong. Proving the possession row right, at the moment of use, needs a key that is live and exists in only one place.\n\nNow to the idea the possession row can carry users and agents, not just workloads.\nBecause the row is not about who the actor is. It is about where the key lives. If the key is live and nowhere else, then whoever is bound to it is provably present. The actor slot is pluggable:\nWorkload: the key is the platform's. Possession means the workload is live. This is mTLS today.\n\nHuman: the human is verified into the platform. The platform's live key then stands for \"this verified human is present.\" Same row.\nAgent: the agent runs on the platform and acts for a human verified into it. Possession means the agent is live and the human it acts for is present. Two actors, one platform, one key.\n\nThere is also a place where this row meets your gravest risk directly. You name rendering faithfulness as the thing cryptography cannot prove — the human signs a hash believing it is action X when it is Y — and your mitigation is a second surface on hardware the operator does not author. That surface is the endpoint. So the possession row does not only sit beside EP; the platform that proves live possession can also be the trusted display your receipt needs. The signature proves a key signed; the endpoint can help prove the human saw the true action.\n\nWe call this LIT — Live Identity in Transaction. The key is live: it exists only while its conditions hold — the right user present, the device sound — and is gone the moment any condition fails. So its presence is its validity. If the handshake completes, the conditions are met; nothing separate to check. And the key exists in one place only, so no copy is off somewhere staying alive when the user is not.\nUnderneath is a fuller definition of identity: not one thing, proven once, but three things, proven live — who is acting, on which platform, under which conditions. The industry proves the first, at one moment. LIT proves all three, in the channel, continuously.\n\nIn WIMSE this appears as a profile, under the precise term — condition-bounded credential. LIT is the general name for the same idea.\n\nYour EP receipt sits on the authorization row; LIT sits on the possession row. Together they are your two rows, each proven on its own terms.\nYou asked why the human binds into the platform. The core is in the possession row above — the human is verified into the platform, and the platform's live key then stands for that verified human being present. The rest — how the agent case composes two actors on one platform, and how the trusted-rendering piece works — needs more room than a mail. Happy to walk the group through it. Vienna would be ideal — I may not make it in person, but I can do it remotely, or on a call whenever it suits the WG.\n\nCheers\n\nThi Nguyen-Huu | CEO\n\nTel: +1 905.502.7000 x 3288  |  Toll Free: 888.879.5879\nthi.nh@winmagic.com<mailto:thi.nh@winmagic.com> |  www.winmagic.com<http://www.winmagic.com/>\n\nWinMagic Corp. | 11-80 Galaxy Blvd.\nToronto, ON  |  M9W 4Y8 |  Canada | www.winmagic.com<http://www.winmagic.com/>",
     "method": "erp+custom",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -784,7 +1135,8 @@
    "result": {
     "text": "Thanks Joe,\n\nAs with most industry, I would like to see this standardized and supported by libraries so that I can potentially enable it in the future. European cybersecurity agencies such as ANSSI has a high confidence in ML-KEM [1].\n\nThe value of hybridization with quantum-vulnerable cryptography is clearly temporary, especially if one believes that nation-state attackers will have CRQCs in 2029 [2].\n\nThe campaign by Bernstein et al. against the IETF and ML-KEM is a waste of everybody's time and resources and is likely to have a significant negative impact on cybersecurity. Can the IETF please take action before we lose more brilliant researchers, such as Nadim Kobeissi, from the community? [3]\n\nCheers,\nJohn Preuß Mattsson\n\n[1] https://na.eventscloud.com/file_uploads/b635298de1c10be6d3732863e8b1beca_Day2-1600-ANSSI.pdf\n\n[2] https://cr.yp.to/talks/2023.06.15/slides-djb-20230615-pqrisk-4x3.pdf\n\n[3] https://mailarchive.ietf.org/arch/msg/tls/7HNihlgf0I8Mpe-0nqGb56dnON8/",
     "method": "erp",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -794,7 +1146,8 @@
    "result": {
     "text": "Thanks Joe,\n\nAs with most industry, I would like to see this standardized and supported by libraries so that I can potentially enable it in the future. European cybersecurity agencies such as ANSSI has a high confidence in ML-KEM [1].\n\nThe value of hybridization with quantum-vulnerable cryptography is clearly temporary, especially if one believes that nation-state attackers will have CRQCs in 2029 [2].\n\nThe campaign by Bernstein et al. against the IETF and ML-KEM is a waste of everybody's time and resources and is likely to have a significant negative impact on cybersecurity. Can the IETF please take action before we lose more brilliant researchers, such as Nadim Kobeissi, from the community? [3]\n\nCheers,\nJohn Preuß Mattsson\n\n[1] https://na.eventscloud.com/file_uploads/b635298de1c10be6d3732863e8b1beca_Day2-1600-ANSSI.pdf\n\n[2] https://cr.yp.to/talks/2023.06.15/slides-djb-20230615-pqrisk-4x3.pdf\n\n[3] https://mailarchive.ietf.org/arch/msg/tls/7HNihlgf0I8Mpe-0nqGb56dnON8/",
     "method": "erp",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -804,7 +1157,8 @@
    "result": {
     "text": "Thanks for clarifying. I suggest adding two more data elements.\n\nThanks,\n\nDick Brooks\n\nEmail: dick@example.org\n\nTel: +1 978-555-0100",
     "method": "erp+custom",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -815,7 +1169,8 @@
    "result": {
     "text": "Thanks for your feedback, Wesley!\n\nWe have addressed everything you noted in v8 of the document.\n\nCheers,\nNate",
     "method": "erp+custom",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -825,7 +1180,22 @@
    "result": {
     "text": "Thanks for your feedback, Wesley!\n\nWe have addressed everything you noted in v8 of the document.\n\nCheers,\nNate",
     "method": "erp+custom",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
+   }
+  },
+  {
+   "args": {
+    "body": "The working group should adopt the proposal as written today.\n\nI agree with adopting it.\n\nThere are two open issues that need resolution before last call.\n\nBoth issues are already tracked.\n",
+    "parent_body": "The working group should adopt the proposal as written today.\n\nThere are two open issues that need resolution before last call.\n"
+   },
+   "result": {
+    "text": "I agree with adopting it.\n\nBoth issues are already tracked.",
+    "method": "erp+parent-diff",
+    "status": "ok",
+    "part_starts": [
+     2
+    ]
    }
   },
   {
@@ -836,7 +1206,8 @@
    "result": {
     "text": "",
     "method": "erp+parent-diff",
-    "status": "empty"
+    "status": "empty",
+    "part_starts": []
    }
   },
   {
@@ -847,7 +1218,8 @@
    "result": {
     "text": "[tried and failed to send to 125attendees@ and recentattendees@ so taking\nit to itef@ now]\n\nWhile there was certainly plenty of spirited discussion about the tradeoffs\nsurrounding the IETF 125 location (I found myself on both sides at various\ntimes), I was ultimately very grateful for the opportunity to visit two\nplaces I'd not previously been. I absolutely loved the built and natural\nenvironment and the interplay between them, and I tried to capture some of\nthe aesthetic in photographs. Thanks, as always, for indulging my\ngratuitous sharing of the results: https://flic.kr/s/aHBqjCYWby\n\n--\n_CONFIDENTIALITY NOTICE: This email may contain confidential and privileged\nmaterial for the sole use of the intended recipient(s). Any review, use,\ndistribution or disclosure by others is strictly prohibited.\u00a0 If you have\nreceived this communication in error, please notify the sender immediately\nby e-mail and delete the message and any file attachments from your\ncomputer. Thank you._",
     "method": "erp+custom",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -857,7 +1229,8 @@
    "result": {
     "text": "[tried and failed to send to 125attendees@ and recentattendees@ so taking\nit to itef@ now]\n\nWhile there was certainly plenty of spirited discussion about the tradeoffs\nsurrounding the IETF 125 location (I found myself on both sides at various\ntimes), I was ultimately very grateful for the opportunity to visit two\nplaces I'd not previously been. I absolutely loved the built and natural\nenvironment and the interplay between them, and I tried to capture some of\nthe aesthetic in photographs. Thanks, as always, for indulging my\ngratuitous sharing of the results: https://flic.kr/s/aHBqjCYWby\n\n--\n_CONFIDENTIALITY NOTICE: This email may contain confidential and privileged\nmaterial for the sole use of the intended recipient(s). Any review, use,\ndistribution or disclosure by others is strictly prohibited.\u00a0 If you have\nreceived this communication in error, please notify the sender immediately\nby e-mail and delete the message and any file attachments from your\ncomputer. Thank you._",
     "method": "erp+custom",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -868,7 +1241,8 @@
    "result": {
     "text": "Correct.\nWe believe that we understood your point of view.\n\nWe discussed the view that all profiles create non-interoperability, and\nthat none of the certificate belongs, and we respectfully disagree.\n\nWe think you are in the rough on this.\nBut, we very much appreciated the engagement.",
     "method": "erp+custom",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -878,7 +1252,8 @@
    "result": {
     "text": "Correct.\nWe believe that we understood your point of view.\n\nWe discussed the view that all profiles create non-interoperability, and\nthat none of the certificate belongs, and we respectfully disagree.\n\nWe think you are in the rough on this.\nBut, we very much appreciated the engagement.",
     "method": "erp+custom",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -889,7 +1264,8 @@
    "result": {
     "text": "Events without label \"editorial\"\n\nIssues\n------\n* quicwg/qmux (+1/-0/💬1)\n  1 issues created:\n  - Revisit graceful close? (by Lukasa)\n    https://github.com/quicwg/qmux/issues/67\n\n  1 issues received 1 new comments:\n  - #67 Revisit graceful close? (1 by LPardue)\n    https://github.com/quicwg/qmux/issues/67\n\n* quicwg/receive-ts (+0/-0/💬1)\n  1 issues received 1 new comments:\n  - #9 Write Security Considerations (1 by jbeshay)\n    https://github.com/quicwg/receive-ts/issues/9\n\n\n\nPull requests\n\n-------------\n* quicwg/qmux (+1/-0/💬1)\n  1 pull requests submitted:\n  -  (by KernelPanic2id)\n\n\n  1 pull requests received 1 new comments:\n  - #66 Fix typo: PATH_REPONSE -> PATH_RESPONSE (1 by kazuho)\n    https://github.com/quicwg/qmux/pull/66\n\n* quicwg/receive-ts (+2/-0/💬0)\n  2 pull requests submitted:\n  -  (by jbeshay)\n\n  -  (by jbeshay)\n\n\n\nRepositories tracked by this digest:\n\n-----------------------------------\n* https://github.com/quicwg/base-drafts\n* https://github.com/quicwg/ops-drafts\n* https://github.com/quicwg/datagram\n* https://github.com/quicwg/load-balancers\n* https://github.com/quicwg/version-negotiation\n* https://github.com/quicwg/quic-bit-grease\n* https://github.com/quicwg/qlog\n* https://github.com/quicwg/quic-v2\n* https://github.com/quicwg/multipath\n* https://github.com/quicwg/ack-frequency\n* https://github.com/quicwg/reliable-stream-reset\n* https://github.com/quicwg/qmux\n* https://github.com/quicwg/receive-ts\n* https://github.com/quicwg/extended-key-update\n* https://github.com/quicwg/address-discovery\n\n\n--\nTo have a summary like this sent to your list, see: https://github.com/ietf-github-services/activity-summary",
     "method": "erp+custom",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -899,7 +1275,8 @@
    "result": {
     "text": "Events without label \"editorial\"\n\nIssues\n------\n* quicwg/qmux (+1/-0/💬1)\n  1 issues created:\n  - Revisit graceful close? (by Lukasa)\n    https://github.com/quicwg/qmux/issues/67\n\n  1 issues received 1 new comments:\n  - #67 Revisit graceful close? (1 by LPardue)\n    https://github.com/quicwg/qmux/issues/67\n\n* quicwg/receive-ts (+0/-0/💬1)\n  1 issues received 1 new comments:\n  - #9 Write Security Considerations (1 by jbeshay)\n    https://github.com/quicwg/receive-ts/issues/9\n\n\n\nPull requests\n\n-------------\n* quicwg/qmux (+1/-0/💬1)\n  1 pull requests submitted:\n  -  (by KernelPanic2id)\n\n\n  1 pull requests received 1 new comments:\n  - #66 Fix typo: PATH_REPONSE -> PATH_RESPONSE (1 by kazuho)\n    https://github.com/quicwg/qmux/pull/66\n\n* quicwg/receive-ts (+2/-0/💬0)\n  2 pull requests submitted:\n  -  (by jbeshay)\n\n  -  (by jbeshay)\n\n\n\nRepositories tracked by this digest:\n\n-----------------------------------\n* https://github.com/quicwg/base-drafts\n* https://github.com/quicwg/ops-drafts\n* https://github.com/quicwg/datagram\n* https://github.com/quicwg/load-balancers\n* https://github.com/quicwg/version-negotiation\n* https://github.com/quicwg/quic-bit-grease\n* https://github.com/quicwg/qlog\n* https://github.com/quicwg/quic-v2\n* https://github.com/quicwg/multipath\n* https://github.com/quicwg/ack-frequency\n* https://github.com/quicwg/reliable-stream-reset\n* https://github.com/quicwg/qmux\n* https://github.com/quicwg/receive-ts\n* https://github.com/quicwg/extended-key-update\n* https://github.com/quicwg/address-discovery\n\n\n--\nTo have a summary like this sent to your list, see: https://github.com/ietf-github-services/activity-summary",
     "method": "erp+custom",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -909,7 +1286,8 @@
    "result": {
     "text": "My actual reply here.",
     "method": "erp",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -920,7 +1298,11 @@
    "result": {
     "text": "The risk mitigation taken relies on the common sense (I know, in short supply now), and adherence to the standards. I.e., if it says “use NIST-blessed DRBG”, the implementation SHALL use it.\n\n\nOtherwise, if you assume that part of the standard will be ignored — why would other parts of that standard or your RFC be followed correctly?\n\n\nIt merely requires the implementation to abide by the letter of the standards it claims to implement. Not a rocket science/\n\nThank you (and others who’d hopefully follow your example) kindly!",
     "method": "erp",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": [
+     6,
+     8
+    ]
    }
   },
   {
@@ -930,7 +1312,11 @@
    "result": {
     "text": "The risk mitigation taken relies on the common sense (I know, in short supply now), and adherence to the standards. I.e., if it says “use NIST-blessed DRBG”, the implementation SHALL use it.\n\n\nOtherwise, if you assume that part of the standard will be ignored — why would other parts of that standard or your RFC be followed correctly?\n\n\nIt merely requires the implementation to abide by the letter of the standards it claims to implement. Not a rocket science/\n\nThank you (and others who’d hopefully follow your example) kindly!",
     "method": "erp",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": [
+     6,
+     8
+    ]
    }
   },
   {
@@ -941,7 +1327,23 @@
    "result": {
     "text": "",
     "method": "none",
-    "status": "empty"
+    "status": "empty",
+    "part_starts": []
+   }
+  },
+  {
+   "args": {
+    "body": null,
+    "html_body": "<div>Answer one here.</div><blockquote type=cite><div>quoted question one</div></blockquote><div>Answer two here.</div><blockquote><div>quoted question two</div></blockquote><div>Answer three here.</div>"
+   },
+   "result": {
+    "text": "Answer one here.\n\nAnswer two here.\n\nAnswer three here.",
+    "method": "html-erp",
+    "status": "ok",
+    "part_starts": [
+     2,
+     4
+    ]
    }
   },
   {
@@ -952,7 +1354,8 @@
    "result": {
     "text": "Here is my genuinely new reply, written for the working group.",
     "method": "html-erp",
-    "status": "ok"
+    "status": "ok",
+    "part_starts": []
    }
   },
   {
@@ -962,7 +1365,8 @@
    "result": {
     "text": "",
     "method": "none",
-    "status": "empty"
+    "status": "empty",
+    "part_starts": []
    }
   }
  ]

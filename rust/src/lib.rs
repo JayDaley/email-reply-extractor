@@ -27,7 +27,9 @@
 //! Functions take decoded strings; the crate does no MIME parsing. The
 //! reference's optional arguments (Python default `None`) are `Option<&str>`
 //! parameters in the reference's order, and its keyword-only flag
-//! `continuation` is a `bool`.
+//! `continuation` is a `bool`. The keyword-only argument `part_starts` of
+//! `clean_for_scoring` is taken by [`clean_for_scoring_with_parts`], so that
+//! [`clean_for_scoring`] keeps its two-argument signature.
 //!
 //! ```
 //! use email_reply_extractor::{clean_for_scoring, extract_new_text, Status};
@@ -61,7 +63,7 @@ mod pyre;
 mod pystr;
 mod unicode_tables;
 
-pub use cleaning::{clean_for_scoring, CleanResult};
+pub use cleaning::{clean_for_scoring, clean_for_scoring_with_parts, CleanResult};
 pub use equivalence::{texts_equivalent, tolerant_lines};
 pub use extraction::{
     extract_new_text, strip_parent_content, ExtractionResult, Status, EXTRACTION_VERSION,

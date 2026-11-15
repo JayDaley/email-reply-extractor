@@ -27,7 +27,7 @@ library, in any of the three languages, that report the same
 `EXTRACTION_VERSION` derive the
 same text from the same input.
 
-It is currently **7**. Seven generations exist; the first four shipped in the
+It is currently **8**. Eight generations exist; the first four shipped in the
 origin application, `mailing-list-ai-check`:
 
 | Generation | First shipped | What changed |
@@ -39,6 +39,7 @@ origin application, `mailing-list-ai-check`:
 | 5 | email-reply-extractor v1.1.0 | Fragment edges kept (blank lines between fragments preserved); the Outlook-boundary fix applies to every occurrence instead of the first eight. |
 | 6 | email-reply-extractor v1.2.0 | Latin-script localized quote-header blocks (French, Spanish, Portuguese, Italian, Dutch, German openers, with U+00A0 / U+202F colon spacing) and "Original message" dividers; a message with the author's tagged inline replies below such a block keeps its generation-5 treatment. |
 | 7 | email-reply-extractor v1.3.0 | The parent-diff aligned-run rule aligns around the longest common run of lines instead of `difflib.SequenceMatcher`, and the parent-diff assist runs in linear time; the fragment scanner inserts the collapsed attribution header literally (see [generation-7.md](generation-7.md)). |
+| 8 | email-reply-extractor v1.4.0 | A `<blockquote>` whose parent element carries Apple Mail's Share-sheet class `Apple-Mail-URLShareWrapperClass` is the author's own text, not a quote, and a message holding such a container outside any quote derives its text from the HTML part (see [generation-8.md](generation-8.md)). |
 
 `email-reply-extractor` 1.0.0 ships generation 4 unchanged: vendoring the
 fragment scanner left every corpus output byte-identical, and a differential
@@ -49,7 +50,11 @@ implementation.
 
 - **Increment by one, by hand, in the same commit** as any change to those four
   modules that could alter the extracted text, the cleaned text, or an
-  extraction's status — a whitespace-only difference included.
+  extraction's status — a whitespace-only difference included. A change that
+  could alter the part boundaries (`ExtractionResult.part_starts`,
+  `CleanResult.parts`) for an unchanged text is incremented too: a consumer
+  that stores the parts re-derives them on the same stamp. The corpus digest
+  does not cover the parts; the conformance vectors do.
 - **Do not increment** for comments, docstrings, type annotations, or refactors
   that keep every output byte identical, and not for changes outside those four
   modules.

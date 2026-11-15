@@ -10,7 +10,7 @@
 
 import { readFragments } from "./fragments.js";
 import { absorb, finish, GramTable, HASH_START, StringTable, Transitions } from "./hashTables.js";
-import { splitHtmlParts } from "./htmlText.js";
+import { htmlToText, splitHtmlParts } from "./htmlText.js";
 import {
   codePointAt,
   cpLen,
@@ -34,7 +34,7 @@ import {
  * ports). Consumers stamp stored derived text with it and compare with `<`, so
  * it only ever increases. See docs/versioning.md.
  */
-export const EXTRACTION_VERSION = 7;
+export const EXTRACTION_VERSION = 8;
 
 // --- result -------------------------------------------------------------------
 
@@ -63,6 +63,17 @@ export interface ExtractionResult {
   readonly method: string;
   /** One of `ok`, `empty`, `failed`. */
   readonly status: ExtractionStatus;
+  /**
+   * The 0-based indices into `text.split("\n")` of the lines that begin a new
+   * part: a run of the author's text separated from the previous run by
+   * content stage 1 removed (a quoted block, an attribution, parent-diff or
+   * HTML-quote content). An inline reply written between quoted passages has
+   * one part per answer. Empty when the text is a single part, when it is
+   * empty, and when the text could not be aligned with its source. The text
+   * does not depend on this field; pass it to `cleanForScoring` as
+   * `partStarts` to get the cleaned text divided into the same parts.
+   */
+  readonly partStarts: readonly number[];
 }
 
 /** Options of {@link extractNewText}. */
@@ -1334,9 +1345,77 @@ function isDegeneratePlain(body: string, htmlNovel: string): boolean {
   return nonblankLineCount(htmlNovel) >= 3 * lines.length;
 }
 
-function result(method: string, text: string): ExtractionResult {
-  if (isBlank(text)) return Object.freeze({ text: "", method, status: STATUS_EMPTY });
-  return Object.freeze({ text, method, status: STATUS_OK });
+const NO_PART_STARTS: readonly number[] = Object.freeze([]);
+
+/** An `ok`/`empty`/`failed` result with no part boundaries. */
+function plainResult(text: string, method: string, status: ExtractionStatus): ExtractionResult {
+  return Object.freeze({ text, method, status, partStarts: NO_PART_STARTS });
+}
+
+/**
+ * Wrap a resolved `(method, text)` in a result with the right empty status.
+ * `source` is the body the text was derived from (the `text/plain` body, or
+ * the full `htmlToText` rendering for the `html-` paths), used only to locate
+ * the part boundaries.
+ */
+function result(method: string, text: string, source: string): ExtractionResult {
+  if (isBlank(text)) return plainResult("", method, STATUS_EMPTY);
+  return Object.freeze({ text, method, status: STATUS_OK, partStarts: safePartStarts(text, source) });
+}
+
+/** The full rendering of `htmlBody` (novel and quoted text); `""` on error. */
+function htmlSource(htmlBody: string): string {
+  try {
+    return htmlToText(htmlBody);
+  } catch {
+    return "";
+  }
+}
+
+/** {@link partStarts} over the normalized `source`; empty on any error. */
+function safePartStarts(text: string, source: string): readonly number[] {
+  try {
+    return partStarts(text, normalizeBody(source));
+  } catch {
+    return NO_PART_STARTS;
+  }
+}
+
+/**
+ * Return the indices of the lines of `text` that begin a new part.
+ *
+ * `source` is the normalized body `text` was derived from. Every non-blank
+ * line of `text` is matched, in order, to the first source line at or after
+ * the previous match whose stripped form is equal. A non-blank source line
+ * lying between two consecutive matches is content stage 1 removed, and the
+ * second line then begins a new part. When a line has no match the alignment
+ * is abandoned and the result is empty (a single part). The search pointer
+ * only moves forward, so the cost is linear in the two line counts.
+ */
+function partStarts(text: string, source: string): readonly number[] {
+  const src = source.split("\n").map(pyStrip);
+  const starts: number[] = [];
+  let pos = 0;
+  let prev = -1;
+  const lines = text.split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    const key = pyStrip(lines[i] as string);
+    if (!key) continue;
+    let j = pos;
+    while (j < src.length && src[j] !== key) j++;
+    if (j === src.length) return NO_PART_STARTS;
+    if (prev >= 0) {
+      for (let k = prev + 1; k < j; k++) {
+        if (src[k]) {
+          starts.push(i);
+          break;
+        }
+      }
+    }
+    prev = j;
+    pos = j + 1;
+  }
+  return Object.freeze(starts);
 }
 
 /**
@@ -1347,7 +1426,7 @@ function result(method: string, text: string): ExtractionResult {
  * `empty` result, and any internal error yields `{ text: "", method: "failed",
  * status: "failed" }`. `options.parentBody` enables the parent-diff assist;
  * `options.htmlBody` enables the HTML oracle (HTML-only, degenerate plain
- * fallback, or quoted-text assist).
+ * fallback, Share-sheet container, or quoted-text assist).
  */
 export function extractNewText(body: string | null | undefined, options: ExtractOptions = {}): ExtractionResult {
   try {
@@ -1359,15 +1438,22 @@ export function extractNewText(body: string | null | undefined, options: Extract
     if (body === null || body === undefined || isBlank(body)) {
       if (parts !== null && !isBlank(parts.novelText)) {
         const [text, method] = coreExtract(parts.novelText, parentBody);
-        return result(`html-${method}`, text);
+        return result(`html-${method}`, text, htmlSource(htmlBody as string));
       }
-      return Object.freeze({ text: "", method: "none", status: STATUS_EMPTY });
+      return plainResult("", "none", STATUS_EMPTY);
     }
 
     // (b) Degenerate plain: a flattened plain body the HTML can replace.
     if (parts !== null && isDegeneratePlain(body, parts.novelText)) {
       const [text, method] = coreExtract(parts.novelText, parentBody);
-      return result(`html-${method}`, text);
+      return result(`html-${method}`, text, htmlSource(htmlBody as string));
+    }
+
+    // (d) Share-sheet container: the plain part marks the author's own text as
+    // quoted; the HTML's novel text holds it.
+    if (parts?.hasShareContainer && !isBlank(parts.novelText)) {
+      const [text, method] = coreExtract(parts.novelText, parentBody);
+      return result(`html-${method}`, text, htmlSource(htmlBody as string));
     }
 
     // Normal plain path.
@@ -1381,8 +1467,8 @@ export function extractNewText(body: string | null | undefined, options: Extract
         method += "+html-quote";
       }
     }
-    return result(method, text);
+    return result(method, text, body);
   } catch {
-    return Object.freeze({ text: "", method: "failed", status: STATUS_FAILED });
+    return plainResult("", "failed", STATUS_FAILED);
   }
 }

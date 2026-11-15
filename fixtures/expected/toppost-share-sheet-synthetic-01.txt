@@ -1,0 +1,3 @@
+Thank you for the review. The second revision states the allocation policy in the "Registry model" section, and the expiry rule now sits in its own subsection so that the profile can reference it directly.
+
+I have kept the open question about renewal out of this revision. It needs input from the operators, and I will raise it at the interim meeting.

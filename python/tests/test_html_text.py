@@ -2,9 +2,9 @@
 
 Cover the block-structure conversion, entity handling, skipped script/style/head,
 the blockquote / gmail_quote / signature container splits (including a signature
-nested inside a quote, which counts as quoted), and defensive handling of
-malformed markup — unclosed tags, stray closes, and empty/garbage input never
-raise.
+nested inside a quote, which counts as quoted), the Apple Mail Share-sheet
+container, and defensive handling of malformed markup — unclosed tags, stray
+closes, and empty/garbage input never raise.
 """
 
 from __future__ import annotations
@@ -195,6 +195,128 @@ def test_independent_gmail_wrappers_are_classified_per_instance():
     assert "forwarded body" in parts.quoted_text
 
 
+# --- Apple Mail Share-sheet container -----------------------------------------
+
+_SHARE_TOP = '<div class="Apple-Mail-URLShareUserContentTopClass"><br></div>'
+_SHARE_OPEN = (
+    '<div class="Apple-Mail-URLShareWrapperClass" style="position: relative !important;">'
+    '<blockquote type="cite" style="border-left-style: none;">'
+)
+_SHARE_CLOSE = "</blockquote></div>"
+
+
+def test_share_container_blockquote_is_novel():
+    # The Share sheet wraps the author's own text in a cite blockquote whose
+    # parent carries the wrapper class: that text is novel, not quoted.
+    html = (
+        f'<div dir="auto">{_SHARE_TOP}{_SHARE_OPEN}Shared text.<br>Second line.{_SHARE_CLOSE}</div>'
+    )
+    parts = split_html_parts(html)
+    assert parts.novel_text == "Shared text.\nSecond line."
+    assert parts.quoted_text == ""
+    assert parts.has_share_container is True
+
+
+def test_share_container_nested_blockquote_stays_quoted():
+    html = (
+        f"{_SHARE_OPEN}My answer.<br>On Monday, Someone wrote:"
+        '<blockquote type="cite">their earlier text</blockquote>'
+        f"More of my answer.{_SHARE_CLOSE}"
+    )
+    parts = split_html_parts(html)
+    assert parts.novel_text == "My answer.\nOn Monday, Someone wrote:\n\nMore of my answer."
+    assert parts.quoted_text == "their earlier text"
+    assert parts.has_share_container is True
+
+
+def test_share_wrapper_with_several_blockquote_children():
+    # Every blockquote that is a direct child of the wrapper is a container.
+    html = (
+        '<div class="Apple-Mail-URLShareWrapperClass">'
+        "<blockquote>first</blockquote><blockquote>second</blockquote></div>"
+    )
+    parts = split_html_parts(html)
+    assert parts.novel_text == "first\n\nsecond"
+    assert parts.quoted_text == ""
+
+
+def test_share_wrapper_class_among_other_tokens():
+    html = '<div class="x Apple-Mail-URLShareWrapperClass y"><blockquote>mine</blockquote></div>'
+    parts = split_html_parts(html)
+    assert parts.novel_text == "mine"
+    assert parts.has_share_container is True
+
+
+@pytest.mark.parametrize(
+    "html",
+    [
+        # Not the parent: an element sits between the wrapper and the blockquote.
+        '<div class="Apple-Mail-URLShareWrapperClass"><div><blockquote>q</blockquote></div></div>',
+        # An unclosed element is still open, so it is the parent.
+        '<div class="Apple-Mail-URLShareWrapperClass"><p>intro<blockquote>q</blockquote></div>',
+        # The class token must match exactly.
+        '<div class="apple-mail-urlsharewrapperclass"><blockquote>q</blockquote></div>',
+        '<div class="Apple-Mail-URLShareWrapperClassX"><blockquote>q</blockquote></div>',
+        # The user-content class is not the wrapper class.
+        '<div class="Apple-Mail-URLShareUserContentTopClass"><blockquote>q</blockquote></div>',
+        # The wrapper has closed before the blockquote opens.
+        '<div class="Apple-Mail-URLShareWrapperClass"></div><blockquote>q</blockquote>',
+    ],
+)
+def test_blockquote_not_directly_under_share_wrapper_is_quoted(html):
+    parts = split_html_parts(html)
+    assert parts.quoted_text == "q"
+    assert parts.has_share_container is False
+
+
+def test_share_wrapper_void_tag_between_does_not_break_parenthood():
+    # Void elements are never open, so a <br> before the blockquote leaves the
+    # wrapper as its parent.
+    html = '<div class="Apple-Mail-URLShareWrapperClass"><br><blockquote>mine</blockquote></div>'
+    parts = split_html_parts(html)
+    assert parts.novel_text == "mine"
+    assert parts.has_share_container is True
+
+
+def test_ordinary_cite_blockquote_is_still_quoted():
+    html = '<div>my reply</div><blockquote type="cite">their text</blockquote>'
+    parts = split_html_parts(html)
+    assert parts.novel_text == "my reply"
+    assert parts.quoted_text == "their text"
+    assert parts.has_share_container is False
+
+
+def test_quoted_share_container_stays_quoted_and_is_not_reported():
+    # A reply quoting a Share-sheet message: the share container sits inside
+    # this message's own quote, so its text is quoted and the flag is unset.
+    html = (
+        "<div>my reply</div>"
+        f'<blockquote type="cite">On Monday, Someone wrote:{_SHARE_OPEN}their shared text'
+        f"{_SHARE_CLOSE}</blockquote>"
+    )
+    parts = split_html_parts(html)
+    assert parts.novel_text == "my reply"
+    assert "their shared text" in parts.quoted_text
+    assert parts.has_share_container is False
+
+
+def test_share_container_in_head_is_not_reported():
+    html = (
+        f"<html><head>{_SHARE_OPEN}hidden{_SHARE_CLOSE}</head>"
+        "<body><div>visible</div></body></html>"
+    )
+    parts = split_html_parts(html)
+    assert parts.novel_text == "visible"
+    assert parts.has_share_container is False
+
+
+def test_unclosed_share_container_does_not_raise():
+    html = f"<div>typed in Mail</div>{_SHARE_OPEN}shared text with no close"
+    parts = split_html_parts(html)
+    assert parts.novel_text == "typed in Mail\n\nshared text with no close"
+    assert parts.has_share_container is True
+
+
 # --- malformed markup ---------------------------------------------------------
 
 
@@ -231,4 +353,5 @@ def test_empty_or_garbage_never_raises(bad):
 
 def test_empty_input_yields_empty_parts():
     assert split_html_parts("") == HtmlParts("", "", "")
+    assert split_html_parts("").has_share_container is False
     assert html_to_text("") == ""

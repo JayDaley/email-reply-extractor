@@ -146,7 +146,10 @@ The rules of both stages are documented in
 
 The reference's optional arguments (Python default `None`) are `Option<&str>`
 parameters, in the reference's order. Its keyword-only `continuation` flag of
-`strip_parent_content` is a `bool` (the reference's default is `false`).
+`strip_parent_content` is a `bool` (the reference's default is `false`). The
+keyword-only `part_starts` argument of `clean_for_scoring` is taken by a
+separate function, `clean_for_scoring_with_parts`; `clean_for_scoring` is that
+function with no part boundaries.
 
 ### Quickstart
 
@@ -200,7 +203,8 @@ let result = extract_new_text(Some(body), Some(parent_body), None);
 
 // The message's decoded text/html part. Used as a structural oracle: as the
 // body when there is no usable plain part, as a replacement for a flattened
-// plain part, or to remove a quoted message leaked unmarked into the plain part.
+// plain part or for the plain part of an Apple Mail Share-sheet message, or to
+// remove a quoted message leaked unmarked into the plain part.
 let result = extract_new_text(Some(body), None, Some(html_body));
 
 // The HTML signature container's visible text, as a stage-2 hint.
@@ -209,19 +213,61 @@ let cleaned = clean_for_scoring(&result.text, Some(&parts.signature_text));
 # assert_eq!(cleaned.text, "Agreed.");
 ```
 
+### Parts of an inline reply
+
+An inline reply interleaves the author's answers with quoted passages. Stage 1
+removes the quoted passages and joins the answers into one text;
+`ExtractionResult::part_starts` records where each separate run of the
+author's text begins, as indices into `result.text.split('\n')`. Passing it to
+`clean_for_scoring_with_parts` divides the cleaned text at the same
+boundaries:
+
+```rust
+use email_reply_extractor::{clean_for_scoring_with_parts, extract_new_text};
+
+let body = "Yes, the draft covers it.
+
+> And the registry?
+
+No, that is left to a later document.
+
+Thanks,
+Ann
+";
+
+let result = extract_new_text(Some(body), None, None);
+assert_eq!(result.part_starts, vec![2]);
+
+let cleaned = clean_for_scoring_with_parts(&result.text, None, &result.part_starts);
+// The whole cleaned text, unchanged by the part boundaries.
+assert_eq!(cleaned.text, "Yes, the draft covers it.\n\nNo, that is left to a later document.");
+// One string per run of the author's text.
+assert_eq!(
+    cleaned.parts,
+    vec!["Yes, the draft covers it.", "No, that is left to a later document."]
+);
+```
+
+A top-posted reply, or any text written as one run, has an empty
+`part_starts` and a single part. The boundaries are found by aligning the
+text with the body it was derived from; when a line cannot be aligned (the
+scanner joins a wrapped attribution onto one line, for example), the text is
+reported as one part.
+
 ## API reference
 
 | Name | What it is |
 |---|---|
 | `extract_new_text(body, parent_body, html_body)` | Stage 1; `Option<&str>` arguments; returns an `ExtractionResult`. |
-| `ExtractionResult` | Struct: `text: String`, `method: String`, `status: Status`. |
+| `ExtractionResult` | Struct: `text: String`, `method: String`, `status: Status`, `part_starts: Vec<usize>`. |
 | `Status` | Enum `Ok`, `Empty`, `Failed`; `as_str()` and `Display` give `"ok"`, `"empty"`, `"failed"`. |
 | `STATUS_OK`, `STATUS_EMPTY`, `STATUS_FAILED` | The three status strings. |
 | `EXTRACTION_VERSION` | `u32` generation stamp of the text-deriving routine. |
 | `clean_for_scoring(extracted_text, html_signature_text)` | Stage 2; `&str`, `Option<&str>`; returns a `CleanResult`. |
-| `CleanResult` | Struct: `text: String`, `ignored_lines: Vec<usize>`. |
+| `clean_for_scoring_with_parts(extracted_text, html_signature_text, part_starts)` | Stage 2 with the stage-1 part boundaries; `&str`, `Option<&str>`, `&[usize]`; fills `CleanResult::parts` from them. |
+| `CleanResult` | Struct: `text: String`, `ignored_lines: Vec<usize>`, `parts: Vec<String>`. |
 | `html_to_text(html)` | Visible text of an HTML part, block structure as newlines. |
-| `split_html_parts(html)` | The same text split into `HtmlParts { novel_text, quoted_text, signature_text }`. |
+| `split_html_parts(html)` | The same text split into `HtmlParts { novel_text, quoted_text, signature_text, has_share_container }`. |
 | `HtmlParts` | Struct returned by `split_html_parts`. |
 | `strip_parent_content(text, parent_body, continuation)` | Remove lines of `text` provably drawn from `parent_body`. |
 | `tolerant_lines(text)` | The non-blank lines of `text`, edge whitespace stripped and U+00A0 unified to spaces. |
@@ -249,7 +295,9 @@ value is one of:
 
 Three modifiers combine with the base value:
 
-- `html-` prefix: the text was derived from the HTML part (for example
+- `html-` prefix: the text was derived from the HTML part, because there was
+  no usable plain body, because a flattened plain body was replaced, or
+  because the HTML holds an Apple Mail Share-sheet container (for example
   `html-erp+custom`).
 - `+parent-diff` suffix: the parent-diff assist removed content.
 - `+html-quote` suffix: the HTML quoted-text oracle removed content from a
@@ -260,7 +308,7 @@ Three modifiers combine with the base value:
 `EXTRACTION_VERSION` is a `u32` identifying the generation of the routine that
 derives the text. It is independent of the package version, only ever
 increases, and is incremented whenever a change can alter the derived text. It
-is currently **7**.
+is currently **8**.
 
 An application that stores derived text should store `EXTRACTION_VERSION`
 alongside it and compare the stored stamp with the running constant using `<`

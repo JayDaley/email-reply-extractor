@@ -28,6 +28,21 @@
   },
   {
    "args": {
+    "text": "> Carol,\n>\n> The registry proposal in the second draft keeps the allocation policy unchanged.\n> I suggest we move the open question about expiry to the next interim meeting.\n>\n> Alice\n"
+   },
+   "result": [
+    {
+     "content": "> Carol,\n>\n> The registry proposal in the second draft keeps the allocation policy unchanged.\n> I suggest we move the open question about expiry to the next interim meeting.\n>\n> Alice",
+     "quoted": true
+    },
+    {
+     "content": "",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
     "text": "> Given the proposal\n\nMy actual reply here."
    },
    "result": [
@@ -74,11 +89,56 @@
   },
   {
    "args": {
+    "text": "> Hi Carol,\n>\n> Thank you for the review. The second revision states the allocation\n> policy in the \"Registry model\" section, and the expiry rule now sits\n> in its own subsection so that the profile can reference it directly.\n>\n> I have kept the open question about renewal out of this revision. It\n> needs input from the operators, and I will raise it at the interim\n> meeting.\n>\n> Best,\n> Alice\n>\n>> On 10 Nov 2026, at 16:02, Carol Example <carol@example.org> wrote:\n>>\n>> Alice, does the second revision say where the allocation policy is\n>> defined? I could not find it in the registry section.\n>>\n>> Carol\n\n\n"
+   },
+   "result": [
+    {
+     "content": "> Hi Carol,\n>\n> Thank you for the review. The second revision states the allocation\n> policy in the \"Registry model\" section, and the expiry rule now sits\n> in its own subsection so that the profile can reference it directly.\n>\n> I have kept the open question about renewal out of this revision. It\n> needs input from the operators, and I will raise it at the interim\n> meeting.\n>\n> Best,\n> Alice\n>\n>> On 10 Nov 2026, at 16:02, Carol Example <carol@example.org> wrote:\n>>\n>> Alice, does the second revision say where the allocation policy is\n>> defined? I could not find it in the registry section.\n>>\n>> Carol",
+     "quoted": true
+    },
+    {
+     "content": "\n\n",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "> The registry proposal in the second draft keeps the allocation policy unchanged.\n> I suggest we move the open question about expiry to the next interim meeting.\n"
+   },
+   "result": [
+    {
+     "content": "> The registry proposal in the second draft keeps the allocation policy unchanged.\n> I suggest we move the open question about expiry to the next interim meeting.",
+     "quoted": true
+    },
+    {
+     "content": "",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
     "text": "> just a quote\n> and more quote\n"
    },
    "result": [
     {
      "content": "> just a quote\n> and more quote",
+     "quoted": true
+    },
+    {
+     "content": "",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "> only quoted\n"
+   },
+   "result": [
+    {
+     "content": "> only quoted",
      "quoted": true
     },
     {
@@ -149,6 +209,28 @@
   },
   {
    "args": {
+    "text": "Answer one here.\n\nAnswer two here.\n\nAnswer three here."
+   },
+   "result": [
+    {
+     "content": "Answer one here.\n\nAnswer two here.\n\nAnswer three here.",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "Carol,\n\nThe registry proposal in the second draft keeps the allocation policy unchanged.\nI suggest we move the open question about expiry to the next interim meeting.\n\nAlice"
+   },
+   "result": [
+    {
+     "content": "Carol,\n\nThe registry proposal in the second draft keeps the allocation policy unchanged.\nI suggest we move the open question about expiry to the next interim meeting.\n\nAlice",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
     "text": "Dear Community,\n\nI hereby initiate a Recall Petition pursuant to § 7.1.1 of\nRFC 8713 against SEC AD Deb Cooley, regarding a significant\nbreach in confidentiality of communication.\n\nWhile her technical competence within the Security Area is\nrecognized without a doubt, the NomCom MAY consider to verify the\ntrustworthiness of the named SEC AD based on the documented\nprocedural infractions.\n\nTo safeguard the fundamental integrity of the IETF standards\nprocess, the technical evidence regarding this unauthorized\nbackchannel disclosure is provided below.\n\nTECHNICAL EVIDENCE OF SECURITY LACK\n\n1. My Private Notice to SEC AD Deb Cooley's officially in\nDatatracker regisered Mailaddress\nMessage-ID: <3c967485-b5d2-4e93-84f6-632f81bc803d@alice-dsl.net>\nDate: Tue, 12 May 2026 10:15:36 +0200\nMIME-Version: 1.0\nUser-Agent: Mozilla Thunderbird\nContent-Language: en-US, de-DE\nFrom: Timo Gerke <timo.gerke@alice-dsl.net>\nTo: \"Deb Cooley (IETF, AD Security Area)\" <debcooley1@gmail.com>\nSubject: Notice: Operational Analysis & Cluster C430 Deadlock\n(TLS/UTA)\n\n2. SEC AD Deb Cooley's response\nReferences: <3c967485-b5d2-4e93-84f6-632f81bc803d@alice-dsl.net>\nIn-Reply-To: <3c967485-b5d2-4e93-84f6-632f81bc803d@alice-dsl.net>\nFrom: Deb Cooley <debcooley1@gmail.com>\nDate: Wed, 13 May 2026 06:42:16 +0100\nSubject: Re: Notice: Operational Analysis & Cluster C430 Deadlock\n(TLS/UTA)\nTo: Timo Gerke <timo.gerke@alice-dsl.net>\nCc: Eric Rescorla <ekr@rtfm.com>, uta-chairs@ietf.org\n\n\nBest regards,\n\nTimo Gerke\n"
    },
    "result": [
@@ -203,6 +285,25 @@
   },
   {
    "args": {
+    "text": "First paragraph of the reply.\n\nSecond paragraph of the reply.\n\nOn Mon, Jan 5, 2026 at 9:00 AM A Person <a@example.com> wrote:\n> quoted\n"
+   },
+   "result": [
+    {
+     "content": "First paragraph of the reply.\n\nSecond paragraph of the reply.",
+     "quoted": false
+    },
+    {
+     "content": "\nOn Mon, Jan 5, 2026 at 9:00 AM A Person <a@example.com> wrote:\n> quoted",
+     "quoted": true
+    },
+    {
+     "content": "",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
     "text": "First point about the draft.\n\nSecond structured line here.\n\nThird structured line here.\n\nFourth structured line here."
    },
    "result": [
@@ -223,6 +324,21 @@
     },
     {
      "content": "----------\nSecond point after an author-drawn rule.\nRegards,\nWei Zhang",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "Forwarding my notes from the review.\n\nThe registry proposal in the second draft keeps the allocation policy unchanged.\nI suggest we move the open question about expiry to the next interim meeting.\n\nSent from my phone"
+   },
+   "result": [
+    {
+     "content": "Forwarding my notes from the review.\n\nThe registry proposal in the second draft keeps the allocation policy unchanged.\nI suggest we move the open question about expiry to the next interim meeting.\n",
+     "quoted": false
+    },
+    {
+     "content": "Sent from my phone",
      "quoted": false
     }
    ]
@@ -277,6 +393,21 @@
   },
   {
    "args": {
+    "text": "Hi Carol,\n\nThank you for the review. The second revision states the allocation policy in the \"Registry model\" section, and the expiry rule now sits in its own subsection so that the profile can reference it directly.\n\nI have kept the open question about renewal out of this revision. It needs input from the operators, and I will raise it at the interim meeting.\n\nBest,\nAlice\n\nOn 10 Nov 2026, at 16:02, Carol Example <carol@example.org> wrote:"
+   },
+   "result": [
+    {
+     "content": "Hi Carol,\n\nThank you for the review. The second revision states the allocation policy in the \"Registry model\" section, and the expiry rule now sits in its own subsection so that the profile can reference it directly.\n\nI have kept the open question about renewal out of this revision. It needs input from the operators, and I will raise it at the interim meeting.\n\nBest,\nAlice\n",
+     "quoted": false
+    },
+    {
+     "content": "On 10 Nov 2026, at 16:02, Carol Example <carol@example.org> wrote:",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
     "text": "Hi Dennis,\n\nthanks for sharing. But this only reflects parts of the discussion.\n\nSince I too provide public mail listings for my users, I know, this is\na difficult issue.\n\nFrom my point of view, this IETF Web-based ML is dysfunctional because\nit is difficult to digest the important topics.\n\nSubscribers often express their oppinion not matching the topic\n(Subject). This is bad for readers and digesting.\n\nRegards.\n--eh.\n\n\nAm Montag, dem 20.07.2026 um 22:55 +0200 schrieb Dennis Jackson:\n> \u00a0\n> The TLS Mailing List Archive is public & available at the following\n> url:\u00a0\n> \u00a0\n> https://mailarchive.ietf.org/arch/browse/tls/\n> \u00a0\n> Bulk extracts can also be downloaded with rsync as described here:\u00a0\n> \u00a0\n> https://www.ietf.org/about/open-records/\n> \u00a0\n> Best,\n> \u00a0Dennis\n> \u00a0\n> On 20/07/2026 22:08, Ken Kubota wrote:\n> \u00a0\n> \u00a0\n> > \u00a0\n> > \u00a0\n> > \u00a0\n> > \u00a0\n> > \u00a0\n> > \u00a0\n> > \u00a0\n> > I am writing to clarify the statement in your email regarding the\n> > statistic \"7/10 WG participants favor advancing the document.\"\n> > \u00a0\n> > \n> > \u00a0\n> > \u00a0\n> > Transparency is a core principle of the IETF.\n> > \u00a0\n> > \n> > \u00a0\n> > \u00a0\n> > Please provide the breakdown or data that supports this figure.\n> > \u00a0\n> > \n> > \u00a0\n> > \u00a0\n> > Thank you for your assistance.\n> > \u00a0\n> > \n> > \u00a0\n> > \u00a0\n> > Kind regards,\n> > \u00a0\n> > \n> > \u00a0\n> > \u00a0\n> > Ken Kubota\n> > \u00a0\n> > \u00a0____________________________________________________\n> > \u00a0\n> > \u00a0Ken Kubota\n> > \u00a0https://doi.org/10.4444/100\n> > \u00a0\n> > \u00a0\n> > \u00a0\n> > \u00a0\n> > \u00a0\n> > \u00a0\n> > \n> > \u00a0\n> > > \u00a0\n> > > Am 20.07.2026 um 21:51 schrieb Joseph Salowey <joe@salowey.net>:\n> > > \u00a0\n> > > \u00a0\n> > > \u00a0\n> > > As others have mentioned on this thread, a consensus call is not\n> > > a\n> > > \u00a0vote. We used public responses to get a sense of where the\n> > > mailing\n> > > \u00a0list participants are leaning. In this case, we saw many\n> > > participants\n> > > \u00a0who had not participated in the previous calls or on the TLS\n> > > list in\n> > > \u00a0general. \u00a0The chairs have the remit to judge consensus based on\n> > > input\n> > > \u00a0such as taking into account the level of previous participation\n> > > of the\n> > > \u00a0sender. \u00a0There is no specific threshold which represents rough\n> > > \u00a0consensus. In this case, we judged that the responses show rough\n> > > \u00a0consensus to move forward with publishing the document and to\n> > > address\n> > > \u00a0the issues raised during the consensus call.\n> > > \u00a0\n> > > \u00a0All of the mail used as part of this process is publicly\n> > > available. We\n> > > \u00a0do not intend to release any further detailed analysis including\n> > > \u00a0\"numbers\" or \"weights/methods\".\n> > > \u00a0\n> > > \u00a0Thanks,\n> > > \u00a0\n> > > \u00a0Joe\n> > > \u00a0\n> > > \u00a0\n> > > \u00a0On Sun, Jul 19, 2026 at 6:55\u202fAM DA PIEVE Fabiana\n> > > \u00a0<Fabiana.DA-PIEVE@ec.europa.eu> wrote:\n> > > \u00a0\n> > > > \n> > > > \u00a0Can I kindly ask if there is evidence that can be provided for\n> > > > your statements about the numbers, and more info on the weights\n> > > > / method you apply to weigh answers, from both sides ?\n> > > > \u00a0\n> > > > \u00a0I imagine you have a table/a scheme/something, with\n> > > > participants, an established method for the weights, weights\n> > > > associated to each person on both sides, other elements you may\n> > > > have considered relevant ....\n> > > > \u00a0\n> > > > \u00a0Thank you for your kind attention\n> > > > \u00a0\n> > > > \u00a0Fabiana Da Pieve\n> > > > \u00a0Team Leader Post-Quantum Cryptography\n> > > > \u00a0\n> > > > \u00a0European Commission\n> > > > \u00a0DG Communications Networks, Content and Technology\n> > > > \u00a0Unit C4 – Emerging & Disruptive Technologies\n> > > > \u00a0\n> > > > \u00a0\n> > > > \u00a0\n> > > > \u00a0\n> > > > \u00a0-----Original Message-----\n> > > > \u00a0From: Joseph Salowey <joe@salowey.net>\n> > > > \u00a0Sent: Sunday, July 19, 2026 1:31 PM\n> > > > \u00a0To: <tls@ietf.org> <tls@ietf.org>\n> > > > \u00a0Cc: draft-ietf-tls-mlkem@ietf.org; tls-chairs\n> > > > <tls-chairs@ietf.org>\n> > > > \u00a0Subject: [TLS] MLKEM Consensus Call (was WG Last Call: draft-\n> > > > ietf-tls-mlkem-08 (Ends 2026-07-08))\n> > > > \u00a0\n> > > > \u00a0During this last call we received responses from a large\n> > > > number of people on both sides of the issue, many were from\n> > > > first time participants, which was probably due to the\n> > > > extensive social media coverage. The primary objection\n> > > > discussed extensively during the call concerned the relative\n> > > > strength of pure versus hybrid approaches.\n> > > > \u00a0Fundamentally, this is a judgement call people have to make\n> > > > for themselves, and the chair’s role is not to just decide for\n> > > > the WG b=t rather to take the sense of the WG. The chairs\n> > > > ultimately bear the burden of how to weigh those responses\n> > > > against those of long-time WG participants with demonstrated\n> > > > expertise. By pure numbers, more people want to progress the\n> > > > document than not, but this alone does not constitute rough\n> > > > consensus. However, if we look at pre-existing WG participants\n> > > > or people with demonstrated expertise, roughly 7/10 WG\n> > > > participants favor advancing the document, which shows rough\n> > > > consensus to move the document forward.\n> > > > \u00a0\n> > > > \u00a0Even though there is rough consensus to move forward we feel\n> > > > several issues raised during the last call need to be\n> > > > addressed. Some of the issues below have text proposals that we\n> > > > think are appropriate given the list discussions, we will\n> > > > accept feedback on them, but we do not intend to make\n> > > > significant changes since these issues have already had a fair\n> > > > amount of discussion\n> > > > \u00a0\n> > > > \u00a01. Emphasize the status of the document\n> > > > \u00a0\n> > > > \u00a0Currently the pure ML-KEM algorithm is recommended “N” in t=e\n> > > > IANA registry and is a non-standards-track informational\n> > > > document while\n> > > > \u00a0X25519MLKEM768 is marked as recommended “Y” and is defined =n\n> > > > a standards-track document. \u00a0While this indicates the\n> > > > preference for the hybrid approach, it was pointed out that the\n> > > > meaning of the “N =80 \u00a0value may not be obvious to readers\n> > > > unfamiliar with the IETF process.\n> > > > \u00a0\n> > > > \u00a0Based on the discussion the following will be added to the\n> > > > IANA considerations section, which the IESG approved for pure\n> > > > ML-DSA, to save readers following existing links in the\n> > > > document to understand the meaning on N and to further\n> > > > addresses some hybrid/pure approach\n> > > > \u00a0concerns:\n> > > > \u00a0\n> > > > \u00a0As defined in Section 3 of [RFC9847], the value N indicates\n> > > > \u00a0\n> > > > \u00a0\u00a0\u00a0\u00a0\u00a0\u00a0That the item has not been evaluated by the IETF and that\n> > > > the IETF\n> > > > \u00a0\u00a0\u00a0\u00a0\u00a0\u00a0has made no statement about the suitability of the\n> > > > associated\n> > > > \u00a0\u00a0\u00a0\u00a0\u00a0\u00a0mechanism. \u00a0This does not necessarily mean that the\n> > > > mechanism is\n> > > > \u00a0\u00a0\u00a0\u00a0\u00a0\u00a0flawed, only that no consensus exists. \u00a0The IETF might\n> > > > have\n> > > > \u00a0\u00a0\u00a0\u00a0\u00a0\u00a0consensus to leave an item marked as \"N\" on the basis of\n> > > > the item\n> > > > \u00a0\u00a0\u00a0\u00a0\u00a0\u00a0having limited applicability or usage constraints\n> > > > \u00a0\n> > > > \u00a02. Randomness requirements\n> > > > \u00a0\n> > > > \u00a0Jacob Appelbaum raised the issue that m random input value is\n> > > > provided directly to the ML-KEM.Encaps() and encrypted and sent\n> > > > to the TLS Client. This means that an attacker who can use raw\n> > > > random output to determine the PRNG state can use a connection\n> > > > with the server to attempt to derive the server's PRNG state\n> > > > and attack other connections.\n> > > > \u00a0\n> > > > \u00a0This issue pertains to the ML-KEM algorithm itself and is not\n> > > > unique to TLS. The NIST document currently does require a\n> > > > secure PRNG defined in NIST SP 800-90A-C and RFC 9846 discusses\n> > > > PRNGs in Appendix C. Any text added to address this point would\n> > > > need to be included both in this document and the ECDHE-MLKEM\n> > > > document.\n> > > > \u00a0\n> > > > \u00a0Text to go into Section 4.2, after the existing \"MUST NOT\n> > > > reuse randomness\" line:\n> > > > \u00a0\n> > > > \u00a0“During encapsulation, ML-KEM encrypts m, drawn from a random\n> > > > bit generator, so the peer holding the decapsulation key\n> > > > recovers m exactly. Any information that m provides about other\n> > > > outputs of the generator is therefore available to that peer.”\n> > > > \u00a0\n> > > > \u00a0And the following text for Section 5 (security\n> > > > considerations):\n> > > > \u00a0\n> > > > \u00a0“The disclosure of raw random number generator (PRNG) output\n> > > > in TLS and other protocols can be used in an attack to\n> > > > compromise the state of an insecure RNG as described in\n> > > > [DUALEC-TLS]. The m value in ML-KEM is an additional place\n> > > > where raw RNG output is disclosed to an active attacker.\n> > > > \u00a0Because the m value in ML-KEM is randomly generated and\n> > > > transmitted to the client, it is important to follow the PRNG\n> > > > guidance in [FIPS203] and [RFC9846]. Implementers MAY choose to\n> > > > implement mechanisms from [RFC8937] for additional protection\n> > > > across sessions.\"\n> > > > \u00a0\n> > > > \u00a0[DUALECTLS] -\n> > > > https://www.usenix.org/system/files/conference/usenixsecurity=4\n> > > > /sec14-paper-checkoway.pdf\n> > > > \u00a0\n> > > > \u00a0Similar text will also go into the ECDHE-MLKEM document.\n> > > > \u00a0\n> > > > \u00a03. Document Track & Stream\n> > > > \u00a0\n> > > > \u00a0The document is currently in the RFC stream on the non-\n> > > > standards Informational track. Some have argued for the ISE\n> > > > stream so that the document does not reflect IETF consensus or\n> > > > the document be included on the experimental track. \u00a0Both of\n> > > > these approaches will result in the publication of an RFC which\n> > > > is the same result as the current path to the average RFC\n> > > > consumer. We believe we have consensus to publish this as an\n> > > > informational working group document\n> > > > \u00a0\n> > > > \u00a0Joe\n> > > > \u00a0\n> > > > \u00a0\n> > > > \u00a0On Wed, Jun 24, 2026 at 8:00\u202fAM Joseph Salowey via Datatracker\n> > > > <noreply@ietf.org> wrote:\n> > > > \u00a0\n> > > > > \n> > > > > \u00a0This message initiates a new Working Group Last Call for\n> > > > > draft-ietf-tls-m=kem[1], which defines standalone ML-KEM key\n> > > > > establishment for TLS 1.3. The=main question before the\n> > > > > working group is: \"Should the working group publi=h a\n> > > > > document specifying stand alone ML-KEM?\". If there is rough\n> > > > > consensus =hen we will push to refine and publish the\n> > > > > document; otherwise, we will st=p discussing the draft and\n> > > > > not progress it. Please respond to this call in=icating\n> > > > > whether you support publishing a document specifying a stand\n> > > > > alone=ML-KEM. Please refrain from further discussion on this\n> > > > > topic as most argum=nts have been discussed multiple times.\n> > > > > \u00a0\n> > > > > \u00a0Why are we holding this consensus call now?\n> > > > > \u00a0\n> > > > > \u00a0Significant developments have occurred both within this\n> > > > > document and in t=e broader TLS ecosystem to address the\n> > > > > concerns raised in the last WGLC. T=erefore, the third\n> > > > > consensus call is warranted. We ask the working group t=\n> > > > > consider document publication in light of these recent\n> > > > > changes:\n> > > > > \u00a0\n> > > > > \u00a0- Promotion of Hybrids in draft-ietf-tls-ecdhe-mlkem:\n> > > > > Following a separat= consensus call, the WG agreed to promote\n> > > > > the X25519MLKEM768 hybrid group =o Recommended: Y in the IANA\n> > > > > registry. Consequently, the IANA registry wil= reflect a\n> > > > > clear community preference for a hybrid because Recommended:\n> > > > > Y =learly indicates this while the standalone ML-KEM groups\n> > > > > defined in this d=aft remain Recommended: N. The updated\n> > > > > security considerations in [1] refe=ence the IANA registry to\n> > > > > emphasize this preference.\n> > > > > \u00a0\n> > > > > \u00a0- Key Share Reuse Prohibited in draft-ietf-tls-rfc8446bis:\n> > > > > The WG recentl= reached consensus to explicitly prohibit key\n> > > > > share reuse across connectio=s in TLS 1.3. The new text\n> > > > > changes the guidance from SHOULD NOT to a stric= MUST NOT.\n> > > > > This resolves the concerns regarding static key reuse and its\n> > > > > a=sociated privacy and forward-secrecy risks for ML-KEM.\n> > > > > \u00a0\n> > > > > \u00a0- Nadim updated the ProVerif model of TLS 1.3 to evaluate\n> > > > > KEM and hybrid =EM groups in TLS 1.3. This supports other\n> > > > > results which show that KEMs are=secure when used in TLS 1.3\n> > > > > and that hybrid groups are secure even if one =f the\n> > > > > components is compromised.\n> > > > > \u00a0\n> > > > > \u00a0- Liaisons: We received liaison statements from multiple\n> > > > > SDOs including \u00a0=-RAN[2], IEEE 802.11[4] and from 3GPP[3]\n> > > > > \u00a0expressing support for the publi=ation of draft-ietf-tls-\n> > > > > mlkem as an RFC as they rely on the IETF to provid= a stable\n> > > > > normative reference.\n> > > > > \u00a0\n> > > > > \u00a0Please note that a third-party IPR disclosure exists [5]\n> > > > > against this doc=ment regarding patents related to the\n> > > > > underlying ML-KEM algorithm. This IP= declaration has not\n> > > > > changed since the last WGLC. As a reminder, per BCP 7=, the\n> > > > > IETF takes no stance on the validity of patent claims, and\n> > > > > the worki=g group may decide to proceed with a technology\n> > > > > despite IPR disclosures if=it decides that such use is\n> > > > > warranted.\n> > > > > \u00a0\n> > > > > \u00a0Conduct Reminder: Given the heated nature of previous\n> > > > > discussions on this=topic, participants are strongly reminded\n> > > > > to adhere to the IETF Code of Co=duct (BCP 54) and the TLS\n> > > > > WG's Mail List Procedures. Keep feedback profess=onal,\n> > > > > technical, and focused on the document's text.\n> > > > > \u00a0\n> > > > > \u00a0This working group last call will end on 2026-07-08.\n> > > > > \u00a0\n> > > > > \u00a0Joe and Sean\n> > > > > \u00a0\n> > > > > \u00a0[1] https://datatracker.ietf.org/doc/draft-ietf-tls-mlkem/\n> > > > > \u00a0[2] https://datatracker.ietf.org/liaison/2198/\n> > > > > \u00a0[3] https://datatracker.ietf.org/liaison/2151/\n> > > > > \u00a0[4] https://datatracker.ietf.org/liaison/2148/\n> > > > > \u00a0[5]\n> > > > > https://datatracker.ietf.org/ipr/search/?submit=draft&id=draft-ie=f-tl\n> > > > > \u00a0s-mlkem\n> > > > > \u00a0\n> > > > \u00a0\n> > > > \u00a0\n> > > \u00a0\n> > > \u00a0_______________________________________________\n> > > \u00a0TLS mailing list -- tls@ietf.org\n> > > \u00a0To unsubscribe send an email to tls-leave@ietf.org\n> > > \u00a0\n> > > \u00a0\n> > > \u00a0\n> > \u00a0\n> > \u00a0\n> > \u00a0\n> > \u00a0\n> > \u00a0\n> > \u00a0\n> > \u00a0\u00a0\n> > _______________________________________________\n> > TLS mailing list -- tls@ietf.org\n> > To unsubscribe send an email to tls-leave@ietf.org\n> > \u00a0\n> \u00a0\n> _______________________________________________\n> TLS mailing list -- tls@ietf.org\n> To unsubscribe send an email to tls-leave@ietf.org\n\n-- \nDr. Erwin Hoffmann | www.fehcom.de\nPGP key-id: 36553F7F9C58D1CC\nPGP key-fingerprint:  950B 5555 0B08 5A2A 1C00 9594 3655 3F7F 9C58 D1CC\n"
    },
    "result": [
@@ -294,6 +425,49 @@
     },
     {
      "content": "-- \nDr. Erwin Hoffmann | www.fehcom.de\nPGP key-id: 36553F7F9C58D1CC\nPGP key-fingerprint:  950B 5555 0B08 5A2A 1C00 9594 3655 3F7F 9C58 D1CC\n",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "Hi Gyan,\n\nI am the Document Shepherd. Thanks for your review.\n\nOn Thu, Oct 23, 2025 at 2:19 AM Gyan Mishra <gyan@example.com> wrote:\n\n> First question about the draft.\n>\nDhruv: This sentence\n\n> A quoted sentence from the draft.\n\nsimply clarifies that the new metric types are not limited.\n\n\n> Second question about section 5.2.\n>\n\nDhruv: Section 5.2 only restates the existing number space.\n\nThanks!\nDhruv\n\n> Trailing quoted text.\n"
+   },
+   "result": [
+    {
+     "content": "Hi Gyan,\n\nI am the Document Shepherd. Thanks for your review.",
+     "quoted": false
+    },
+    {
+     "content": "\nOn Thu, Oct 23, 2025 at 2:19 AM Gyan Mishra <gyan@example.com> wrote:\n\n> First question about the draft.\n>",
+     "quoted": true
+    },
+    {
+     "content": "Dhruv: This sentence",
+     "quoted": false
+    },
+    {
+     "content": "\n> A quoted sentence from the draft.",
+     "quoted": true
+    },
+    {
+     "content": "\nsimply clarifies that the new metric types are not limited.",
+     "quoted": false
+    },
+    {
+     "content": "\n\n> Second question about section 5.2.\n>",
+     "quoted": true
+    },
+    {
+     "content": "\nDhruv: Section 5.2 only restates the existing number space.\n\nThanks!\nDhruv",
+     "quoted": false
+    },
+    {
+     "content": "\n> Trailing quoted text.",
+     "quoted": true
+    },
+    {
+     "content": "",
      "quoted": false
     }
    ]
@@ -590,6 +764,25 @@
   },
   {
    "args": {
+    "text": "I agree with both points and will update the draft this week.\n\nOn Mon, 2 Nov 2026, Bob Example wrote:\n\n> The registry proposal in the second draft keeps the allocation policy unchanged.\n> I suggest we move the open question about expiry to the next interim meeting.\n"
+   },
+   "result": [
+    {
+     "content": "I agree with both points and will update the draft this week.",
+     "quoted": false
+    },
+    {
+     "content": "\nOn Mon, 2 Nov 2026, Bob Example wrote:\n\n> The registry proposal in the second draft keeps the allocation policy unchanged.\n> I suggest we move the open question about expiry to the next interim meeting.",
+     "quoted": true
+    },
+    {
+     "content": "",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
     "text": "I have revised the entire draft to address every one of your review points.\n\nThe registry should remain open for new entries at all times going forward.\nEach entry must include a stable reference and a short human readable summary.\nReviewers should be given at least two full weeks to raise any late concerns.\n"
    },
    "result": [
@@ -650,6 +843,25 @@
    "result": [
     {
      "content": "Line one of my reply.\nLine two of my reply.\nLine three.\nLine four here.",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "My reply to the agenda, written below the quote.\n\n> The registry proposal in the second draft keeps the allocation policy unchanged.\n> I suggest we move the open question about expiry to the next interim meeting.\n"
+   },
+   "result": [
+    {
+     "content": "My reply to the agenda, written below the quote.",
+     "quoted": false
+    },
+    {
+     "content": "\n> The registry proposal in the second draft keeps the allocation policy unchanged.\n> I suggest we move the open question about expiry to the next interim meeting.",
+     "quoted": true
+    },
+    {
+     "content": "",
      "quoted": false
     }
    ]
@@ -764,6 +976,36 @@
     {
      "content": "On \\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1\\1 wrote:\n> quoted",
      "quoted": true
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "One.\n\n\n\nTwo.\n"
+   },
+   "result": [
+    {
+     "content": "One.\n\n\n\nTwo.\n",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "Reply text.\n\nOn Tue, Jan 28, 2025 at 10:38 AM\nSomeone <s@example.com> wrote:\n> q\n"
+   },
+   "result": [
+    {
+     "content": "Reply text.",
+     "quoted": false
+    },
+    {
+     "content": "\nOn Tue, Jan 28, 2025 at 10:38 AMSomeone <s@example.com> wrote:\n> q",
+     "quoted": true
+    },
+    {
+     "content": "",
+     "quoted": false
     }
    ]
   },
@@ -885,6 +1127,58 @@
    "result": [
     {
      "content": "Thanks for your feedback, Wesley!\n\nWe have addressed everything you noted in v8 of the document.\n\nCheers,\nNate",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "The registry proposal in the second draft keeps the allocation policy unchanged.\nI suggest we move the open question about expiry to the next interim meeting."
+   },
+   "result": [
+    {
+     "content": "The registry proposal in the second draft keeps the allocation policy unchanged.\nI suggest we move the open question about expiry to the next interim meeting.",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "The registry proposal in the second draft keeps the allocation policy unchanged.\n\nHere is the agenda for the interim meeting next week.\nItem one covers the registry and its allocation policy in detail.\nItem two covers expiry and the remaining open questions from Prague."
+   },
+   "result": [
+    {
+     "content": "The registry proposal in the second draft keeps the allocation policy unchanged.\n\nHere is the agenda for the interim meeting next week.\nItem one covers the registry and its allocation policy in detail.\nItem two covers expiry and the remaining open questions from Prague.",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "The registry proposal in the second draft keeps the allocation policy unchanged.\n\nOn Mon, 2 Nov 2026 at 10:00, Bob Example wrote:\n> The allocation policy should change in the next revision.\n> Expiry also needs discussion.\n\nI suggest we move the open question about expiry to the next interim meeting."
+   },
+   "result": [
+    {
+     "content": "The registry proposal in the second draft keeps the allocation policy unchanged.",
+     "quoted": false
+    },
+    {
+     "content": "\nOn Mon, 2 Nov 2026 at 10:00, Bob Example wrote:\n> The allocation policy should change in the next revision.\n> Expiry also needs discussion.",
+     "quoted": true
+    },
+    {
+     "content": "\nI suggest we move the open question about expiry to the next interim meeting.",
+     "quoted": false
+    }
+   ]
+  },
+  {
+   "args": {
+    "text": "The working group should adopt the proposal as written today.\n\nI agree with adopting it.\n\nThere are two open issues that need resolution before last call.\n\nBoth issues are already tracked.\n"
+   },
+   "result": [
+    {
+     "content": "The working group should adopt the proposal as written today.\n\nI agree with adopting it.\n\nThere are two open issues that need resolution before last call.\n\nBoth issues are already tracked.\n",
      "quoted": false
     }
    ]
