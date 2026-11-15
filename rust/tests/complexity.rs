@@ -238,8 +238,9 @@ fn g7a_aligned_runs_of_identical_lines() {
 #[test]
 fn g7b_distinct_long_lines() {
     // Rule (b): one substring search of the parent per child line (89 s at
-    // 20,000 lines; the reference uses 60,000).
-    let (child, parent) = distinct_long_lines(20000);
+    // 20,000 lines, quadratic: about 14 s here; the reference uses 60,000).
+    // At 20,000 lines the debug build took 5.0 s on a CI runner.
+    let (child, parent) = distinct_long_lines(8000);
     bounded(|| strip_parent_content(&child, &parent, false));
 }
 
