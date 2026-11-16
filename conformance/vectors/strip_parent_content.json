@@ -16,6 +16,11 @@
    "name": "continuation",
    "kind": "keyword_only",
    "default": false
+  },
+  {
+   "name": "quoted_text",
+   "kind": "keyword_only",
+   "default": null
   }
  ],
  "returns": "str",
@@ -40,6 +45,32 @@
     "parent_body": "Some earlier discussion here about the draft.\nBest,\nSongbo"
    },
    "result": "Best,\nSongbo"
+  },
+  {
+   "args": {
+    "text": "Enable a receiving participant to verify a particular linked-dialog\nrelationship across administrative and trust domains, while keeping\nunnecessary disclosure of delegation history and participant information.\n",
+    "parent_body": "Comments on the draft are below.\n\nThe protocol should allow a receiving participant to verify a particular\nrelationship across administrative and trust boundaries while minimising\nunnecessary disclosure of delegation history and participant information.\n\nThe protocol should distinguish between:\n\n   - Verification of an individual parent-to-child relationship.\n   - Verification of a complete delegation or propagation chain.\n   - Verification based on partial provenance.\n   - Disclosure of the identities of all participants in the interaction\n   path.\n\nRegards,\nAlex\n",
+    "continuation": true,
+    "quoted_text": "> An unrelated earlier message that the reply also quotes.\n"
+   },
+   "result": "Enable a receiving participant to verify a particular linked-dialog\nrelationship across administrative and trust domains, while keeping"
+  },
+  {
+   "args": {
+    "text": "Enable a receiving participant to verify a particular linked-dialog\nrelationship across administrative and trust domains, while keeping\nunnecessary disclosure of delegation history and participant information.\n",
+    "parent_body": "Comments on the draft are below.\n\nThe protocol should allow a receiving participant to verify a particular\nrelationship across administrative and trust boundaries while minimising\nunnecessary disclosure of delegation history and participant information.\n\nThe protocol should distinguish between:\n\n   - Verification of an individual parent-to-child relationship.\n   - Verification of a complete delegation or propagation chain.\n   - Verification based on partial provenance.\n   - Disclosure of the identities of all participants in the interaction\n   path.\n\nRegards,\nAlex\n",
+    "continuation": true,
+    "quoted_text": "> Comments on the draft are below.\n> \n> The protocol should allow a receiving participant to verify a particular\n> relationship across administrative and trust boundaries while minimising\n> unnecessary disclosure of delegation history and participant information.\n> \n> The protocol should distinguish between:\n> \n>    - Verification of an individual parent-to-child relationship.\n>    - Verification of a complete delegation or propagation chain.\n>    - Verification based on partial provenance.\n>    - Disclosure of the identities of all participants in the interaction\n>    path.\n> \n> Regards,\n> Alex\n> \n"
+   },
+   "result": "Enable a receiving participant to verify a particular linked-dialog\nrelationship across administrative and trust domains, while keeping\nunnecessary disclosure of delegation history and participant information."
+  },
+  {
+   "args": {
+    "text": "Enable a receiving participant to verify a particular linked-dialog\nrelationship across administrative and trust domains, while keeping\nunnecessary disclosure of delegation history and participant information.\n",
+    "parent_body": "Comments on the draft are below.\n\nThe protocol should allow a receiving participant to verify a particular\nrelationship across administrative and trust boundaries while minimising\nunnecessary disclosure of delegation history and participant information.\n\nThe protocol should distinguish between:\n\n   - Verification of an individual parent-to-child relationship.\n   - Verification of a complete delegation or propagation chain.\n   - Verification based on partial provenance.\n   - Disclosure of the identities of all participants in the interaction\n   path.\n\nRegards,\nAlex\n",
+    "continuation": true
+   },
+   "result": "Enable a receiving participant to verify a particular linked-dialog\nrelationship across administrative and trust domains, while keeping"
   },
   {
    "args": {
@@ -88,10 +119,62 @@
   },
   {
    "args": {
+    "text": "The protocol SHOULD distinguish between the following four cases:\n   - Verification of an individual parent-to-child dialog relationship.\n   - Verification of a complete delegation or propagation chain.\n   - Verification based on partial provenance.\n   - Disclosure of the identities of participants in the interaction path.\n   - Verification that the delegated authority has not been withdrawn.\n",
+    "parent_body": "Comments on the draft are below.\n\nThe protocol should allow a receiving participant to verify a particular\nrelationship across administrative and trust boundaries while minimising\nunnecessary disclosure of delegation history and participant information.\n\nThe protocol should distinguish between:\n\n   - Verification of an individual parent-to-child relationship.\n   - Verification of a complete delegation or propagation chain.\n   - Verification based on partial provenance.\n   - Disclosure of the identities of all participants in the interaction\n   path.\n\nRegards,\nAlex\n",
+    "continuation": true,
+    "quoted_text": "> Comments on the draft are below.\n> \n> The protocol should allow a receiving participant to verify a particular\n> relationship across administrative and trust boundaries while minimising\n> unnecessary disclosure of delegation history and participant information.\n> \n> The protocol should distinguish between:\n> \n>    - Verification of an individual parent-to-child relationship.\n>    - Verification of a complete delegation or propagation chain.\n>    - Verification based on partial provenance.\n>    - Disclosure of the identities of all participants in the interaction\n>    path.\n> \n> Regards,\n> Alex\n> \n"
+   },
+   "result": "The protocol SHOULD distinguish between the following four cases:\n   - Verification of an individual parent-to-child dialog relationship.\n   - Verification of a complete delegation or propagation chain.\n   - Verification based on partial provenance.\n   - Disclosure of the identities of participants in the interaction path.\n   - Verification that the delegated authority has not been withdrawn."
+  },
+  {
+   "args": {
+    "text": "The protocol should allow a receiving participant to verify a particular\ndialog relationship, and only that relationship, across the boundaries of\nthe administrative domains that the dialog passes through on its way.\n",
+    "parent_body": "Comments on the draft are below.\n\nThe protocol should allow a receiving participant to verify a particular\nrelationship across administrative and trust boundaries while minimising\nunnecessary disclosure of delegation history and participant information.\n\nThe protocol should distinguish between:\n\n   - Verification of an individual parent-to-child relationship.\n   - Verification of a complete delegation or propagation chain.\n   - Verification based on partial provenance.\n   - Disclosure of the identities of all participants in the interaction\n   path.\n\nRegards,\nAlex\n",
+    "continuation": true,
+    "quoted_text": "> Comments on the draft are below.\n> \n> The protocol should allow a receiving participant to verify a particular\n> relationship across administrative and trust boundaries while minimising\n> unnecessary disclosure of delegation history and participant information.\n> \n> The protocol should distinguish between:\n> \n>    - Verification of an individual parent-to-child relationship.\n>    - Verification of a complete delegation or propagation chain.\n>    - Verification based on partial provenance.\n>    - Disclosure of the identities of all participants in the interaction\n>    path.\n> \n> Regards,\n> Alex\n> \n"
+   },
+   "result": "The protocol should allow a receiving participant to verify a particular\ndialog relationship, and only that relationship, across the boundaries of\nthe administrative domains that the dialog passes through on its way."
+  },
+  {
+   "args": {
+    "text": "The protocol should allow a receiving participant to verify a particular\ndialog relationship, and only that relationship, across the boundaries of\nthe administrative domains that the dialog passes through on its way.\n",
+    "parent_body": "Comments on the draft are below.\n\nThe protocol should allow a receiving participant to verify a particular\nrelationship across administrative and trust boundaries while minimising\nunnecessary disclosure of delegation history and participant information.\n\nThe protocol should distinguish between:\n\n   - Verification of an individual parent-to-child relationship.\n   - Verification of a complete delegation or propagation chain.\n   - Verification based on partial provenance.\n   - Disclosure of the identities of all participants in the interaction\n   path.\n\nRegards,\nAlex\n",
+    "continuation": true
+   },
+   "result": "dialog relationship, and only that relationship, across the boundaries of\nthe administrative domains that the dialog passes through on its way."
+  },
+  {
+   "args": {
+    "text": "The protocol should allow a receiving participant to verify a particular\nrelationship across administrative and trust boundaries while minimising\nunnecessary disclosure of delegation history and participant information.\n\nI do not think minimising disclosure belongs in this requirement at all.\n",
+    "parent_body": "Comments on the draft are below.\n\nThe protocol should allow a receiving participant to verify a particular\nrelationship across administrative and trust boundaries while minimising\nunnecessary disclosure of delegation history and participant information.\n\nThe protocol should distinguish between:\n\n   - Verification of an individual parent-to-child relationship.\n   - Verification of a complete delegation or propagation chain.\n   - Verification based on partial provenance.\n   - Disclosure of the identities of all participants in the interaction\n   path.\n\nRegards,\nAlex\n",
+    "continuation": true,
+    "quoted_text": "> Comments on the draft are below.\n> \n> The protocol should allow a receiving participant to verify a particular\n> relationship across administrative and trust boundaries while minimising\n> unnecessary disclosure of delegation history and participant information.\n> \n> The protocol should distinguish between:\n> \n>    - Verification of an individual parent-to-child relationship.\n>    - Verification of a complete delegation or propagation chain.\n>    - Verification based on partial provenance.\n>    - Disclosure of the identities of all participants in the interaction\n>    path.\n> \n> Regards,\n> Alex\n> \n"
+   },
+   "result": "I do not think minimising disclosure belongs in this requirement at all."
+  },
+  {
+   "args": {
     "text": "This is a fairly long authored looking line with plenty of words.",
     "parent_body": "This is a fairly long authored looking line with plenty of words."
    },
    "result": ""
+  },
+  {
+   "args": {
+    "text": "Under my revision a dialog that first continues over another transport is\ncovered by the first of the scenarios, which I have left as it was, namely\n1. Transport change, in which a dialog continues over another transport.\n\n2.\n\nThe protocol should allow a receiving participant to verify a particular\nrelationship across administrative and trust boundaries while minimising\nunnecessary disclosure of delegation history and participant information.\n",
+    "parent_body": "The scenarios are:\n1. Transport change, in which a dialog continues over another transport.\n2. Cross-domain continuation, where a dialog crosses a trust boundary.\n\nThe protocol should allow a receiving participant to verify a particular\nrelationship across administrative and trust boundaries while minimising\nunnecessary disclosure of delegation history and participant information.\n",
+    "continuation": true,
+    "quoted_text": "> The scenarios are:\n> 1. Transport change, in which a dialog continues over another transport.\n> 2. Cross-domain continuation, where a dialog crosses a trust boundary.\n> \n> The protocol should allow a receiving participant to verify a particular\n> relationship across administrative and trust boundaries while minimising\n> unnecessary disclosure of delegation history and participant information.\n> \n"
+   },
+   "result": "Under my revision a dialog that first continues over another transport is\ncovered by the first of the scenarios, which I have left as it was, namely\n1. Transport change, in which a dialog continues over another transport.\n\n2."
+  },
+  {
+   "args": {
+    "text": "Under my revision a dialog that first continues over another transport is\ncovered by the first of the scenarios, which I have left as it was, namely\n1. Transport change, in which a dialog continues over another transport.\n\n2.\n\nThe protocol should allow a receiving participant to verify a particular\nrelationship across administrative and trust boundaries while minimising\nunnecessary disclosure of delegation history and participant information.\n",
+    "parent_body": "The scenarios are:\n1. Transport change, in which a dialog continues over another transport.\n2. Cross-domain continuation, where a dialog crosses a trust boundary.\n\nThe protocol should allow a receiving participant to verify a particular\nrelationship across administrative and trust boundaries while minimising\nunnecessary disclosure of delegation history and participant information.\n",
+    "continuation": true
+   },
+   "result": "Under my revision a dialog that first continues over another transport is\ncovered by the first of the scenarios, which I have left as it was, namely"
   },
   {
    "args": {
@@ -106,6 +189,15 @@
     "parent_body": "q one two three four\nq five six seven eight\np one two three four\np five six seven eight\nA short\nB short\nC short"
    },
    "result": "A short\nB short\nC short"
+  },
+  {
+   "args": {
+    "text": "relationship across administrative and trust boundaries while minimising\nunnecessary disclosure of delegation history and participant information.\nAgreed, thanks.\n",
+    "parent_body": "Comments on the draft are below.\n\nThe protocol should allow a receiving participant to verify a particular\nrelationship across administrative and trust boundaries while minimising\nunnecessary disclosure of delegation history and participant information.\n\nThe protocol should distinguish between:\n\n   - Verification of an individual parent-to-child relationship.\n   - Verification of a complete delegation or propagation chain.\n   - Verification based on partial provenance.\n   - Disclosure of the identities of all participants in the interaction\n   path.\n\nRegards,\nAlex\n",
+    "continuation": true,
+    "quoted_text": "> Comments on the draft are below.\n> \n> The protocol should allow a receiving participant to verify a particular\n> relationship across administrative and trust boundaries while minimising\n> unnecessary disclosure of delegation history and participant information.\n> \n> The protocol should distinguish between:\n> \n>    - Verification of an individual parent-to-child relationship.\n>    - Verification of a complete delegation or propagation chain.\n>    - Verification based on partial provenance.\n>    - Disclosure of the identities of all participants in the interaction\n>    path.\n> \n> Regards,\n> Alex\n> \n"
+   },
+   "result": "Agreed, thanks."
   },
   {
    "args": {

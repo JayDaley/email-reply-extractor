@@ -27,7 +27,7 @@ library, in any of the three languages, that report the same
 `EXTRACTION_VERSION` derive the
 same text from the same input.
 
-It is currently **8**. Eight generations exist; the first four shipped in the
+It is currently **9**. Nine generations exist; the first four shipped in the
 origin application, `mailing-list-ai-check`:
 
 | Generation | First shipped | What changed |
@@ -40,6 +40,7 @@ origin application, `mailing-list-ai-check`:
 | 6 | email-reply-extractor v1.2.0 | Latin-script localized quote-header blocks (French, Spanish, Portuguese, Italian, Dutch, German openers, with U+00A0 / U+202F colon spacing) and "Original message" dividers; a message with the author's tagged inline replies below such a block keeps its generation-5 treatment. |
 | 7 | email-reply-extractor v1.3.0 | The parent-diff aligned-run rule aligns around the longest common run of lines instead of `difflib.SequenceMatcher`, and the parent-diff assist runs in linear time; the fragment scanner inserts the collapsed attribution header literally (see [generation-7.md](generation-7.md)). |
 | 8 | email-reply-extractor v1.4.0 | A `<blockquote>` whose parent element carries Apple Mail's Share-sheet class `Apple-Mail-URLShareWrapperClass` is the author's own text, not a quote, and a message holding such a container outside any quote derives its text from the HTML part (see [generation-8.md](generation-8.md)). |
+| 9 | email-reply-extractor v1.5.0 | A matched run of lines that the message also carries inside its own marked quotation is kept by the parent-diff assist when its block of consecutive non-blank lines is mostly unmatched text; `strip_parent_content` takes the marked quotation as a new optional argument (see [generation-9.md](generation-9.md)). |
 
 `email-reply-extractor` 1.0.0 ships generation 4 unchanged: vendoring the
 fragment scanner left every corpus output byte-identical, and a differential

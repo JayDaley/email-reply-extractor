@@ -141,6 +141,7 @@ changed without a generation bump. The rules for incrementing are in
 | 6 | `6ccdd626b598da3948b4119ae383ae02f587855c7ea1cb946ff21984dbb1a0d8` | v1.2.0: localized quote-header blocks and dividers, with the two French fixtures added. |
 | 7 | `b4fc24eee6a5a2daaeac57d87fca6245663f3f25a1a1f495874fd7427a65e9f6` | v1.3.0: the linear parent-diff assist, with the synthetic repeated-signature fixture added. Over the 26 earlier fixtures the output is unchanged; the digest moved with the added fixture. |
 | 8 | `e003451394561ba2bd1270e6be5a2bbbef50f247df7466eb77235871f8663450` | v1.4.0: Apple Mail Share-sheet containers, with the synthetic Share-sheet fixture added. Over the 27 earlier fixtures the digested output is unchanged; the digest moved with the added fixture. `split_html_parts` results gained the `has_share_container` field. |
+| 9 | `e003451394561ba2bd1270e6be5a2bbbef50f247df7466eb77235871f8663450` | v1.5.0: the parent-diff own-quotation rule. No fixture passes a thread parent with a body whose marked quotation contains a matched run, so the digested output is unchanged and the digest equals that of generation 8. `strip_parent_content` vectors gained the optional `quoted_text` argument. |
 
 ## vectors/
 

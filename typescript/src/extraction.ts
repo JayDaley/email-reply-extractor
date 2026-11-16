@@ -34,7 +34,7 @@ import {
  * ports). Consumers stamp stored derived text with it and compare with `<`, so
  * it only ever increases. See docs/versioning.md.
  */
-export const EXTRACTION_VERSION = 8;
+export const EXTRACTION_VERSION = 9;
 
 // --- result -------------------------------------------------------------------
 
@@ -1017,20 +1017,128 @@ export class ParentStream {
   }
 }
 
+/**
+ * Rule (c): `seeds` extended to the fixpoint of the continuation test. The
+ * reference's `_continuation_marks`: an unmarked, unprotected line is marked
+ * when an adjacent non-blank line is marked and the two, joined in reading
+ * order, occur contiguously in the parent's word-stream. The rule is monotone,
+ * so a worklist over the neighbors of newly marked lines reaches the fixpoint.
+ */
+function continuationMarks(
+  childSeq: readonly string[],
+  seeds: readonly boolean[],
+  isProtected: readonly boolean[],
+  parentStream: ParentStream,
+): boolean[] {
+  const count = childSeq.length;
+  const isMarked = seeds.slice();
+  const normAt = (k: number): string => childSeq[k] as string;
+
+  /** Unmarked `k` joins a marked neighbor contiguously in the parent. */
+  const chains = (k: number): boolean => {
+    const norm = normAt(k);
+    if (k > 0 && isMarked[k - 1] && parentStream.contains(`${normAt(k - 1)} ${norm}`)) return true;
+    if (k + 1 < count && isMarked[k + 1] && parentStream.contains(`${norm} ${normAt(k + 1)}`)) return true;
+    return false;
+  };
+
+  const pending: number[] = [];
+  for (let k = 0; k < count; k++) {
+    if (!isMarked[k] && !isProtected[k] && ((k > 0 && isMarked[k - 1]) || (k + 1 < count && isMarked[k + 1]))) {
+      pending.push(k);
+    }
+  }
+  for (let k = pending.pop(); k !== undefined; k = pending.pop()) {
+    if (isMarked[k] || isProtected[k] || !chains(k)) continue;
+    isMarked[k] = true;
+    for (const j of [k - 1, k + 1]) {
+      if (j >= 0 && j < count && !isMarked[j]) pending.push(j);
+    }
+  }
+  return isMarked;
+}
+
+/** The quote-marked lines of `body`, in order, joined by newlines (`_marked_quotation`). */
+function markedQuotation(body: string): string {
+  return normalizeBody(body).split("\n").filter(isQuoteLine).join("\n");
+}
+
+/**
+ * Rule (d): which child lines (indexes of `childPairs`) are protected. The
+ * reference's `_restored_by_own_quotation`; the comment above it there is the
+ * specification. A segment (a maximal run of marked lines within a block of
+ * consecutive non-blank lines) is restored when the block's unmarked lines
+ * total more words than its marked lines and the quotation stream contains
+ * the segment's lines joined by single spaces.
+ */
+function restoredByOwnQuotation(
+  childPairs: readonly (readonly [number, string])[],
+  marks: readonly boolean[],
+  quotedSeq: readonly string[],
+): boolean[] {
+  const count = childPairs.length;
+  const isProtected: boolean[] = new Array<boolean>(count).fill(false);
+  if (count === 0 || quotedSeq.length === 0) return isProtected;
+  const indexAt = (k: number): number => (childPairs[k] as readonly [number, string])[0];
+  const normAt = (k: number): string => (childPairs[k] as readonly [number, string])[1];
+
+  // Blocks: consecutive indexes in the text. Words per block, by mark.
+  const block = new Int32Array(count);
+  for (let k = 1; k < count; k++) {
+    block[k] = (block[k - 1] as number) + (indexAt(k) === indexAt(k - 1) + 1 ? 0 : 1);
+  }
+  const blocks = (block[count - 1] as number) + 1;
+  const markedWords = new Float64Array(blocks);
+  const unmarkedWords = new Float64Array(blocks);
+  for (let k = 0; k < count; k++) {
+    const words = pyWordCount(normAt(k));
+    const b = block[k] as number;
+    if (marks[k]) markedWords[b] = (markedWords[b] as number) + words;
+    else unmarkedWords[b] = (unmarkedWords[b] as number) + words;
+  }
+
+  let quotation: ParentStream | null = null;
+  let k = 0;
+  while (k < count) {
+    if (!marks[k]) {
+      k++;
+      continue;
+    }
+    const start = k;
+    while (k + 1 < count && marks[k + 1] && block[k + 1] === block[start]) k++;
+    const end = k;
+    k++;
+    const b = block[start] as number;
+    if ((unmarkedWords[b] as number) <= (markedWords[b] as number)) continue; // step 2
+    if (quotation === null) quotation = new ParentStream(quotedSeq);
+    const segment: string[] = [];
+    for (let j = start; j <= end; j++) segment.push(normAt(j));
+    if (!quotation.contains(segment.join(" "))) continue; // step 1
+    for (let j = start; j <= end; j++) isProtected[j] = true;
+  }
+  return isProtected;
+}
+
 /** Options of {@link stripParentContent}. */
 export interface StripParentOptions {
   /** Apply the continuation rule (default `false`). */
   readonly continuation?: boolean;
+  /**
+   * The message's marked quotation: the quote-marked lines of its body. When
+   * given, the own-quotation rule restores matched runs that it contains.
+   */
+  readonly quotedText?: string | null;
 }
 
 /**
  * Remove lines of `text` that provably came from `parentBody`.
  *
  * Pure; never throws. See the reference's `strip_parent_content` for the
- * aligned-run, rewrap and continuation rules.
+ * aligned-run, rewrap, continuation and own-quotation rules.
  */
 export function stripParentContent(text: string, parentBody: string, options: StripParentOptions = {}): string {
   const continuation = options.continuation ?? false;
+  const quotedText = options.quotedText ?? null;
   const childRaw = normalizeBody(text).split("\n");
   const childNorm = childRaw.map(normalizeLineForDiff);
   const parentNorm = normalizeBody(parentBody).split("\n").map(normalizeLineForDiff);
@@ -1041,63 +1149,54 @@ export function stripParentContent(text: string, parentBody: string, options: St
   });
   const childSeq = childPairs.map(([, norm]) => norm);
   const parentSeq = parentNorm.filter((norm) => norm);
-
-  // The reference's `marked` set of child line indexes.
-  const marked = new Uint8Array(childRaw.length);
-  let markedCount = 0;
-  const mark = (i: number): void => {
-    if (marked[i] === 0) {
-      marked[i] = 1;
-      markedCount++;
-    }
+  const count = childPairs.length;
+  const countTrue = (flags: readonly boolean[]): number => {
+    let n = 0;
+    for (const flag of flags) if (flag) n++;
+    return n;
   };
 
   // Rule (a): runs of matching lines with enough substance, aligned around
   // the longest common run.
-  const ruleA = alignedRunMarks(childSeq, parentSeq);
-  for (let k = 0; k < childPairs.length; k++) {
-    if (ruleA[k]) mark((childPairs[k] as [number, string])[0]);
-  }
+  let seeds: boolean[] = Array.from(alignedRunMarks(childSeq, parentSeq), (flag) => Boolean(flag));
 
   // Rule (b): a long child line re-wrapped from the parent.
   const parentStream = new ParentStream(parentSeq);
-  for (const [origI, norm] of childPairs) {
-    if (marked[origI]) continue;
-    if (pyWordCount(norm) >= PARENT_DIFF_MIN_LINE_WORDS && parentStream.contains(norm)) mark(origI);
+  for (let k = 0; k < count; k++) {
+    if (seeds[k]) continue;
+    const norm = childSeq[k] as string;
+    if (pyWordCount(norm) >= PARENT_DIFF_MIN_LINE_WORDS && parentStream.contains(norm)) seeds[k] = true;
   }
 
   // Rule (c): chain short remainder lines off marked neighbors, to a fixpoint.
-  // The rule is monotone (a mark only ever enables more marks), so its
-  // fixpoint is the same whatever order lines are examined in. A worklist
-  // re-examines only the neighbors of a newly marked line; repeating full
-  // passes until nothing changed needed one pass per backward-chained mark.
-  if (continuation && markedCount >= PARENT_DIFF_CONTINUATION_MIN_SEEDS) {
-    const count = childPairs.length;
-    const isMarked = childPairs.map(([origI]) => marked[origI] === 1);
-    const normAt = (k: number): string => (childPairs[k] as [number, string])[1];
+  const unprotected: boolean[] = new Array<boolean>(count).fill(false);
+  let marks = seeds;
+  if (continuation && countTrue(seeds) >= PARENT_DIFF_CONTINUATION_MIN_SEEDS) {
+    marks = continuationMarks(childSeq, seeds, unprotected, parentStream);
+  }
 
-    /** Unmarked `k` joins a marked neighbor contiguously in the parent. */
-    const chains = (k: number): boolean => {
-      const norm = normAt(k);
-      if (k > 0 && isMarked[k - 1] && parentStream.contains(`${normAt(k - 1)} ${norm}`)) return true;
-      if (k + 1 < count && isMarked[k + 1] && parentStream.contains(`${norm} ${normAt(k + 1)}`)) return true;
-      return false;
-    };
-
-    const pending: number[] = [];
-    for (let k = 0; k < count; k++) {
-      if (!isMarked[k] && ((k > 0 && isMarked[k - 1]) || (k + 1 < count && isMarked[k + 1]))) pending.push(k);
-    }
-    for (let k = pending.pop(); k !== undefined; k = pending.pop()) {
-      if (isMarked[k] || !chains(k)) continue;
-      isMarked[k] = true;
-      mark((childPairs[k] as [number, string])[0]);
-      for (const j of [k - 1, k + 1]) {
-        if (j >= 0 && j < count && !isMarked[j]) pending.push(j);
-      }
+  // Rule (d): restore segments the message also carries in its marked
+  // quotation, then re-derive rule (c) without them.
+  const quotedSeq =
+    quotedText === null
+      ? []
+      : normalizeBody(quotedText)
+          .split("\n")
+          .map(normalizeLineForDiff)
+          .filter((norm) => norm);
+  const isProtected = restoredByOwnQuotation(childPairs, marks, quotedSeq);
+  if (isProtected.includes(true)) {
+    seeds = seeds.map((flag, k) => flag && !isProtected[k]);
+    marks = seeds;
+    if (continuation && countTrue(seeds) >= PARENT_DIFF_CONTINUATION_MIN_SEEDS) {
+      marks = continuationMarks(childSeq, seeds, isProtected, parentStream);
     }
   }
 
+  const marked = new Uint8Array(childRaw.length);
+  for (let k = 0; k < count; k++) {
+    if (marks[k]) marked[(childPairs[k] as [number, string])[0]] = 1;
+  }
   const survivors: string[] = [];
   childRaw.forEach((line, i) => {
     if (!marked[i]) survivors.push(pyRstrip(line));
@@ -1290,6 +1389,8 @@ function nameInHead(head: string, names: readonly string[]): boolean {
 /** Run the ERP + custom + over-strip-guard + parent-diff pipeline; returns `[text, method]`. */
 function coreExtract(body: string, parentBody: string | null): [string, string] {
   let normalized = normalizeBody(body);
+  // The marked quotation is taken from the whole body, before any truncation.
+  const quotedText = markedQuotation(normalized);
 
   // Truncate at a forwarded/quote-header block before ERP (see the reference).
   const lines = normalized.split("\n");
@@ -1325,7 +1426,7 @@ function coreExtract(body: string, parentBody: string | null): [string, string] 
 
   // Parent-diff assist, after guard resolution.
   if (parentBody !== null && !isBlank(text)) {
-    const assisted = stripParentContent(text, parentBody, { continuation: true });
+    const assisted = stripParentContent(text, parentBody, { continuation: true, quotedText });
     if (nonblankLineCount(assisted) < nonblankLineCount(text)) {
       text = assisted;
       method += "+parent-diff";
@@ -1461,7 +1562,7 @@ export function extractNewText(body: string | null | undefined, options: Extract
 
     // (c) Oracle assist: remove content provably present in the HTML's quoted text.
     if (parts !== null && !isBlank(text) && !isBlank(parts.quotedText)) {
-      const assisted = stripParentContent(text, parts.quotedText);
+      const assisted = stripParentContent(text, parts.quotedText, { quotedText: markedQuotation(body) });
       if (nonblankLineCount(text) - nonblankLineCount(assisted) >= HTML_QUOTE_MIN_REMOVED) {
         text = assisted;
         method += "+html-quote";

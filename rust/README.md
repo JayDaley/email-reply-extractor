@@ -140,13 +140,24 @@ internal failure as `Status::Failed` with empty text, as the reference does.
 The rules of both stages are documented in
 [docs/extraction.md](https://github.com/JayDaley/email-reply-extractor/blob/main/docs/extraction.md).
 
+## Limitations
+
+The rules are heuristics over text, and their known limits are the same in
+every port: text the author repeats from the thread parent, the evidence the
+caller must supply, the languages and mail clients recognized, and the scope
+of the measurements. They are listed in the
+[Limitations section of the repository README](https://github.com/JayDaley/email-reply-extractor/blob/main/README.md#limitations).
+
 ## Usage
 
 ### Arguments
 
 The reference's optional arguments (Python default `None`) are `Option<&str>`
 parameters, in the reference's order. Its keyword-only `continuation` flag of
-`strip_parent_content` is a `bool` (the reference's default is `false`). The
+`strip_parent_content` is a `bool` (the reference's default is `false`); its
+keyword-only `quoted_text` argument is taken by a separate function,
+`strip_parent_content_with_quotation`, and `strip_parent_content` is that
+function with no quotation. The
 keyword-only `part_starts` argument of `clean_for_scoring` is taken by a
 separate function, `clean_for_scoring_with_parts`; `clean_for_scoring` is that
 function with no part boundaries.
@@ -270,6 +281,7 @@ reported as one part.
 | `split_html_parts(html)` | The same text split into `HtmlParts { novel_text, quoted_text, signature_text, has_share_container }`. |
 | `HtmlParts` | Struct returned by `split_html_parts`. |
 | `strip_parent_content(text, parent_body, continuation)` | Remove lines of `text` provably drawn from `parent_body`. |
+| `strip_parent_content_with_quotation(text, parent_body, continuation, quoted_text)` | The same, with the message's marked quotation (`Option<&str>`): a removed run that the quotation contains is kept when its block is mostly unmatched text. |
 | `tolerant_lines(text)` | The non-blank lines of `text`, edge whitespace stripped and U+00A0 unified to spaces. |
 | `texts_equivalent(a, b)` | `true` when `a` and `b` differ at most in whitespace. |
 | `VERSION` | The package version. |

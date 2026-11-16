@@ -32,4 +32,4 @@ export {
 export { type HtmlParts, htmlToText, splitHtmlParts } from "./htmlText.js";
 
 /** The package version (equal to the Python package's `__version__`). */
-export const VERSION = "1.4.0";
+export const VERSION = "1.5.0";

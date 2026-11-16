@@ -1395,6 +1395,170 @@ def test_continuation_keeps_the_authors_own_signoff():
     assert "is mechanical." not in result
 
 
+# --- parent-diff own-quotation rule (d) ----------------------------------------
+
+# A parent that carries an earlier draft of a proposal. The children below are
+# replies whose top-posted text is a revision of that draft, above the client's
+# marked quotation of the parent.
+_DRAFT_PARENT = (
+    "Comments on the draft are below.\n"
+    "\n"
+    "The protocol should allow a receiving participant to verify a particular\n"
+    "relationship across administrative and trust boundaries while minimising\n"
+    "unnecessary disclosure of delegation history and participant information.\n"
+    "\n"
+    "The protocol should distinguish between:\n"
+    "\n"
+    "   - Verification of an individual parent-to-child relationship.\n"
+    "   - Verification of a complete delegation or propagation chain.\n"
+    "   - Verification based on partial provenance.\n"
+    "   - Disclosure of the identities of all participants in the interaction\n"
+    "   path.\n"
+    "\n"
+    "Regards,\n"
+    "Alex\n"
+)
+_DRAFT_QUOTATION = "".join("> " + line + "\n" for line in _DRAFT_PARENT.split("\n"))
+
+
+def _strip_with_quotation(child: str, parent: str = _DRAFT_PARENT) -> str:
+    return strip_parent_content(child, parent, continuation=True, quoted_text=_DRAFT_QUOTATION)
+
+
+def test_own_quotation_rule_keeps_a_parent_line_ending_the_authors_paragraph():
+    child = (
+        "Enable a receiving participant to verify a particular linked-dialog\n"
+        "relationship across administrative and trust domains, while keeping\n"
+        "unnecessary disclosure of delegation history and participant information.\n"
+    )
+    # Without the marked quotation the last line is removed (generation 8).
+    assert "unnecessary disclosure" not in strip_parent_content(
+        child, _DRAFT_PARENT, continuation=True
+    )
+    assert _strip_with_quotation(child) == child.strip()
+
+
+def test_own_quotation_rule_keeps_a_parent_line_opening_the_authors_paragraph():
+    # The matched line opens its block: nothing of the author's leads into it.
+    child = (
+        "The protocol should allow a receiving participant to verify a particular\n"
+        "dialog relationship, and only that relationship, across the boundaries of\n"
+        "the administrative domains that the dialog passes through on its way.\n"
+    )
+    assert "verify a particular" not in strip_parent_content(
+        child, _DRAFT_PARENT, continuation=True
+    )
+    assert _strip_with_quotation(child) == child.strip()
+
+
+def test_own_quotation_rule_keeps_parent_items_inside_the_authors_list():
+    child = (
+        "The protocol SHOULD distinguish between the following four cases:\n"
+        "   - Verification of an individual parent-to-child dialog relationship.\n"
+        "   - Verification of a complete delegation or propagation chain.\n"
+        "   - Verification based on partial provenance.\n"
+        "   - Disclosure of the identities of participants in the interaction path.\n"
+        "   - Verification that the delegated authority has not been withdrawn.\n"
+    )
+    assert _strip_with_quotation(child) == child.strip()
+
+
+def test_own_quotation_rule_removes_text_the_marked_quotation_lacks():
+    # The message quotes something else with markers: the matched line is not
+    # in its marked quotation, so it may be the client's unmarked copy.
+    child = (
+        "Enable a receiving participant to verify a particular linked-dialog\n"
+        "relationship across administrative and trust domains, while keeping\n"
+        "unnecessary disclosure of delegation history and participant information.\n"
+    )
+    result = strip_parent_content(
+        child,
+        _DRAFT_PARENT,
+        continuation=True,
+        quoted_text="> An unrelated earlier message that the reply also quotes.\n",
+    )
+    assert "unnecessary disclosure" not in result
+    assert "Enable a receiving participant" in result
+
+
+def test_own_quotation_rule_removes_a_passage_placed_whole():
+    # A paragraph of the parent pasted above the answer to it: its block is
+    # entirely matched text, so it stays removed although the marked
+    # quotation contains it.
+    child = (
+        "The protocol should allow a receiving participant to verify a particular\n"
+        "relationship across administrative and trust boundaries while minimising\n"
+        "unnecessary disclosure of delegation history and participant information.\n"
+        "\n"
+        "I do not think minimising disclosure belongs in this requirement at all.\n"
+    )
+    result = _strip_with_quotation(child)
+    assert result == "I do not think minimising disclosure belongs in this requirement at all."
+
+
+def test_own_quotation_rule_removes_a_mostly_matched_block():
+    # Two matched lines and a short answer directly below them: the block's
+    # matched lines carry more words than its unmatched line.
+    child = (
+        "relationship across administrative and trust boundaries while minimising\n"
+        "unnecessary disclosure of delegation history and participant information.\n"
+        "Agreed, thanks.\n"
+    )
+    assert _strip_with_quotation(child) == "Agreed, thanks."
+
+
+def test_own_quotation_rule_rederives_continuation_without_restored_lines():
+    # "2." chains off the long line above it (the two are contiguous in the
+    # parent), but that line is restored, so "2." is no longer removed. The
+    # pasted paragraph below still seeds the continuation rule.
+    parent = (
+        "The scenarios are:\n"
+        "1. Transport change, in which a dialog continues over another transport.\n"
+        "2. Cross-domain continuation, where a dialog crosses a trust boundary.\n"
+        "\n"
+        "The protocol should allow a receiving participant to verify a particular\n"
+        "relationship across administrative and trust boundaries while minimising\n"
+        "unnecessary disclosure of delegation history and participant information.\n"
+    )
+    quotation = "".join("> " + line + "\n" for line in parent.split("\n"))
+    child = (
+        "Under my revision a dialog that first continues over another transport is\n"
+        "covered by the first of the scenarios, which I have left as it was, namely\n"
+        "1. Transport change, in which a dialog continues over another transport.\n"
+        "\n"
+        "2.\n"
+        "\n"
+        "The protocol should allow a receiving participant to verify a particular\n"
+        "relationship across administrative and trust boundaries while minimising\n"
+        "unnecessary disclosure of delegation history and participant information.\n"
+    )
+    result = strip_parent_content(child, parent, continuation=True, quoted_text=quotation)
+    assert "1. Transport change" in result
+    assert "\n2." in result
+    assert "The protocol should allow" not in result
+    # Generation 8 removed all three.
+    old = strip_parent_content(child, parent, continuation=True)
+    assert "1. Transport change" not in old and "\n2." not in old
+
+
+def test_extract_new_text_keeps_a_revision_above_the_marked_quotation():
+    revision = (
+        "Here is the revised requirement.\n"
+        "\n"
+        "Enable a receiving participant to verify a particular linked-dialog\n"
+        "relationship across administrative and trust domains, while keeping\n"
+        "unnecessary disclosure of delegation history and participant information.\n"
+    )
+    body = revision + "\nOn Mon, 2 Nov 2026, Alex wrote:\n\n" + _DRAFT_QUOTATION
+    result = extract_new_text(body, _DRAFT_PARENT)
+    assert result.text == revision.strip()
+    assert "+parent-diff" not in result.method
+    # The same text with no marked quotation in the body loses the line.
+    unmarked = extract_new_text(revision, _DRAFT_PARENT)
+    assert "unnecessary disclosure" not in unmarked.text
+    assert unmarked.method.endswith("+parent-diff")
+
+
 def test_parent_diff_no_removal_leaves_text_and_method_untouched():
     # A parent that shares no substantial content must not change the output.
     # strip_parent_content collapses internal blank runs, so a naive string

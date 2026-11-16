@@ -39,6 +39,22 @@ Any other line (headings above level 2, blank lines, prose in this Format
 section) is not part of a release record and can be ignored. Outside fenced
 code blocks, no release section appears before the first `## [` header.
 
+## [1.5.0] - 2026-11-16
+
+Summary: Generation 9: the parent-diff assist keeps a line the author repeated from the thread parent when the message also carries it inside its own marked quotation.
+
+- Bump `EXTRACTION_VERSION` to 9; the corpus digest is unchanged, because no fixture exercises the new rule, and is re-recorded against generation 9.
+- `strip_parent_content` restores a run of matched lines when the message's marked quotation (the quote-marked lines of its body) contains the run and the run's block of consecutive non-blank lines has more unmatched than matched words (the own-quotation rule).
+- After a restoration the continuation rule is evaluated again from the remaining aligned-run and rewrap marks and never marks a restored line.
+- `extract_new_text` passes the body's marked quotation to the parent-diff assist and to the HTML oracle's assist; the localized inline-reply test passes none.
+- Python: `strip_parent_content` gained the keyword-only argument `quoted_text` (default `None`).
+- TypeScript: `stripParentContent` gained the option `quotedText`.
+- Rust: added `strip_parent_content_with_quotation`, which takes `quoted_text: Option<&str>`; `strip_parent_content` is that function with no quotation.
+- Over the 154,429 stored extractions of the origin application, the extracted text of 1,146 messages changes and 2,572 lines that generation 8 removed are kept.
+- Added two adversarial inputs for the rule to each port's complexity tests, and a specification transcription compared with the implementation on random inputs to the Python suite.
+- Added `docs/generation-9.md`.
+- Added a "Limitations" section to the repository README and the Python README, with a pointer to it in the TypeScript and Rust READMEs.
+
 ## [1.4.0] - 2026-11-15
 
 Summary: Generation 8: text sent through Apple Mail's Share sheet, which the plain part marks as quoted, is read from the HTML part; extraction results report the boundaries between the separate runs of an inline reply.

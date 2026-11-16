@@ -276,10 +276,39 @@ child line as parent content:
   the first two rules marked at least 3 lines, so an isolated inline-citation
   echo cannot seed a chain into the author's own text.
 
-The substring tests of the rewrap and continuation rules give the same
-answers as a plain substring search, but are answered from an index over the
-parent's word-stream built once per call, so the whole function runs in time
-linear in the size of the child and the parent.
+- **Own-quotation rule.** The first three rules accept a match anywhere in the
+  child, so a line the author wrote that repeats a line of the parent is
+  marked too: a line kept in a revised paragraph, the new wording of a
+  proposed-text edit, a phrase of the parent cited inside a sentence. This
+  rule restores such lines when the message shows where its client put the
+  quotation. The message's *marked quotation* is the quote-marked lines of
+  its body; its *quotation stream* is those lines, normalized (the marker
+  stripped), without the blank ones, joined by single spaces. A *block* is a
+  maximal run of consecutive non-blank lines of the text, and a *segment* is a
+  maximal run of consecutive marked lines within one block. A segment is
+  restored when both hold:
+  1. the quotation stream contains the segment's lines joined by single
+     spaces. The client's copy of the parent is the marked one, so a second
+     copy outside it was placed there by the author;
+  2. the unmarked lines of the segment's block total more words than its
+     marked lines. The block is mostly text the parent does not have, so the
+     segment is part of a passage the author wrote. A passage placed whole (a
+     citation pasted from the parent, a signature) keeps its marks.
+
+  A message with no marked quotation restores nothing. The lines of restored
+  segments are protected: the continuation rule is evaluated again from the
+  remaining marks of the first two rules (when at least 3 remain) and never
+  marks a protected line, so a line that only chained off a restored line is
+  kept too. The rule applies wherever the assist runs with the body at hand:
+  against the thread parent and against the HTML oracle's quoted text. It is
+  not applied by the localized inline-reply test, which passes no quotation.
+
+The substring tests of the rewrap, continuation and own-quotation rules give
+the same answers as a plain substring search, but are answered from an index
+over the parent's word-stream (for the own-quotation rule, the quotation
+stream) built once per call. The segments the own-quotation rule tests are
+disjoint, so their total length is at most the child's. The whole function
+runs in time linear in the size of the child, the parent and the quotation.
 
 The continuation rule is safe against a parent body, which never contains the
 author's new text, but not against this message's own HTML quote container,

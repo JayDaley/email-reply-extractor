@@ -168,6 +168,34 @@ const CASES: [string, () => unknown][] = [
   ],
 ];
 
+/**
+ * `n` blocks, each a line of the parent between two longer lines of the
+ * author's; the parent doubles as the marked quotation, so rule (d) queries
+ * the quotation stream once per block and restores every segment.
+ */
+function ownQuotationSegments(n: number): [string, string] {
+  const child: string[] = [];
+  const parent: string[] = [];
+  for (let k = 0; k < n; k++) {
+    child.push(
+      `x${k} y${k} z${k} q${k} r${k} s${k} t${k} u${k} v${k} w${k} o${k}\n` +
+        `p${k} a${k} b${k} c${k} d${k} e${k} f${k} g${k}\n` +
+        `m${k} n${k} o${k} p${k} q${k} r${k} s${k} t${k} u${k}\n\n`,
+    );
+    parent.push(`> p${k} a${k} b${k} c${k} d${k} e${k} f${k} g${k}`);
+  }
+  return [child.join(""), parent.join("\n")];
+}
+
+/**
+ * `n` blocks whose segment the quotation stream's table cannot decide: every
+ * interior word pair of the segment occurs in the quotation (the parent
+ * without its last two words), which never contains the segment.
+ */
+function ownQuotationAutomaton(n: number): [string, string] {
+  return ["b b b b b b b b b b\na a a a a a a c\n\n".repeat(n), `> ${"a ".repeat(200000)}c a`];
+}
+
 // [finding id, input builder, call]. The input is built before timing starts.
 // Comments give the generation-6 port's cost on the same input on V8.
 const PREPARED_CASES: [string, () => [string, string], (child: string, parent: string) => unknown][] = [
@@ -186,6 +214,18 @@ const PREPARED_CASES: [string, () => [string, string], (child: string, parent: s
   ],
   // Continuation rule (c): one substring search of the parent per join (184 s).
   ["G7c-stripParentContent", () => remainderChain(300000), (c, p) => stripParentContent(c, p, { continuation: true })],
+  // Own-quotation rule (d): one quotation-stream query per segment, then the
+  // continuation rule again (added with the rule; no earlier cost).
+  [
+    "own-quotation-stripParentContent",
+    () => ownQuotationSegments(50000),
+    (c, p) => stripParentContent(c, p, { continuation: true, quotedText: p }),
+  ],
+  [
+    "own-quotation-automaton-stripParentContent",
+    () => ownQuotationAutomaton(100000),
+    (c, p) => stripParentContent(c, p, { continuation: true, quotedText: p.slice(0, -4) }),
+  ],
   // Inline-reply author tags: per tag, a search of the parent and of the text
   // above the quote header (2.2 s in this port, whose name search was already
   // an indexOf scan; 99 s in the reference; kept for parity).
@@ -221,6 +261,22 @@ test("the G7c input marks every line", () => {
   // The G7c input exercises the continuation rule: every remainder chains.
   const [child, parent] = remainderChain(50);
   assert.equal(stripParentContent(child, parent, { continuation: true }), "");
+});
+
+test("the own-quotation input restores every segment", () => {
+  // The own-quotation input exercises rule (d): every segment is restored.
+  const [child, parent] = ownQuotationSegments(20);
+  assert.notEqual(stripParentContent(child, parent, { continuation: true }), child.trim());
+  assert.equal(stripParentContent(child, parent, { continuation: true, quotedText: parent }), child.trim());
+});
+
+test("the own-quotation automaton input reaches the quotation query", () => {
+  // Every block is mostly unmatched and its segment is marked, so each one
+  // queries the quotation stream, which does not contain it.
+  const [child, parent] = ownQuotationAutomaton(20);
+  const plain = stripParentContent(child, parent, { continuation: true });
+  assert.ok(!plain.includes("a a a a a a a c"));
+  assert.equal(stripParentContent(child, parent, { continuation: true, quotedText: parent.slice(0, -4) }), plain);
 });
 
 test("the G7tag input reaches every tag", () => {

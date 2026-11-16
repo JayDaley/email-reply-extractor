@@ -179,7 +179,7 @@ reproduces the answers exactly; the data structures are the port's choice.
   the longest matched run strictly exceeds every earlier one, and the
   automaton state's `first_end` (the smallest end position of its strings,
   copied to a clone from the state it splits).
-- **Rules (b) and (c), `_ParentStream`.** `contains(needle)` equals the
+- **Rules (b), (c) and (d), `_ParentStream`.** `contains(needle)` equals the
   substring test `needle in " ".join(parent_seq)`. Every needle is one or two
   normalized lines (single spaces between non-empty words, no other
   whitespace); the reference relies on that form only in its word table, and
@@ -197,6 +197,16 @@ reproduces the answers exactly; the data structures are the port's choice.
   because a JavaScript `Map` holds at most 2^24 entries. The Rust port answers
   with `str::contains`, which gives the same result, for a stream too large
   for its 32-bit table offsets.
+- **Rule (d), `_restored_by_own_quotation`.** The specification is the
+  comment above it in `extraction.py`. The quotation stream is queried with
+  the same substring test as the parent's word-stream (`_ParentStream` over
+  the normalized, non-blank lines of `quoted_text`); each needle is one
+  segment, its lines joined by single spaces. Word counts are those of
+  `str.split()` on the normalized line. A block boundary is a gap in the
+  line indexes of the text, so a line that is blank only after normalization
+  (a bare quote marker) separates two blocks. Python and TypeScript take the
+  quotation as an optional argument of `strip_parent_content`; Rust takes it
+  in `strip_parent_content_with_quotation`.
 - **Inline-reply tags, `_any_author_tag`.** Equals, per label, the tests
   `"[" + label in parent_body` and
   `re.search(r"(?<!\w)" + re.escape(name) + r"(?!\w)", head)`, with `\w` as

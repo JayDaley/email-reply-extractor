@@ -76,6 +76,8 @@ diverges from hand-labeled ground truth:
   ``>`` markers at all (so the quote/attribution/header filters see nothing to
   drop), using a line-level alignment around the longest common run of lines
   and an exact substring index over the parent as an evidence-based backstop.
+  A matched run that the message also carries inside its own marked quotation,
+  in a block that is mostly unmatched text, is kept.
   See :func:`strip_parent_content`; it adds the ``"+parent-diff"`` method
   suffix.
 
@@ -179,7 +181,7 @@ from .html_text import html_to_text, split_html_parts
 #: :mod:`html_text` and :mod:`._fragments` together). Hand-incremented; see the
 #: module docstring for when and why. Consumers stamp stored derived text with
 #: it and compare with ``<``, so it must only ever increase.
-EXTRACTION_VERSION: int = 8
+EXTRACTION_VERSION: int = 9
 
 # --- result -------------------------------------------------------------------
 
@@ -1372,7 +1374,157 @@ class _ParentStream:
         return True
 
 
-def strip_parent_content(text: str, parent_body: str, *, continuation: bool = False) -> str:
+def _continuation_marks(
+    child_seq: list[str],
+    seeds: list[bool],
+    protected: list[bool],
+    parent_stream: _ParentStream,
+) -> list[bool]:
+    """Rule (c): ``seeds`` extended to the fixpoint of the continuation test.
+
+    An unmarked, unprotected line is marked when an adjacent non-blank line is
+    marked and the two, joined in reading order, occur contiguously in the
+    parent's word-stream. The rule is monotone (a mark only ever enables more
+    marks), so its fixpoint is the same whatever order lines are examined in. A
+    worklist re-examines only the neighbors of a newly marked line; repeating
+    full passes until nothing changed needed one pass per backward-chained mark.
+    """
+    count = len(child_seq)
+    is_marked = list(seeds)
+
+    def chains(k: int) -> bool:
+        """Unmarked ``k`` joins a marked neighbor contiguously in the parent."""
+        norm = child_seq[k]
+        if k > 0 and is_marked[k - 1]:
+            if parent_stream.contains(child_seq[k - 1] + " " + norm):
+                return True
+        if k + 1 < count and is_marked[k + 1]:
+            if parent_stream.contains(norm + " " + child_seq[k + 1]):
+                return True
+        return False
+
+    pending = [
+        k
+        for k in range(count)
+        if not is_marked[k]
+        and not protected[k]
+        and ((k > 0 and is_marked[k - 1]) or (k + 1 < count and is_marked[k + 1]))
+    ]
+    while pending:
+        k = pending.pop()
+        if is_marked[k] or protected[k] or not chains(k):
+            continue
+        is_marked[k] = True
+        pending.extend(j for j in (k - 1, k + 1) if 0 <= j < count and not is_marked[j])
+    return is_marked
+
+
+# --- rule (d): text the message also quotes with markers ---------------------------
+#
+# Rules (a)-(c) accept a match anywhere in the child, so a line the author wrote
+# that repeats a line of the parent (a revised paragraph that keeps one of the
+# old lines, the NEW wording of a proposed-text edit, a phrase of the parent
+# cited mid-sentence) is marked too. Rule (d) restores such lines when the
+# message itself shows where its client put the quotation.
+#
+# The message's *marked quotation* is the quote-marked lines of its body
+# (:func:`is_quote_line`), in order. Its *quotation stream* is those lines,
+# each normalized by :func:`_normalize_line_for_diff` (which strips the
+# marker), the blank ones dropped, joined by single spaces.
+#
+# A *block* is a maximal run of consecutive lines of the text that are non-blank
+# after normalization. A *segment* is a maximal run of consecutive marked lines
+# within one block. A segment is restored (unmarked) when both hold:
+#
+# 1. The quotation stream contains the segment's lines joined by single
+#    spaces: the message carries this text inside its marked quotation as
+#    well. The client's copy of the parent is the marked one, so the copy
+#    outside it was placed there by the author.
+# 2. The unmarked lines of its block total more words than the marked lines:
+#    the block is mostly text the parent does not have, so the segment is part
+#    of a passage the author wrote. A passage placed whole (a citation pasted
+#    from the parent, a signature) keeps its marks.
+#
+# A message with no marked quotation restores nothing: its client did not mark
+# the quotation, and an unmarked copy of parent text may be the client's.
+#
+# The marks tested are those of rules (a)-(c). The lines of restored segments
+# are *protected*: rule (c) is then evaluated again from the rule (a)/(b) marks
+# of the unprotected lines (when they number at least
+# _PARENT_DIFF_CONTINUATION_MIN_SEEDS) and never marks a protected line, so a
+# line that only chained off a restored line is not removed either.
+#
+# Linear: blocks, segments and word counts take one pass over the child; the
+# segments are disjoint, so the needles of step 1 total at most the child's
+# length, and each is one query of a _ParentStream over the quotation stream
+# (built only when a segment reaches step 1).
+
+
+def _marked_quotation(body: str) -> str:
+    """The quote-marked lines of ``body``, in order, joined by newlines."""
+    return "\n".join(line for line in normalize_body(body).split("\n") if is_quote_line(line))
+
+
+def _restored_by_own_quotation(
+    child_pairs: list[tuple[int, str]],
+    marks: list[bool],
+    quoted_seq: list[str],
+) -> list[bool]:
+    """Rule (d): which child lines (indexes of ``child_pairs``) are protected.
+
+    ``child_pairs`` holds each non-blank normalized child line with its index
+    in the text; ``marks`` are the marks of rules (a)-(c); ``quoted_seq`` is
+    the message's marked quotation, normalized, without blank lines.
+    """
+    count = len(child_pairs)
+    protected = [False] * count
+    if count == 0 or not quoted_seq:
+        return protected
+
+    # Blocks: consecutive indexes in the text. Words per block, by mark.
+    block = [0] * count
+    for k in range(1, count):
+        block[k] = block[k - 1] + (0 if child_pairs[k][0] == child_pairs[k - 1][0] + 1 else 1)
+    marked_words = [0] * (block[-1] + 1)
+    unmarked_words = [0] * (block[-1] + 1)
+    for k in range(count):
+        words = len(child_pairs[k][1].split())
+        if marks[k]:
+            marked_words[block[k]] += words
+        else:
+            unmarked_words[block[k]] += words
+
+    quotation: _ParentStream | None = None
+    k = 0
+    while k < count:
+        if not marks[k]:
+            k += 1
+            continue
+        start = k
+        while k + 1 < count and marks[k + 1] and block[k + 1] == block[start]:
+            k += 1
+        end = k
+        k += 1
+        b = block[start]
+        if unmarked_words[b] <= marked_words[b]:  # step 2 (the cheaper test first)
+            continue
+        if quotation is None:
+            quotation = _ParentStream(quoted_seq)
+        segment = " ".join(child_pairs[j][1] for j in range(start, end + 1))
+        if not quotation.contains(segment):  # step 1
+            continue
+        for j in range(start, end + 1):
+            protected[j] = True
+    return protected
+
+
+def strip_parent_content(
+    text: str,
+    parent_body: str,
+    *,
+    continuation: bool = False,
+    quoted_text: str | None = None,
+) -> str:
     """Remove lines of ``text`` that provably came from ``parent_body``.
 
     Pure and I/O-free; never raises (empty or whitespace-only inputs yield a
@@ -1405,8 +1557,17 @@ def strip_parent_content(text: str, parent_body: str, *, continuation: bool = Fa
        author's new text is never in it) but not against this message's own
        HTML quote container, where a client may wrap the author's inline
        replies (so the html-quote oracle call leaves it off).
+    d) **Own-quotation rule** (only with ``quoted_text``, the message's marked
+       quotation: the quote-marked lines of its body) — a run of marked lines
+       inside a block (a run of consecutive non-blank lines) is restored when
+       ``quoted_text`` contains it and the block's unmarked lines carry more
+       words than its marked lines (see :func:`_restored_by_own_quotation`).
+       Rule (c) is then re-derived from the remaining rule (a)/(b) marks and
+       never marks a restored line. The client's copy of the parent is the
+       marked one; a second copy outside it, inside a passage that is mostly
+       not the parent's, is the author's repetition of it.
 
-    The substring tests of rules (b) and (c) are answered by
+    The substring tests of rules (b), (c) and (d) are answered by
     :class:`_ParentStream`, with the same answers as Python's ``in`` and in
     time linear in the needle, so the whole function runs in time linear in
     the size of ``text`` and ``parent_body``.
@@ -1427,58 +1588,47 @@ def strip_parent_content(text: str, parent_body: str, *, continuation: bool = Fa
     child_seq = [norm for _, norm in child_pairs]
     parent_seq = [norm for norm in parent_norm if norm]
 
-    marked: set[int] = set()
+    count = len(child_pairs)
 
     # Rule (a): runs of matching lines with enough substance, aligned around
     # the longest common run.
-    rule_a = _aligned_run_marks(child_seq, parent_seq)
-    for k in range(len(child_pairs)):
-        if rule_a[k]:
-            marked.add(child_pairs[k][0])
+    seeds = _aligned_run_marks(child_seq, parent_seq)
 
     # Rule (b): a long child line re-wrapped from the parent (line-level match
     # missed it) but still present verbatim in the parent's word-stream.
     parent_stream = _ParentStream(parent_seq)
-    for orig_i, norm in child_pairs:
-        if orig_i in marked:
+    for k in range(count):
+        if seeds[k]:
             continue
+        norm = child_seq[k]
         if len(norm.split()) >= _PARENT_DIFF_MIN_LINE_WORDS and parent_stream.contains(norm):
-            marked.add(orig_i)
+            seeds[k] = True
 
     # Rule (c): chain short remainder lines off marked neighbors, to a fixpoint.
-    # The rule is monotone (a mark only ever enables more marks), so its
-    # fixpoint is the same whatever order lines are examined in. A worklist
-    # re-examines only the neighbors of a newly marked line; repeating full
-    # passes until nothing changed needed one pass per backward-chained mark.
-    if continuation and len(marked) >= _PARENT_DIFF_CONTINUATION_MIN_SEEDS:
-        count = len(child_pairs)
-        is_marked = [orig_i in marked for orig_i, _norm in child_pairs]
+    unprotected = [False] * count
+    marks = seeds
+    if continuation and sum(seeds) >= _PARENT_DIFF_CONTINUATION_MIN_SEEDS:
+        marks = _continuation_marks(child_seq, seeds, unprotected, parent_stream)
 
-        def chains(k: int) -> bool:
-            """Unmarked ``k`` joins a marked neighbor contiguously in the parent."""
-            norm = child_pairs[k][1]
-            if k > 0 and is_marked[k - 1]:
-                if parent_stream.contains(child_pairs[k - 1][1] + " " + norm):
-                    return True
-            if k + 1 < count and is_marked[k + 1]:
-                if parent_stream.contains(norm + " " + child_pairs[k + 1][1]):
-                    return True
-            return False
-
-        pending = [
-            k
-            for k in range(count)
-            if not is_marked[k]
-            and ((k > 0 and is_marked[k - 1]) or (k + 1 < count and is_marked[k + 1]))
+    # Rule (d): restore segments the message also carries in its marked
+    # quotation, then re-derive rule (c) without them.
+    quoted_seq: list[str] = []
+    if quoted_text is not None:
+        quoted_seq = [
+            norm
+            for norm in (
+                _normalize_line_for_diff(line) for line in normalize_body(quoted_text).split("\n")
+            )
+            if norm
         ]
-        while pending:
-            k = pending.pop()
-            if is_marked[k] or not chains(k):
-                continue
-            is_marked[k] = True
-            marked.add(child_pairs[k][0])
-            pending.extend(j for j in (k - 1, k + 1) if 0 <= j < count and not is_marked[j])
+    protected = _restored_by_own_quotation(child_pairs, marks, quoted_seq)
+    if any(protected):
+        seeds = [seeds[k] and not protected[k] for k in range(count)]
+        marks = seeds
+        if continuation and sum(seeds) >= _PARENT_DIFF_CONTINUATION_MIN_SEEDS:
+            marks = _continuation_marks(child_seq, seeds, protected, parent_stream)
 
+    marked = {child_pairs[k][0] for k in range(count) if marks[k]}
     survivors = [line.rstrip() for i, line in enumerate(child_raw) if i not in marked]
 
     # Collapse 2+ consecutive blank lines (left by removals) into one, then trim
@@ -1679,6 +1829,8 @@ def _core_extract(body: str, parent_body: str | None) -> tuple[str, str]:
     owns the try/except and the empty/status decision.
     """
     normalized = normalize_body(body)
+    # The marked quotation is taken from the whole body, before any truncation.
+    quoted_text = _marked_quotation(normalized)
 
     # Truncate at a forwarded/quote-header block *before* ERP. The scanner's
     # wrapped-attribution collapse deletes newlines inside the block ("On\n
@@ -1733,7 +1885,9 @@ def _core_extract(body: str, parent_body: str | None) -> tuple[str, str]:
     # string comparison would fire — mutating the text and mislabeling the
     # method — on a parent that removed nothing.
     if parent_body is not None and text.strip():
-        assisted = strip_parent_content(text, parent_body, continuation=True)
+        assisted = strip_parent_content(
+            text, parent_body, continuation=True, quoted_text=quoted_text
+        )
         if _nonblank_line_count(assisted) < _nonblank_line_count(text):
             text = assisted
             method += "+parent-diff"
@@ -1824,7 +1978,9 @@ def extract_new_text(
         # reformatting would trip), but here it must clear a block threshold so an
         # isolated coincidental match never strips genuine author content.
         if parts is not None and text.strip() and parts.quoted_text.strip():
-            assisted = strip_parent_content(text, parts.quoted_text)
+            assisted = strip_parent_content(
+                text, parts.quoted_text, quoted_text=_marked_quotation(body)
+            )
             if (
                 _nonblank_line_count(text) - _nonblank_line_count(assisted)
                 >= _HTML_QUOTE_MIN_REMOVED

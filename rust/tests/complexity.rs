@@ -28,7 +28,7 @@ use email_reply_extractor::internal::{
 use email_reply_extractor::{
     clean_for_scoring, clean_for_scoring_with_parts, extract_new_text, split_html_parts,
 };
-use email_reply_extractor::{strip_parent_content, Status};
+use email_reply_extractor::{strip_parent_content, strip_parent_content_with_quotation, Status};
 
 /// Time each call may take.
 const BOUND: Duration = Duration::from_secs(5);
@@ -281,6 +281,73 @@ fn g7c_remainder_chain() {
     // 100,000 remainder lines; the reference uses 150,000).
     let (child, parent) = remainder_chain(100_000);
     bounded(|| strip_parent_content(&child, &parent, true));
+}
+
+/// `n` blocks, each a line of the parent between two longer lines of the
+/// author's; the parent doubles as the marked quotation, so rule (d) queries
+/// the quotation stream once per block and restores every segment.
+fn own_quotation_segments(n: usize) -> (String, String) {
+    let mut child = String::new();
+    let mut parent: Vec<String> = Vec::with_capacity(n);
+    for k in 0..n {
+        child.push_str(&format!(
+            "x{k} y{k} z{k} q{k} r{k} s{k} t{k} u{k} v{k} w{k} o{k}\n\
+             p{k} a{k} b{k} c{k} d{k} e{k} f{k} g{k}\n\
+             m{k} n{k} o{k} p{k} q{k} r{k} s{k} t{k} u{k}\n\n"
+        ));
+        parent.push(format!("> p{k} a{k} b{k} c{k} d{k} e{k} f{k} g{k}"));
+    }
+    (child, parent.join("\n"))
+}
+
+/// `n` blocks whose segment the quotation stream's table cannot decide: every
+/// interior word pair of the segment occurs in the quotation (the parent
+/// without its last two words), which never contains the segment.
+fn own_quotation_automaton(n: usize) -> (String, String) {
+    (
+        "b b b b b b b b b b\na a a a a a a c\n\n".repeat(n),
+        format!("> {}c a", "a ".repeat(200_000)),
+    )
+}
+
+#[test]
+fn own_quotation_segments_complete() {
+    // Own-quotation rule (d): one quotation-stream query per segment, then
+    // the continuation rule again (added with the rule; no earlier cost).
+    let (child, parent) = own_quotation_segments(50_000);
+    bounded(|| strip_parent_content_with_quotation(&child, &parent, true, Some(&parent)));
+}
+
+#[test]
+fn own_quotation_automaton_completes() {
+    let (child, parent) = own_quotation_automaton(100_000);
+    let quoted = &parent[..parent.len() - 4];
+    bounded(|| strip_parent_content_with_quotation(&child, &parent, true, Some(quoted)));
+}
+
+#[test]
+fn own_quotation_input_restores_every_segment() {
+    // The own-quotation input exercises rule (d): every segment is restored.
+    let (child, parent) = own_quotation_segments(20);
+    assert_ne!(strip_parent_content(&child, &parent, true), child.trim());
+    assert_eq!(
+        strip_parent_content_with_quotation(&child, &parent, true, Some(&parent)),
+        child.trim()
+    );
+}
+
+#[test]
+fn own_quotation_automaton_input_reaches_the_quotation_query() {
+    // Every block is mostly unmatched and its segment is marked, so each one
+    // queries the quotation stream, which does not contain it.
+    let (child, parent) = own_quotation_automaton(20);
+    let plain = strip_parent_content(&child, &parent, true);
+    assert!(!plain.contains("a a a a a a a c"));
+    let quoted = &parent[..parent.len() - 4];
+    assert_eq!(
+        strip_parent_content_with_quotation(&child, &parent, true, Some(quoted)),
+        plain
+    );
 }
 
 #[test]

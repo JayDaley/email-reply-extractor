@@ -122,10 +122,11 @@ those modules, and never decrement it: the value only ever increases, so that
 an older consumer opening a store written by a newer routine reads that store
 as current instead of offering to re-derive text it cannot reproduce.
 
-Eight generations exist: 1 (initial release of the origin application), 2
+Nine generations exist: 1 (initial release of the origin application), 2
 (from its v1.2.0), 3 (from v1.11.0), 4 (from v1.15.0, shipped by this
 package's v1.0.0), 5 (this package's v1.1.0), 6 (this package's v1.2.0), 7
-(this package's v1.3.0) and 8 (this package's v1.4.0).
+(this package's v1.3.0), 8 (this package's v1.4.0) and 9 (this package's
+v1.5.0).
 
 ### The digest, and re-recording it
 

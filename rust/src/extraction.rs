@@ -32,7 +32,7 @@ use crate::pystr;
 /// `html_text` and `fragments` together). Consumers stamp stored derived
 /// text with it and compare with `<`; it only ever increases. It is
 /// independent of the package version.
-pub const EXTRACTION_VERSION: u32 = 8;
+pub const EXTRACTION_VERSION: u32 = 9;
 
 // --- result -------------------------------------------------------------------
 
@@ -1483,7 +1483,8 @@ impl<'a> ParentStream<'a> {
 /// word stream (once at least 3 lines were removed by the first two rules).
 /// Survivors are right-stripped, runs of blank lines collapse to one, and
 /// blank edges are trimmed. The call runs in time linear in the size of
-/// `text` and `parent_body`.
+/// `text` and `parent_body`. [`strip_parent_content_with_quotation`] adds the
+/// reference's `quoted_text` argument.
 ///
 /// ```
 /// use email_reply_extractor::strip_parent_content;
@@ -1492,6 +1493,169 @@ impl<'a> ParentStream<'a> {
 /// assert_eq!(strip_parent_content(text, parent, false), "Agreed.");
 /// ```
 pub fn strip_parent_content(text: &str, parent_body: &str, continuation: bool) -> String {
+    strip_parent_content_with_quotation(text, parent_body, continuation, None)
+}
+
+/// Rule (c): `seeds` extended to the fixpoint of the continuation test. The
+/// reference's `_continuation_marks`: an unmarked, unprotected line is marked
+/// when an adjacent non-blank line is marked and the two, joined in reading
+/// order, occur contiguously in the parent's word-stream. The rule is
+/// monotone, so a worklist over the neighbors of newly marked lines reaches
+/// the fixpoint.
+fn continuation_marks(
+    child_seq: &[&str],
+    seeds: &[bool],
+    protected: &[bool],
+    parent_stream: &mut ParentStream,
+) -> Vec<bool> {
+    let count = child_seq.len();
+    let mut is_marked: Vec<bool> = seeds.to_vec();
+
+    // Unmarked `k` joins a marked neighbor contiguously in the parent.
+    let mut chains = |k: usize, is_marked: &[bool]| {
+        let norm = child_seq[k];
+        if k > 0
+            && is_marked[k - 1]
+            && parent_stream.contains(&format!("{} {norm}", child_seq[k - 1]))
+        {
+            return true;
+        }
+        k + 1 < count
+            && is_marked[k + 1]
+            && parent_stream.contains(&format!("{norm} {}", child_seq[k + 1]))
+    };
+
+    let mut pending: Vec<usize> = (0..count)
+        .filter(|&k| {
+            !is_marked[k]
+                && !protected[k]
+                && ((k > 0 && is_marked[k - 1]) || (k + 1 < count && is_marked[k + 1]))
+        })
+        .collect();
+    while let Some(k) = pending.pop() {
+        if is_marked[k] || protected[k] || !chains(k, &is_marked) {
+            continue;
+        }
+        is_marked[k] = true;
+        if k > 0 && !is_marked[k - 1] {
+            pending.push(k - 1);
+        }
+        if k + 1 < count && !is_marked[k + 1] {
+            pending.push(k + 1);
+        }
+    }
+    is_marked
+}
+
+/// The quote-marked lines of `body`, in order, joined by newlines (the
+/// reference's `_marked_quotation`).
+fn marked_quotation(body: &str) -> String {
+    normalize_body(body)
+        .split('\n')
+        .filter(|line| is_quote_line(line))
+        .collect::<Vec<&str>>()
+        .join("\n")
+}
+
+/// Rule (d): which child lines (indexes of `child_pairs`) are protected. The
+/// reference's `_restored_by_own_quotation`; the comment above it there is
+/// the specification. A segment (a maximal run of marked lines within a block
+/// of consecutive non-blank lines) is restored when the block's unmarked
+/// lines total more words than its marked lines and the quotation stream
+/// contains the segment's lines joined by single spaces.
+fn restored_by_own_quotation(
+    child_pairs: &[(usize, &str)],
+    marks: &[bool],
+    quoted_seq: &[&str],
+) -> Vec<bool> {
+    let count = child_pairs.len();
+    let mut protected = vec![false; count];
+    if count == 0 || quoted_seq.is_empty() {
+        return protected;
+    }
+
+    // Blocks: consecutive indexes in the text. Words per block, by mark.
+    let mut block = vec![0usize; count];
+    for k in 1..count {
+        block[k] = block[k - 1] + usize::from(child_pairs[k].0 != child_pairs[k - 1].0 + 1);
+    }
+    let blocks = block[count - 1] + 1;
+    let mut marked_words = vec![0usize; blocks];
+    let mut unmarked_words = vec![0usize; blocks];
+    for k in 0..count {
+        let words = word_count(child_pairs[k].1);
+        if marks[k] {
+            marked_words[block[k]] += words;
+        } else {
+            unmarked_words[block[k]] += words;
+        }
+    }
+
+    let joined = quoted_seq.join(" ");
+    let mut quotation: Option<ParentStream> = None;
+    let mut k = 0;
+    while k < count {
+        if !marks[k] {
+            k += 1;
+            continue;
+        }
+        let start = k;
+        while k + 1 < count && marks[k + 1] && block[k + 1] == block[start] {
+            k += 1;
+        }
+        let end = k;
+        k += 1;
+        let b = block[start];
+        if unmarked_words[b] <= marked_words[b] {
+            continue; // step 2
+        }
+        let segment = child_pairs[start..=end]
+            .iter()
+            .map(|&(_, norm)| norm)
+            .collect::<Vec<&str>>()
+            .join(" ");
+        let stream = quotation.get_or_insert_with(|| ParentStream::new(&joined));
+        if !stream.contains(&segment) {
+            continue; // step 1
+        }
+        for flag in &mut protected[start..=end] {
+            *flag = true;
+        }
+    }
+    protected
+}
+
+/// [`strip_parent_content`] with the message's marked quotation.
+///
+/// `quoted_text` is the reference's keyword-only argument `quoted_text`
+/// (default `None`): the quote-marked lines of the message's body. When it
+/// is given, the own-quotation rule applies: a run of removed lines inside a
+/// block of consecutive non-blank lines is kept when `quoted_text` contains
+/// the run (its lines normalized and joined by single spaces) and the block's
+/// other lines total more words than its removed lines. The continuation rule
+/// is then evaluated again without the kept lines. With `None`, or a
+/// quotation with no non-blank line, the result equals
+/// [`strip_parent_content`]. The call runs in time linear in the size of
+/// `text`, `parent_body` and `quoted_text`.
+///
+/// ```
+/// use email_reply_extractor::strip_parent_content_with_quotation;
+/// let parent = "The working group last call ends on Friday at noon UTC.";
+/// let text = "I propose that we extend it by a week, so that instead of now,\n\
+///             The working group last call ends on Friday at noon UTC.\n\
+///             it ends a week later, on the Friday after the meeting.";
+/// let quoted = "> The working group last call ends on Friday at noon UTC.";
+/// assert_eq!(
+///     strip_parent_content_with_quotation(text, parent, true, Some(quoted)),
+///     text
+/// );
+/// ```
+pub fn strip_parent_content_with_quotation(
+    text: &str,
+    parent_body: &str,
+    continuation: bool,
+    quoted_text: Option<&str>,
+) -> String {
     let normalized_child = normalize_body(text);
     let child_raw: Vec<&str> = normalized_child.split('\n').collect();
     let child_norm: Vec<String> = child_raw
@@ -1515,78 +1679,63 @@ pub fn strip_parent_content(text: &str, parent_body: &str, continuation: bool) -
         .map(String::as_str)
         .filter(|n| !n.is_empty())
         .collect();
-
-    let mut marked: HashSet<usize> = HashSet::new();
+    let count = child_pairs.len();
+    let count_true = |flags: &[bool]| flags.iter().filter(|&&flag| flag).count();
 
     // Rule (a): runs of matching lines with enough substance, aligned around
     // the longest common run.
-    let rule_a = aligned_run_marks(&child_seq, &parent_seq);
-    for (&(orig_i, _), &mark) in child_pairs.iter().zip(&rule_a) {
-        if mark {
-            marked.insert(orig_i);
-        }
-    }
+    let mut seeds: Vec<bool> = aligned_run_marks(&child_seq, &parent_seq);
 
     // Rule (b): a long child line re-wrapped from the parent (line-level match
     // missed it) but still present verbatim in the parent's word-stream.
     let joined = parent_seq.join(" ");
     let mut parent_stream = ParentStream::new(&joined);
-    for &(orig_i, norm) in &child_pairs {
-        if marked.contains(&orig_i) {
+    for k in 0..count {
+        if seeds[k] {
             continue;
         }
+        let norm = child_seq[k];
         if word_count(norm) >= PARENT_DIFF_MIN_LINE_WORDS && parent_stream.contains(norm) {
-            marked.insert(orig_i);
+            seeds[k] = true;
         }
     }
 
     // Rule (c): chain short remainder lines off marked neighbors, to a fixpoint.
-    // The rule is monotone (a mark only ever enables more marks), so its
-    // fixpoint is the same whatever order lines are examined in. A worklist
-    // re-examines only the neighbors of a newly marked line; repeating full
-    // passes until nothing changed needed one pass per backward-chained mark.
-    if continuation && marked.len() >= PARENT_DIFF_CONTINUATION_MIN_SEEDS {
-        let count = child_pairs.len();
-        let mut is_marked: Vec<bool> = child_pairs
-            .iter()
-            .map(|(orig_i, _)| marked.contains(orig_i))
-            .collect();
-
-        // Unmarked `k` joins a marked neighbor contiguously in the parent.
-        let mut chains = |k: usize, is_marked: &[bool]| {
-            let norm = child_pairs[k].1;
-            if k > 0
-                && is_marked[k - 1]
-                && parent_stream.contains(&format!("{} {norm}", child_pairs[k - 1].1))
-            {
-                return true;
-            }
-            k + 1 < count
-                && is_marked[k + 1]
-                && parent_stream.contains(&format!("{norm} {}", child_pairs[k + 1].1))
+    let unprotected = vec![false; count];
+    let mut marks: Vec<bool> =
+        if continuation && count_true(&seeds) >= PARENT_DIFF_CONTINUATION_MIN_SEEDS {
+            continuation_marks(&child_seq, &seeds, &unprotected, &mut parent_stream)
+        } else {
+            seeds.clone()
         };
 
-        let mut pending: Vec<usize> = (0..count)
-            .filter(|&k| {
-                !is_marked[k]
-                    && ((k > 0 && is_marked[k - 1]) || (k + 1 < count && is_marked[k + 1]))
-            })
-            .collect();
-        while let Some(k) = pending.pop() {
-            if is_marked[k] || !chains(k, &is_marked) {
-                continue;
-            }
-            is_marked[k] = true;
-            marked.insert(child_pairs[k].0);
-            if k > 0 && !is_marked[k - 1] {
-                pending.push(k - 1);
-            }
-            if k + 1 < count && !is_marked[k + 1] {
-                pending.push(k + 1);
-            }
+    // Rule (d): restore segments the message also carries in its marked
+    // quotation, then re-derive rule (c) without them.
+    let quoted_norm: Vec<String> = match quoted_text {
+        Some(quoted) => normalize_body(quoted)
+            .split('\n')
+            .map(normalize_line_for_diff)
+            .filter(|n| !n.is_empty())
+            .collect(),
+        None => Vec::new(),
+    };
+    let quoted_seq: Vec<&str> = quoted_norm.iter().map(String::as_str).collect();
+    let protected = restored_by_own_quotation(&child_pairs, &marks, &quoted_seq);
+    if protected.iter().any(|&flag| flag) {
+        for k in 0..count {
+            seeds[k] = seeds[k] && !protected[k];
         }
+        marks = if continuation && count_true(&seeds) >= PARENT_DIFF_CONTINUATION_MIN_SEEDS {
+            continuation_marks(&child_seq, &seeds, &protected, &mut parent_stream)
+        } else {
+            seeds.clone()
+        };
     }
 
+    let marked: HashSet<usize> = (0..count)
+        .filter(|&k| marks[k])
+        .map(|k| child_pairs[k].0)
+        .collect();
     let survivors = child_raw
         .iter()
         .enumerate()
@@ -1811,6 +1960,8 @@ fn name_in_head(head: &str, names: &[&str]) -> bool {
 
 fn core_extract(body: &str, parent_body: Option<&str>) -> (String, String) {
     let mut normalized = normalize_body(body);
+    // The marked quotation is taken from the whole body, before any truncation.
+    let quoted_text = marked_quotation(&normalized);
 
     let lines: Vec<&str> = normalized.split('\n').collect();
     let localized = !localized_inline_reply(&lines, parent_body);
@@ -1848,7 +1999,8 @@ fn core_extract(body: &str, parent_body: Option<&str>) -> (String, String) {
 
     if let Some(parent) = parent_body {
         if pystr::has_content(&text) {
-            let assisted = strip_parent_content(&text, parent, true);
+            let assisted =
+                strip_parent_content_with_quotation(&text, parent, true, Some(&quoted_text));
             if nonblank_line_count(&assisted) < nonblank_line_count(&text) {
                 text = assisted;
                 method.push_str("+parent-diff");
@@ -1998,7 +2150,12 @@ fn extract(
     // (c) Oracle assist: remove plain-body content present in the HTML's quoted text.
     if let Some(p) = &parts {
         if pystr::has_content(&text) && pystr::has_content(&p.quoted_text) {
-            let assisted = strip_parent_content(&text, &p.quoted_text, false);
+            let assisted = strip_parent_content_with_quotation(
+                &text,
+                &p.quoted_text,
+                false,
+                Some(&marked_quotation(body)),
+            );
             if nonblank_line_count(&text).saturating_sub(nonblank_line_count(&assisted))
                 >= HTML_QUOTE_MIN_REMOVED
             {

@@ -66,8 +66,8 @@ mod unicode_tables;
 pub use cleaning::{clean_for_scoring, clean_for_scoring_with_parts, CleanResult};
 pub use equivalence::{texts_equivalent, tolerant_lines};
 pub use extraction::{
-    extract_new_text, strip_parent_content, ExtractionResult, Status, EXTRACTION_VERSION,
-    STATUS_EMPTY, STATUS_FAILED, STATUS_OK,
+    extract_new_text, strip_parent_content, strip_parent_content_with_quotation, ExtractionResult,
+    Status, EXTRACTION_VERSION, STATUS_EMPTY, STATUS_FAILED, STATUS_OK,
 };
 pub use html_text::{html_to_text, split_html_parts, HtmlParts};
 

@@ -60,7 +60,7 @@ test("VERSION equals package.json version", () => {
 });
 
 test("constants", () => {
-  assert.equal(EXTRACTION_VERSION, 8);
+  assert.equal(EXTRACTION_VERSION, 9);
   assert.deepStrictEqual([STATUS_OK, STATUS_EMPTY, STATUS_FAILED], ["ok", "empty", "failed"]);
 });
 

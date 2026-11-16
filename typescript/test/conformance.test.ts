@@ -90,7 +90,11 @@ const PUBLIC: Record<string, Call> = {
       htmlSignatureText: a.html_signature_text ?? null,
       partStarts: a.part_starts ?? [],
     }),
-  strip_parent_content: (a) => stripParentContent(a.text, a.parent_body, { continuation: a.continuation ?? false }),
+  strip_parent_content: (a) =>
+    stripParentContent(a.text, a.parent_body, {
+      continuation: a.continuation ?? false,
+      quotedText: a.quoted_text ?? null,
+    }),
   html_to_text: (a) => htmlToText(a.html),
   split_html_parts: (a) => splitHtmlParts(a.html),
   texts_equivalent: (a) => textsEquivalent(a.a, a.b),

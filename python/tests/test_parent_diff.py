@@ -315,3 +315,137 @@ def test_any_author_tag_cases():
     # Without the parent only the head decides.
     assert extraction._any_author_tag(["Linda3"], "Linda", None)
     assert not extraction._any_author_tag(["Linda3"], "Lindas", None)
+
+
+# --- rule (d): the own-quotation rule against a transcription of its specification
+
+
+def _reference_strip(text: str, parent_body: str, quoted_text: str, continuation: bool) -> str:
+    """``strip_parent_content`` transcribed from the specification, with
+    Python's ``in`` for every substring test. Rule (a) is taken from the
+    implementation; the test above compares it with its own reference."""
+    norm_lines = lambda body: [  # noqa: E731
+        extraction._normalize_line_for_diff(line)
+        for line in extraction.normalize_body(body).split("\n")
+    ]
+    raw = extraction.normalize_body(text).split("\n")
+    norm = norm_lines(text)
+    idx = [i for i, n in enumerate(norm) if n]
+    c = [norm[i] for i in idx]
+    p = [n for n in norm_lines(parent_body) if n]
+    stream = " ".join(p)
+    quotation = " ".join(n for n in norm_lines(quoted_text) if n)
+    count = len(c)
+
+    seeds = extraction._aligned_run_marks(c, p)
+    for k in range(count):
+        if not seeds[k] and len(c[k].split()) >= 8 and c[k] in stream:
+            seeds[k] = True
+
+    def continuation_marks(start: list[bool], protected: list[bool]) -> list[bool]:
+        marks = list(start)
+        if not continuation or sum(start) < 3:
+            return marks
+        changed = True
+        while changed:
+            changed = False
+            for k in range(count):
+                if marks[k] or protected[k]:
+                    continue
+                before = k > 0 and marks[k - 1] and c[k - 1] + " " + c[k] in stream
+                after = k + 1 < count and marks[k + 1] and c[k] + " " + c[k + 1] in stream
+                if before or after:
+                    marks[k] = True
+                    changed = True
+        return marks
+
+    marks = continuation_marks(seeds, [False] * count)
+
+    # Blocks and segments.
+    block = [0] * count
+    for k in range(1, count):
+        block[k] = block[k - 1] + (0 if idx[k] == idx[k - 1] + 1 else 1)
+    protected = [False] * count
+    k = 0
+    while k < count:
+        if not marks[k]:
+            k += 1
+            continue
+        start = k
+        while k + 1 < count and marks[k + 1] and block[k + 1] == block[start]:
+            k += 1
+        end = k
+        k += 1
+        members = [j for j in range(count) if block[j] == block[start]]
+        unmarked = sum(len(c[j].split()) for j in members if not marks[j])
+        marked = sum(len(c[j].split()) for j in members if marks[j])
+        if quotation and " ".join(c[start : end + 1]) in quotation and unmarked > marked:
+            for j in range(start, end + 1):
+                protected[j] = True
+
+    if any(protected):
+        marks = continuation_marks([seeds[k] and not protected[k] for k in range(count)], protected)
+
+    removed = {idx[k] for k in range(count) if marks[k]}
+    out: list[str] = []
+    for i, line in enumerate(raw):
+        if i in removed:
+            continue
+        line = line.rstrip()
+        if not line and out and not out[-1]:
+            continue
+        out.append(line)
+    while out and not out[0]:
+        out.pop(0)
+    while out and not out[-1]:
+        out.pop()
+    return "\n".join(out)
+
+
+#: Lines for the random texts: long lines (substance alone), short lines, and
+#: halves of long lines, so that runs, rewraps and continuations all occur.
+_QUOTATION_POOL = [
+    "alpha beta gamma delta epsilon zeta eta theta iota",
+    "kappa lambda mu nu xi omicron pi rho sigma",
+    "tau upsilon phi chi psi omega one two three",
+    "alpha beta gamma delta",
+    "epsilon zeta eta theta iota",
+    "kappa lambda",
+    "mu nu xi omicron pi rho sigma tau upsilon",
+    "one two",
+    "the authors own words that are not in any parent at all",
+    "more words of the authors own that the parent lacks entirely",
+    "phi chi",
+    "",
+]
+
+
+def test_strip_parent_content_matches_the_reference_on_random_inputs():
+    rng = random.Random(20261116)
+    restored = 0
+    for _ in range(4000):
+        parent = "\n".join(rng.choice(_QUOTATION_POOL) for _ in range(rng.randint(0, 10)))
+        child = "\n".join(rng.choice(_QUOTATION_POOL) for _ in range(rng.randint(0, 12)))
+        quoted = "\n".join("> " + rng.choice(_QUOTATION_POOL) for _ in range(rng.randint(0, 8)))
+        continuation = rng.random() < 0.8
+        expected = _reference_strip(child, parent, quoted, continuation)
+        got = extraction.strip_parent_content(
+            child, parent, continuation=continuation, quoted_text=quoted
+        )
+        assert got == expected, (child, parent, quoted, continuation)
+        restored += got != extraction.strip_parent_content(child, parent, continuation=continuation)
+    assert restored > 50  # the random inputs exercise the own-quotation rule
+
+
+def test_strip_parent_content_without_quotation_is_unchanged():
+    # No marked quotation, an empty one, or one of blank quote lines: rule (d)
+    # restores nothing.
+    child = "the authors own words that are not in any parent at all\nkappa lambda mu nu xi omicron pi rho sigma"
+    parent = "kappa lambda mu nu xi omicron pi rho sigma"
+    plain = extraction.strip_parent_content(child, parent, continuation=True)
+    assert "kappa" not in plain
+    for quoted in ("", ">\n> \n"):
+        assert (
+            extraction.strip_parent_content(child, parent, continuation=True, quoted_text=quoted)
+            == plain
+        )

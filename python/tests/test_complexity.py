@@ -66,6 +66,27 @@ def _remainder_chain(n: int) -> tuple[str, str]:
     return "\n".join(child), parent
 
 
+def _own_quotation_segments(n: int) -> tuple[str, str]:
+    """``n`` blocks, each a line of the parent between two longer lines of the
+    author's; the parent doubles as the marked quotation, so rule (d) queries
+    the quotation stream once per block and restores every segment."""
+    child = "".join(
+        f"x{k} y{k} z{k} q{k} r{k} s{k} t{k} u{k} v{k} w{k} o{k}\n"
+        f"p{k} a{k} b{k} c{k} d{k} e{k} f{k} g{k}\n"
+        f"m{k} n{k} o{k} p{k} q{k} r{k} s{k} t{k} u{k}\n\n"
+        for k in range(n)
+    )
+    parent = "\n".join(f"> p{k} a{k} b{k} c{k} d{k} e{k} f{k} g{k}" for k in range(n))
+    return child, parent
+
+
+def _own_quotation_automaton(n: int) -> tuple[str, str]:
+    """``n`` blocks whose segment the quotation stream's table cannot decide:
+    every interior word pair of the segment occurs in the quotation (the
+    parent without its last two words), which never contains the segment."""
+    return "b b b b b b b b b b\na a a a a a a c\n\n" * n, "> " + "a " * 200000 + "c a"
+
+
 def _localized_tags(n: int) -> tuple[str, str]:
     """A body with ``n`` tagged lines below a French quote header, and a
     parent that uses every tag: each tag is tested against the parent and
@@ -176,6 +197,22 @@ _PREPARED_CASES: list[tuple[str, Callable[[], tuple[str, str]], Callable[[str, s
         lambda: _remainder_chain(150000),
         lambda child, parent: strip_parent_content(child, parent, continuation=True),
     ),
+    # Own-quotation rule (d): one quotation-stream query per segment, then the
+    # continuation rule again (added with the rule; no earlier cost).
+    (
+        "own-quotation-strip_parent_content",
+        lambda: _own_quotation_segments(50000),
+        lambda child, parent: strip_parent_content(
+            child, parent, continuation=True, quoted_text=parent
+        ),
+    ),
+    (
+        "own-quotation-automaton-strip_parent_content",
+        lambda: _own_quotation_automaton(100000),
+        lambda child, parent: strip_parent_content(
+            child, parent, continuation=True, quoted_text=parent[:-4]
+        ),
+    ),
     # Inline-reply author tags: per tag, a search of the parent and of the
     # text above the quote header (99 s).
     ("G7tag-extract", lambda: _localized_tags(25000), extract_new_text),
@@ -214,6 +251,24 @@ def test_seed_chain_marks_every_line() -> None:
 def test_remainder_chain_marks_every_line() -> None:
     # The G7c input exercises the continuation rule: every remainder chains.
     assert strip_parent_content(*_remainder_chain(50), continuation=True) == ""
+
+
+def test_own_quotation_input_restores_every_segment() -> None:
+    # The own-quotation input exercises rule (d): every segment is restored.
+    child, parent = _own_quotation_segments(20)
+    assert strip_parent_content(child, parent, continuation=True) != child.strip()
+    result = strip_parent_content(child, parent, continuation=True, quoted_text=parent)
+    assert result == child.strip()
+
+
+def test_own_quotation_automaton_input_reaches_the_quotation_query() -> None:
+    # Every block is mostly unmatched and its segment is marked, so each one
+    # queries the quotation stream, which does not contain it.
+    child, parent = _own_quotation_automaton(20)
+    plain = strip_parent_content(child, parent, continuation=True)
+    assert "a a a a a a a c" not in plain
+    quoted = parent[:-4]
+    assert strip_parent_content(child, parent, continuation=True, quoted_text=quoted) == plain
 
 
 def test_localized_tags_reach_every_tag() -> None:

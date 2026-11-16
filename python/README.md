@@ -91,6 +91,7 @@ reports the removed line indices in `cleaned.ignored_lines`
 - [Comparison with alternatives](#comparison-with-alternatives)
 - [Install](#install)
 - [What it does](#what-it-does)
+- [Limitations](#limitations)
 - [Usage](#usage)
   - [Quickstart](#quickstart)
   - [Thread parent and HTML part](#thread-parent-and-html-part)
@@ -122,7 +123,7 @@ project's documented behavior; release data is from PyPI as of November 2026.
 | Output stability | Behavior pinned by an integer generation (`EXTRACTION_VERSION`) and a corpus digest test; whitespace-tolerant equivalence helpers for consumers | Not versioned separately | Not versioned separately |
 | Test corpus | Hand-labeled real mailing-list messages (`fixtures/`) | Unit-test fixture emails | Unit-test fixture emails; ML training data |
 | Runtime dependencies | None (standard library) | None (standard library) | lxml, regex, numpy, scipy, scikit-learn, chardet, and others |
-| Latest release | 1.4.0 (2026) | 0.5.12 (2020) | 1.4.4 (2017) |
+| Latest release | 1.5.0 (2026) | 0.5.12 (2020) | 1.4.4 (2017) |
 | License | MIT | MIT | Apache 2.0 |
 
 The fragment scanner at this library's core derives from email-reply-parser
@@ -176,6 +177,103 @@ cannot stall a pipeline.
 
 The rules of both stages are documented in
 [docs/extraction.md](https://github.com/JayDaley/email-reply-extractor/blob/main/docs/extraction.md).
+
+## Limitations
+
+The rules are heuristics over text, tuned and measured on technical
+mailing-list mail. The limits below are known; each follows from a rule
+described in [docs/extraction.md](https://github.com/JayDaley/email-reply-extractor/blob/main/docs/extraction.md).
+
+### Text the author repeats from the thread parent
+
+The parent-diff assist removes lines of a reply that also occur in the thread
+parent. It cannot always tell a quotation the client left unmarked from a line
+the author wrote again. From generation 9 a repeated line is kept when the
+message also carries it inside its own `>`-marked quotation and the line sits
+in a block of consecutive non-blank lines that is mostly unmatched text (see
+[docs/generation-9.md](https://github.com/JayDaley/email-reply-extractor/blob/main/docs/generation-9.md)). Outside those conditions:
+
+- **A message with no marked quotation.** When the client marks no quotation
+  (an Outlook-style reply, a plain proposed-text edit), a line the author
+  repeats from the parent is removed: a line kept in a revised paragraph, the
+  new wording of an `OLD:` / `NEW:` edit, a phrase of the parent cited inside
+  a sentence.
+- **Passages left unchanged.** A paragraph or list item that a revised
+  document carries over unchanged from the version in the parent is removed
+  as a whole.
+- **Short blocks.** A repeated line that has at least as many words as the
+  rest of its block is removed, for example the first line of a two-line list
+  item whose second line was reworded.
+- **A quoted line directly above its answer.** When an author pastes a line of
+  the parent and answers it on the next line, with no blank line between, and
+  the answer is longer than the pasted line, the pasted line is kept if the
+  message also quotes it with markers.
+- **Short quotations without markers.** An unmarked quoted line of fewer than
+  8 words is removed only as part of a matching run of at least 10 words, or
+  by chaining from a removed neighbour when at least 3 lines were removed. A
+  short quoted line that stands alone is kept.
+
+### Evidence the caller must supply
+
+- **The thread parent.** Without `parent_body`, a previous message reproduced
+  with no `>` markers, no attribution line, no quote-header block and no
+  sign-off boundary above it is not removed. Only the direct parent is
+  compared: text pasted without markers from any other message is kept.
+- **The HTML part.** The Apple Mail Share-sheet case, a flattened plain part,
+  and a quoted message leaked unmarked into the plain part are recovered only
+  when `html_body` is passed. The HTML assist removes nothing unless it
+  removes at least 3 non-blank lines.
+- **Decoding.** The functions take decoded strings. MIME parsing, charset
+  decoding and resolving `In-Reply-To` to the parent's body are the caller's.
+
+### Languages and clients
+
+- **Attribution lines** are recognized in English, German, French, Spanish
+  and Japanese forms. An attribution line in another language is kept as text.
+- **Quote-header blocks and "Original message" dividers** are recognized with
+  English, German, French, Spanish, Portuguese, Italian, Dutch and Chinese
+  labels. A localized block is recognized only when its opener is followed by
+  at least two further field lines including the language's subject label.
+- **Greetings and sign-offs** are matched against fixed multilingual lists; a
+  salutation outside them is kept.
+- **HTML quote containers** are `<blockquote>`, the Gmail, Mozilla and Outlook
+  class and id hooks listed in [docs/extraction.md](https://github.com/JayDaley/email-reply-extractor/blob/main/docs/extraction.md), and Apple Mail's
+  Share-sheet wrapper. A client that marks quoted text by another means is not
+  recognized, and its quoted text counts as the author's.
+
+### Structure the rules require
+
+- **Sign-off boundary.** A fully top-posted reply with no `>` markers is cut
+  at its sign-off only when a salutation line, a name line and an attribution
+  line follow one another. A reply with no sign-off, or no attribution line
+  after it, is not cut there.
+- **Pasted headers.** A `From:` block the author pasted as evidence is kept
+  only when a transport or trace field (`Message-ID`, `Received`, …) sits in
+  the header run directly above it; otherwise the body is truncated at the
+  block.
+- **Part boundaries.** `part_starts` is empty (one part) when a line of the
+  text has no counterpart in the body, which happens when the scanner joined
+  wrapped lines into one: 11 of 29,895 sampled extractions.
+
+### What stage 2 keeps
+
+Stage 2 removes one opening greeting line, one closing sign-off and trailing
+disclaimer paragraphs. It keeps a bare trailing name with no salutation
+("Dino", "—Daniel"), greetings and valedictions in the middle of the text,
+elision markers (`[...]`), URLs pasted in prose, and a disclaimer-shaped
+paragraph that is not at the end. Signature lines with no `-- ` delimiter and
+no recognizable contact shape are removed only with the HTML signature hint.
+
+### Scope of the measurements
+
+The hand-labeled corpus is 28 messages (25 from the public IETF mail archive,
+3 synthetic), and the measured effects recorded in `docs/` are taken over the
+stored IETF mailing-list mail of the origin application. The corpus digest
+covers no fixture that exercises the generation-9 rule, which is pinned by
+unit tests and conformance vectors only. Behaviour on other kinds of mail
+(personal correspondence, customer-support threads, newsletters) has not been
+measured. No minimum-length gate is applied: whether a short extraction is
+worth processing is the consuming application's decision.
 
 ## Usage
 
@@ -273,7 +371,7 @@ reported as one part.
 | `html_to_text(html)` | Visible text of an HTML part, block structure as newlines. |
 | `split_html_parts(html)` | The same text split into `HtmlParts(novel_text, quoted_text, signature_text, has_share_container)`. |
 | `HtmlParts` | Frozen dataclass returned by `split_html_parts`. |
-| `strip_parent_content(text, parent_body, *, continuation=False)` | Remove lines of `text` provably drawn from `parent_body`. |
+| `strip_parent_content(text, parent_body, *, continuation=False, quoted_text=None)` | Remove lines of `text` provably drawn from `parent_body`; `quoted_text` is the message's marked quotation. |
 | `tolerant_lines(text)` | The non-blank lines of `text`, edge whitespace stripped and U+00A0 unified to spaces. |
 | `texts_equivalent(a, b)` | `True` when `a` and `b` differ at most in whitespace. |
 | `__version__` | The package version. |
@@ -333,6 +431,10 @@ with a linear one and makes the whole assist run in linear time; see
 Generation 8 (v1.4.0) reads the text of a message sent through Apple Mail's
 Share sheet, which the plain part marks as quoted, from the HTML part; see
 [docs/generation-8.md](https://github.com/JayDaley/email-reply-extractor/blob/main/docs/generation-8.md).
+Generation 9 (v1.5.0) keeps a line of the author's that repeats a line of the
+thread parent, when the message also carries that line inside its own marked
+quotation and the line sits in a block that is mostly unmatched text; see
+[docs/generation-9.md](https://github.com/JayDaley/email-reply-extractor/blob/main/docs/generation-9.md).
 
 Because a generation bump can move bytes without changing substance, the
 package exports `tolerant_lines` and `texts_equivalent` so a consumer can
@@ -368,6 +470,8 @@ and [docs/ports.md](https://github.com/JayDaley/email-reply-extractor/blob/main/
   — generation 7: the linear parent-diff assist and its new aligned-run rule.
 - [docs/generation-8.md](https://github.com/JayDaley/email-reply-extractor/blob/main/docs/generation-8.md)
   — generation 8: Apple Mail Share-sheet containers.
+- [docs/generation-9.md](https://github.com/JayDaley/email-reply-extractor/blob/main/docs/generation-9.md)
+  — generation 9: the parent-diff own-quotation rule.
 - [CONTRIBUTING.md](https://github.com/JayDaley/email-reply-extractor/blob/main/CONTRIBUTING.md)
   — development setup and contributor contracts.
 - [CHANGELOG.md](https://github.com/JayDaley/email-reply-extractor/blob/main/CHANGELOG.md)

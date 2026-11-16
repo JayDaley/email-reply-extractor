@@ -24,6 +24,7 @@ regular expressions.
 
 - [Install](#install)
 - [What it does](#what-it-does)
+- [Limitations](#limitations)
 - [Usage](#usage)
   - [Quickstart](#quickstart)
   - [Thread parent and HTML part](#thread-parent-and-html-part)
@@ -84,6 +85,14 @@ unexpected error is reported as `status: "failed"`.
 
 The rules of both stages are documented in
 [docs/extraction.md](https://github.com/JayDaley/email-reply-extractor/blob/main/docs/extraction.md).
+
+## Limitations
+
+The rules are heuristics over text, and their known limits are the same in
+every port: text the author repeats from the thread parent, the evidence the
+caller must supply, the languages and mail clients recognized, and the scope
+of the measurements. They are listed in the
+[Limitations section of the repository README](https://github.com/JayDaley/email-reply-extractor/blob/main/README.md#limitations).
 
 ## Usage
 
@@ -176,21 +185,21 @@ that cleaning emptied.
 
 ## API reference
 
-| Name                                                                  | What it is                                                                            |
-| --------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `extractNewText(body, { parentBody?, htmlBody? })`                    | Stage 1; returns an `ExtractionResult`. `body` may be `null` or `undefined`.          |
-| `ExtractionResult`                                                    | `{ text, method, status, partStarts }`.                                               |
-| `STATUS_OK`, `STATUS_EMPTY`, `STATUS_FAILED`                          | The three `status` values; the `ExtractionStatus` type is their union.                |
-| `EXTRACTION_VERSION`                                                  | Integer generation stamp of the text-deriving routine.                                |
-| `cleanForScoring(extractedText, { htmlSignatureText?, partStarts? })` | Stage 2; returns a `CleanResult`.                                                     |
-| `CleanResult`                                                         | `{ text, ignoredLines, parts }`.                                                      |
-| `htmlToText(html)`                                                    | Visible text of an HTML part, block structure as newlines.                            |
-| `splitHtmlParts(html)`                                                | The same text split into `HtmlParts`.                                                 |
-| `HtmlParts`                                                           | `{ novelText, quotedText, signatureText, hasShareContainer }`.                        |
-| `stripParentContent(text, parentBody, { continuation? })`             | Remove lines of `text` provably drawn from `parentBody`.                              |
-| `tolerantLines(text)`                                                 | The non-blank lines of `text`, edge whitespace stripped and U+00A0 unified to spaces. |
-| `textsEquivalent(a, b)`                                               | `true` when `a` and `b` differ at most in whitespace.                                 |
-| `VERSION`                                                             | The package version.                                                                  |
+| Name                                                                   | What it is                                                                                               |
+| ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `extractNewText(body, { parentBody?, htmlBody? })`                     | Stage 1; returns an `ExtractionResult`. `body` may be `null` or `undefined`.                             |
+| `ExtractionResult`                                                     | `{ text, method, status, partStarts }`.                                                                  |
+| `STATUS_OK`, `STATUS_EMPTY`, `STATUS_FAILED`                           | The three `status` values; the `ExtractionStatus` type is their union.                                   |
+| `EXTRACTION_VERSION`                                                   | Integer generation stamp of the text-deriving routine.                                                   |
+| `cleanForScoring(extractedText, { htmlSignatureText?, partStarts? })`  | Stage 2; returns a `CleanResult`.                                                                        |
+| `CleanResult`                                                          | `{ text, ignoredLines, parts }`.                                                                         |
+| `htmlToText(html)`                                                     | Visible text of an HTML part, block structure as newlines.                                               |
+| `splitHtmlParts(html)`                                                 | The same text split into `HtmlParts`.                                                                    |
+| `HtmlParts`                                                            | `{ novelText, quotedText, signatureText, hasShareContainer }`.                                           |
+| `stripParentContent(text, parentBody, { continuation?, quotedText? })` | Remove lines of `text` provably drawn from `parentBody`; `quotedText` is the message's marked quotation. |
+| `tolerantLines(text)`                                                  | The non-blank lines of `text`, edge whitespace stripped and U+00A0 unified to spaces.                    |
+| `textsEquivalent(a, b)`                                                | `true` when `a` and `b` differ at most in whitespace.                                                    |
+| `VERSION`                                                              | The package version.                                                                                     |
 
 The result types are frozen plain objects. Their fields are the Python
 package's fields in camelCase: `ignored_lines` is `ignoredLines`,
@@ -201,7 +210,7 @@ package's fields in camelCase: `ignored_lines` is `ignoredLines`,
 
 Required arguments are positional. Every optional argument of the Python API
 (`parent_body`, `html_body`, `html_signature_text`, `part_starts`,
-`continuation`) is a
+`continuation`, `quoted_text`) is a
 property of an options object passed last, named in camelCase. An omitted
 property, `undefined` and `null` all mean the Python default (`None`, `False`
 or, for `partStarts`, no boundaries).

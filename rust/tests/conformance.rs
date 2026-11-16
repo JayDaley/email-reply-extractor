@@ -125,10 +125,11 @@ fn call(module: &str, function: &str, a: &Args) -> Option<Result<Value, ()>> {
             a.opt("html_signature_text"),
             &a.indices("part_starts"),
         ))),
-        ("extraction", "strip_parent_content") => Ok(json!(strip_parent_content(
+        ("extraction", "strip_parent_content") => Ok(json!(strip_parent_content_with_quotation(
             a.str("text"),
             a.str("parent_body"),
             a.bool("continuation"),
+            a.opt("quoted_text"),
         ))),
         ("html_text", "html_to_text") => Ok(json!(html_to_text(a.str("html")))),
         ("html_text", "split_html_parts") => Ok(parts_json(&split_html_parts(a.str("html")))),
