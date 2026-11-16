@@ -314,7 +314,9 @@ fn own_quotation_automaton(n: usize) -> (String, String) {
 fn own_quotation_segments_complete() {
     // Own-quotation rule (d): one quotation-stream query per segment, then
     // the continuation rule again (added with the rule; no earlier cost).
-    let (child, parent) = own_quotation_segments(50_000);
+    // The reference uses 50,000 blocks; at that size the debug build took
+    // 6.4 s on a CI runner.
+    let (child, parent) = own_quotation_segments(15_000);
     bounded(|| strip_parent_content_with_quotation(&child, &parent, true, Some(&parent)));
 }
 
