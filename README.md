@@ -9,13 +9,15 @@ signatures and sign-offs.**
 in two stages:
 
 - **Stage 1**, `extract_new_text`, removes quoted text (`>` lines, "On …
-  wrote:" attribution lines, Outlook quote-header blocks in several languages,
-  "Original message" dividers) from top-posted, bottom-posted and inline
-  replies. It optionally uses the thread parent's body and the message's HTML
-  part as evidence.
+  wrote:" and other attribution lines, Outlook quote-header blocks in several
+  languages, "Original message" dividers) from top-posted, bottom-posted and
+  inline replies. It optionally uses the thread parent's body and the
+  message's HTML part as evidence.
 - **Stage 2**, `clean_for_scoring`, removes greetings, signatures, sign-offs,
   mailing-list footers and legal disclaimers from the stage-1 text, and
-  reports which lines it removed.
+  reports which lines it removed. It optionally uses the sender's display
+  name, the addressees' display names and the signature lines the sender
+  repeats across messages (`learn_signature_lines`) as evidence.
 
 Both stages take already-decoded strings and have no runtime dependencies.
 `EXTRACTION_VERSION`, an integer, identifies the generation of the routine,
@@ -59,39 +61,33 @@ The formats and the digest algorithm are specified in
 
 The rules are heuristics over text, tuned and measured on technical
 mailing-list mail. The limits below are known; each follows from a rule
-described in [docs/extraction.md](docs/extraction.md).
-
-### Text the author repeats from the thread parent
-
-The parent-diff assist removes lines of a reply that also occur in the thread
-parent. It cannot always tell a quotation the client left unmarked from a line
-the author wrote again. From generation 9 a repeated line is kept when the
-message also carries it inside its own `>`-marked quotation and the line sits
-in a block of consecutive non-blank lines that is mostly unmatched text (see
-[docs/generation-9.md](docs/generation-9.md)). Outside those conditions:
-
-- **A message with no marked quotation.** When the client marks no quotation
-  (an Outlook-style reply, a plain proposed-text edit), a line the author
-  repeats from the parent is removed: a line kept in a revised paragraph, the
-  new wording of an `OLD:` / `NEW:` edit, a phrase of the parent cited inside
-  a sentence.
-- **Passages left unchanged.** A paragraph or list item that a revised
-  document carries over unchanged from the version in the parent is removed
-  as a whole.
-- **Short blocks.** A repeated line that has at least as many words as the
-  rest of its block is removed, for example the first line of a two-line list
-  item whose second line was reworded.
-- **A quoted line directly above its answer.** When an author pastes a line of
-  the parent and answers it on the next line, with no blank line between, and
-  the answer is longer than the pasted line, the pasted line is kept if the
-  message also quotes it with markers.
-- **Short quotations without markers.** An unmarked quoted line of fewer than
-  8 words is removed only as part of a matching run of at least 10 words, or
-  by chaining from a removed neighbour when at least 3 lines were removed. A
-  short quoted line that stands alone is kept.
+described in [docs/extraction.md](docs/extraction.md). The figures are from
+the origin application's corpus of 154,394 IETF list messages and from two
+audits of messages drawn from it at random (see
+[docs/generation-10.md](docs/generation-10.md)). On the held-out audit of 160
+messages, 36 (22.5%) have at least one error in generation 10, against 104
+(65%) in generation 9.
 
 ### Evidence the caller must supply
 
+Several rules act only when the caller passes the evidence they need. Without
+it, the corresponding errors remain.
+
+- **The sender's name.** Without `author_name`, a trailing line that is only
+  the sender's name is removed only as part of a salutation-and-name sign-off;
+  a bare name with no salutation above it ("Dino", "—Daniel") is kept. In
+  generation 9, 23.8% of the corpus's cleaned texts ended in a line that is
+  only the sender's name. A sender whose display name yields no name token
+  (an empty name, or a name with no letters) gets no sender-name rules, and a
+  sender who signs in a different script from the display name is not
+  matched.
+- **Learned signature lines.** `learn_signature_lines` needs at least 5
+  stage-1 texts of one sender, and a line must occur among the last 10
+  non-blank lines of at least 3 of them and at least one fifth of them. A
+  sender with fewer messages gets no learned lines.
+- **The addressees' names.** Without `addressee_names`, a greeting line that
+  only names people is removed only when it opens with a greeting word, or
+  has one to four capitalized words ending in `,`, `:` or `-` ("Jane, Joe,").
 - **The thread parent.** Without `parent_body`, a previous message reproduced
   with no `>` markers, no attribution line, no quote-header block and no
   sign-off boundary above it is not removed. Only the direct parent is
@@ -101,18 +97,60 @@ in a block of consecutive non-blank lines that is mostly unmatched text (see
   when `html_body` is passed. The HTML assist removes nothing unless it
   removes at least 3 non-blank lines.
 - **Decoding.** The functions take decoded strings. MIME parsing, charset
-  decoding and resolving `In-Reply-To` to the parent's body are the caller's.
+  decoding, resolving `In-Reply-To` to the parent's body, and storing a
+  sender's earlier texts for `learn_signature_lines` are the caller's.
+
+With none of the generation-10 evidence arguments, stage 2 still removes more
+than generation 9 did: the tolerant sign-off forms and the greeting rules that
+need no evidence change the cleaned text of 19,910 of the 154,394 messages.
+
+### What remains
+
+- **Author text carrying `>` markers.** A pasted diff, an mbox `>From` line,
+  or inline replies typed inside an Outlook quote block carry quote markers
+  and are removed as quoted text: 9 of the 160 held-out messages.
+- **Role lines and split signature blocks.** A role line written above the
+  sign-off ("Speaking as IAB Chair,", "(as IAB Chair)") is kept, and so is a
+  signature block or role line separated from the sign-off by a blank line,
+  when it has no `-- ` delimiter, no recognizable contact shape and no learned
+  or HTML-hinted lines. A role written on the name line ("Jane (as chair)",
+  "Jane, as IAB Chair") or directly below it is removed with the name.
+- **Long wrap remainders.** A re-wrapped quote remainder between two quote
+  lines is removed only when it has at most two words and starts lowercase;
+  a longer remainder is kept as the author's.
+- **Text the author repeats from the thread parent.** The parent-diff assist
+  cannot always tell a quotation the client left unmarked from a line the
+  author wrote again. A repeated line is kept when the message also carries it
+  inside its own `>`-marked quotation and the line sits in a block that is
+  mostly unmatched text (generation 9), and when the client marks its
+  quotation and the line stands in a block with no quote line (marking mode,
+  generation 10). A message whose client marks no quotation loses such lines;
+  a paragraph a revision carries over unchanged from the parent is removed as
+  a whole; and a message that answers an unmarked copy of the parent point by
+  point in 8 or more pieces loses its protected runs.
+- **Short quotations without markers.** An unmarked quoted line of fewer than
+  8 words is removed only as part of a matching run of at least 10 words, or
+  by chaining from a removed neighbour when at least 3 lines were removed. A
+  short quoted line that stands alone is kept.
+- **Part boundaries.** `part_starts` is empty (one part) when a line of the
+  text has no counterpart in the body: 10 of the 154,394 messages (72 in
+  generation 9).
 
 ### Languages and clients
 
 - **Attribution lines** are recognized in English, German, French, Spanish
-  and Japanese forms. An attribution line in another language is kept as text.
+  and Japanese fixed forms. Other wordings are recognized only when they end
+  in a colon directly above a quote line and carry an e-mail address, a clock
+  time and a date, or a speech verb from the list in
+  [docs/extraction.md](docs/extraction.md).
 - **Quote-header blocks and "Original message" dividers** are recognized with
   English, German, French, Spanish, Portuguese, Italian, Dutch and Chinese
-  labels. A localized block is recognized only when its opener is followed by
-  at least two further field lines including the language's subject label.
-- **Greetings and sign-offs** are matched against fixed multilingual lists; a
-  salutation outside them is kept.
+  labels, and the short "Original" dividers of QQ Mail and Foxmail. A
+  localized block is recognized only when its opener is followed by at least
+  two further field lines including the language's subject label.
+- **Greetings and sign-offs** are matched against fixed multilingual lists,
+  and, with the evidence, against the sender's and addressees' names. A
+  salutation outside the lists is kept.
 - **HTML quote containers** are `<blockquote>`, the Gmail, Mozilla and Outlook
   class and id hooks listed in [docs/extraction.md](docs/extraction.md), and Apple Mail's
   Share-sheet wrapper. A client that marks quoted text by another means is not
@@ -122,35 +160,23 @@ in a block of consecutive non-blank lines that is mostly unmatched text (see
 
 - **Sign-off boundary.** A fully top-posted reply with no `>` markers is cut
   at its sign-off only when a salutation line, a name line and an attribution
-  line follow one another. A reply with no sign-off, or no attribution line
-  after it, is not cut there.
+  follow one another. A reply with no sign-off, or no attribution after it, is
+  not cut there.
 - **Pasted headers.** A `From:` block the author pasted as evidence is kept
   only when a transport or trace field (`Message-ID`, `Received`, …) sits in
   the header run directly above it; otherwise the body is truncated at the
   block.
-- **Part boundaries.** `part_starts` is empty (one part) when a line of the
-  text has no counterpart in the body, which happens when the scanner joined
-  wrapped lines into one: 11 of 29,895 sampled extractions.
-
-### What stage 2 keeps
-
-Stage 2 removes one opening greeting line, one closing sign-off and trailing
-disclaimer paragraphs. It keeps a bare trailing name with no salutation
-("Dino", "—Daniel"), greetings and valedictions in the middle of the text,
-elision markers (`[...]`), URLs pasted in prose, and a disclaimer-shaped
-paragraph that is not at the end. Signature lines with no `-- ` delimiter and
-no recognizable contact shape are removed only with the HTML signature hint.
 
 ### Scope of the measurements
 
 The hand-labeled corpus is 28 messages (25 from the public IETF mail archive,
-3 synthetic), and the measured effects recorded in `docs/` are taken over the
-stored IETF mailing-list mail of the origin application. The corpus digest
-covers no fixture that exercises the generation-9 rule, which is pinned by
-unit tests and conformance vectors only. Behaviour on other kinds of mail
-(personal correspondence, customer-support threads, newsletters) has not been
-measured. No minimum-length gate is applied: whether a short extraction is
-worth processing is the consuming application's decision.
+3 synthetic), processed without the evidence arguments; the rules that need
+evidence are pinned by unit tests and conformance vectors only. All measured
+effects recorded in `docs/` are taken over IETF mailing-list mail. Behaviour
+on other kinds of mail (personal correspondence, customer-support threads,
+newsletters) has not been measured. No minimum-length gate is applied:
+whether a short extraction is worth processing is the consuming application's
+decision.
 
 ## Repository layout
 
@@ -170,14 +196,16 @@ worth processing is the consuming application's decision.
   contract.
 - [docs/ports.md](docs/ports.md) — the port contract and the semantic details
   a port must reproduce.
-- [docs/generation-5.md](docs/generation-5.md) — generation 5 and the deferred
-  scanner changes.
+- [docs/generation-5.md](docs/generation-5.md) — generation 5 and the
+  scanner changes deferred to generation 10.
 - [docs/generation-7.md](docs/generation-7.md) — generation 7: the linear
   parent-diff assist and its new aligned-run rule.
 - [docs/generation-8.md](docs/generation-8.md) — generation 8: Apple Mail
   Share-sheet containers.
 - [docs/generation-9.md](docs/generation-9.md) — generation 9: the
   parent-diff own-quotation rule.
+- [docs/generation-10.md](docs/generation-10.md) — generation 10: the
+  scanner removed, new stage-1 rules, and evidence for stage 2.
 - [conformance/README.md](conformance/README.md) — the conformance data.
 - [fixtures/README.md](fixtures/README.md) — the fixture corpus and its
   provenance.

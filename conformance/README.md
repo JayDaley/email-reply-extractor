@@ -42,13 +42,13 @@ top-level `"format": 1`. A harness should refuse a `format` it does not know.
 - A list or tuple is an array.
 - A result dataclass is an object whose keys are the Python field names, in
   declaration order:
-  - `ExtractionResult`: `{"text", "method", "status"}`
-  - `CleanResult`: `{"text", "ignored_lines"}` (`ignored_lines` is an array of
-    integers)
+  - `ExtractionResult`: `{"text", "method", "status", "part_starts"}`
+    (`part_starts` is an array of integers)
+  - `CleanResult`: `{"text", "ignored_lines", "parts"}` (`ignored_lines` is an
+    array of integers, `parts` an array of strings)
   - `HtmlParts`: `{"novel_text", "quoted_text", "signature_text",
     "has_share_container"}` (`has_share_container` is a boolean, from
     generation 8)
-  - `Fragment` (internal): `{"content", "quoted"}`
 
   A port compares its own result type field by field under these snake_case
   names, whatever its idiomatic field names are.
@@ -89,7 +89,7 @@ conformance test.
 ## digest.json
 
 ```
-{"format": 1, "extraction_version": 8, "digest": "<64 lowercase hex digits>"}
+{"format": 1, "extraction_version": 10, "digest": "<64 lowercase hex digits>"}
 ```
 
 This file is the single recorded value of the corpus digest for all three
@@ -114,7 +114,7 @@ The digest is SHA-256 over a byte stream built from `corpus.json` alone:
 4. The digest is the lowercase hexadecimal SHA-256 of the whole stream.
 
 For example, an entry with stem `a`, composite `Hi`, stage-1 text `Hi\nBob`
-and method `erp` contributes the bytes `1:a2:Hi6:Hi\nBob3:erp` (where `\n` is
+and method `custom` contributes the bytes `1:a2:Hi6:Hi\nBob6:custom` (where `\n` is
 the single byte 0x0A). There is no separator between fields or entries other
 than the length prefixes.
 
@@ -142,6 +142,7 @@ changed without a generation bump. The rules for incrementing are in
 | 7 | `b4fc24eee6a5a2daaeac57d87fca6245663f3f25a1a1f495874fd7427a65e9f6` | v1.3.0: the linear parent-diff assist, with the synthetic repeated-signature fixture added. Over the 26 earlier fixtures the output is unchanged; the digest moved with the added fixture. |
 | 8 | `e003451394561ba2bd1270e6be5a2bbbef50f247df7466eb77235871f8663450` | v1.4.0: Apple Mail Share-sheet containers, with the synthetic Share-sheet fixture added. Over the 27 earlier fixtures the digested output is unchanged; the digest moved with the added fixture. `split_html_parts` results gained the `has_share_container` field. |
 | 9 | `e003451394561ba2bd1270e6be5a2bbbef50f247df7466eb77235871f8663450` | v1.5.0: the parent-diff own-quotation rule. No fixture passes a thread parent with a body whose marked quotation contains a matched run, so the digested output is unchanged and the digest equals that of generation 8. `strip_parent_content` vectors gained the optional `quoted_text` argument. |
+| 10 | `69cb4e6c378885d0bc29043026c5ac8194c4bddef81009b9a373c457de3ad725` | v1.6.0: the vendored fragment scanner is removed from stage 1, and stage 2 gains greeting and sign-off rules with optional display-name and learned-line evidence. Every `method` loses the `erp` component (`erp` and `erp+custom` become `custom`). Seven fixtures' stage-1 text gains blank lines; six fixtures' cleaned text changes (five lose a greeting or sign-off line, one gains a blank line). `clean_for_scoring` vectors gained the keyword-only arguments `author_name`, `addressee_names` and `signature_lines`; `vectors/learn_signature_lines.json` was added; `vectors/internal/fragments.read_fragments.json` and `vectors/internal/extraction.count_unquoted_content_lines.json` were removed with the functions. |
 
 ## vectors/
 
@@ -151,7 +152,7 @@ Each file describes one function:
 {
  "format": 1,
  "function": "strip_parent_content",     Python name
- "module": "extraction",                 extraction | cleaning | html_text | fragments | equivalence
+ "module": "extraction",                 extraction | cleaning | html_text | equivalence
  "public": true,                         false under vectors/internal/
  "parameters": [                         Python signature, in order
   {"name": "text", "kind": "positional_or_keyword"},
@@ -191,9 +192,7 @@ unchanged behaviour produces byte-identical files.
 `test_conformance.py` and `test_extraction_version.py`, which check this data,
 and `test_complexity.py`, whose inputs are megabytes in size)
 with every library function that a test module imports wrapped by a recorder.
-Each call's arguments and result are logged. In addition, every call the
-pipeline makes to the vendored fragment scanner (`read_fragments`) is logged,
-because the scanner has no unit tests of its own. The unit tests therefore
+Each call's arguments and result are logged. The unit tests therefore
 become data: a new Python unit test adds vectors at the next `make vectors`.
 `python/tests/test_port_hazards.py` exists to add vectors for inputs that
 expose differences between Python's standard library and other languages'
@@ -201,15 +200,18 @@ expose differences between Python's standard library and other languages'
 
 ### Public and internal vectors
 
-The files directly under `vectors/` cover the seven public functions:
-`extract_new_text`, `clean_for_scoring`, `strip_parent_content`,
-`html_to_text`, `split_html_parts`, `texts_equivalent` and `tolerant_lines`.
-Every port must pass all of them.
+The files directly under `vectors/` cover the eight public functions:
+`extract_new_text`, `clean_for_scoring`, `learn_signature_lines`,
+`strip_parent_content`, `html_to_text`, `split_html_parts`,
+`texts_equivalent` and `tolerant_lines`. Every port must pass all of them.
+`learn_signature_lines` returns an array of strings. The keyword-only
+arguments of `clean_for_scoring` that identify people and learned lines
+(`author_name`, a string or `null`; `addressee_names` and `signature_lines`,
+arrays of strings or `null`) are recorded like any other argument.
 
 The files under `vectors/internal/` cover helpers the Python unit tests call
 directly (for example `extraction.find_quote_header_block`,
-`extraction.normalize_body`, `cleaning.is_mobile_tagline`) and the fragment
-scanner. A port whose internal structure mirrors the reference
+`extraction.normalize_body`, `cleaning.is_mobile_tagline`). A port whose internal structure mirrors the reference
 (see [docs/ports.md](../docs/ports.md)) can run them to localize a failure to
 one helper; they are optional. Arguments named `lines` are arrays of strings,
 and helpers that return a line index return an integer or `null`.

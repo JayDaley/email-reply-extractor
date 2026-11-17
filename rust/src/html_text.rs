@@ -24,6 +24,14 @@
 //! - **Signature**: inside an element whose `class` list holds
 //!   `gmail_signature`, `moz-signature` or `Signature`, or whose `id` is
 //!   `Signature`, when not inside a quoted container.
+//! - **Composed signature**: inside an element whose `class` list holds
+//!   `protonmail_signature_block`, or whose `id` is
+//!   `ms-outlook-mobile-signature` or `composer_signature`, when inside
+//!   neither a quoted nor a signature container. The author can type into
+//!   these containers, so [`split_html_parts`] renders their text as
+//!   signature text when its non-blank lines number no more than the
+//!   non-blank lines of novel text before the first of them, and as novel
+//!   text otherwise.
 //! - **Novel**: everything else.
 
 use crate::html_parser::{self, Sink};
@@ -35,6 +43,9 @@ enum Category {
     Novel,
     Quoted,
     Signature,
+    /// Inside a composed-signature container (see
+    /// [`COMPOSED_SIGNATURE_CLASSES`]) and inside no quoted or signature one.
+    Composed,
 }
 
 const BLOCK_TAGS: [&str; 15] = [
@@ -67,6 +78,13 @@ const GMAIL_WRAPPER_CLASSES: [&str; 2] = ["gmail_quote", "gmail_quote_container"
 const QUOTED_IDS: [&str; 2] = ["divRplyFwdMsg", "appendonsend"];
 const SIGNATURE_CLASSES: [&str; 3] = ["gmail_signature", "moz-signature", "Signature"];
 const SIGNATURE_ID: &str = "Signature";
+/// `class` tokens and `id` values of signature containers the author can
+/// type into: Proton Mail's `protonmail_signature_block`, Outlook mobile's
+/// `ms-outlook-mobile-signature` and the `composer_signature` of Samsung and
+/// other Android clients. Their category is decided per document (see
+/// [`split_html_parts`]).
+const COMPOSED_SIGNATURE_CLASSES: [&str; 1] = ["protonmail_signature_block"];
+const COMPOSED_SIGNATURE_IDS: [&str; 2] = ["ms-outlook-mobile-signature", "composer_signature"];
 /// `class` tokens of Apple Mail's Share-sheet wrapper. A `<blockquote>` whose
 /// parent element (the innermost open element when its start tag is read)
 /// carries one of these tokens is a *share container*: it contributes no
@@ -164,6 +182,7 @@ struct Segmenter {
     open_counts: HashMap<String, usize>,
     quoted_depth: usize,
     signature_depth: usize,
+    composed_depth: usize,
     skip_depth: usize,
     interleaved_wrappers: HashSet<usize>,
     wrapper_count: usize,
@@ -179,6 +198,8 @@ impl Segmenter {
             Category::Quoted
         } else if self.signature_depth > 0 {
             Category::Signature
+        } else if self.composed_depth > 0 {
+            Category::Composed
         } else {
             Category::Novel
         }
@@ -212,6 +233,13 @@ impl Segmenter {
         if classes.iter().any(|c| SIGNATURE_CLASSES.contains(c)) || id == SIGNATURE_ID {
             return Some(Category::Signature);
         }
+        if classes
+            .iter()
+            .any(|c| COMPOSED_SIGNATURE_CLASSES.contains(c))
+            || COMPOSED_SIGNATURE_IDS.contains(&id)
+        {
+            return Some(Category::Composed);
+        }
         None
     }
 }
@@ -242,6 +270,7 @@ impl Sink for Segmenter {
         match category {
             Some(Category::Quoted) => self.quoted_depth += 1,
             Some(Category::Signature) => self.signature_depth += 1,
+            Some(Category::Composed) => self.composed_depth += 1,
             _ => {}
         }
         let is_block = BLOCK_TAGS.contains(&tag.as_str());
@@ -275,6 +304,8 @@ impl Sink for Segmenter {
                 self.quoted_depth -= 1;
             } else if frame.category == Some(Category::Signature) {
                 self.signature_depth -= 1;
+            } else if frame.category == Some(Category::Composed) {
+                self.composed_depth -= 1;
             }
         }
         self.stack.truncate(idx);
@@ -380,6 +411,7 @@ fn segment(html: &str) -> Segmenter {
         open_counts: HashMap::new(),
         quoted_depth: 0,
         signature_depth: 0,
+        composed_depth: 0,
         skip_depth: 0,
         interleaved_wrappers: interleaved_wrappers(html),
         wrapper_count: 0,
@@ -390,14 +422,16 @@ fn segment(html: &str) -> Segmenter {
     seg
 }
 
-fn render(segments: &[Segment], wanted: Option<Category>) -> String {
+/// Render `segments` to text, keeping only text runs whose category is in
+/// `wanted` (`None` keeps every category).
+fn render(segments: &[Segment], wanted: Option<&[Category]>) -> String {
     let mut lines: Vec<String> = Vec::new();
     let mut buf = String::new();
     for seg in segments {
         match seg {
             Segment::Newline => lines.push(std::mem::take(&mut buf)),
             Segment::Text(category, text) => {
-                if wanted.is_none() || wanted == Some(*category) {
+                if wanted.map_or(true, |w| w.contains(category)) {
                     buf.push_str(text);
                 }
             }
@@ -415,6 +449,10 @@ fn render(segments: &[Segment], wanted: Option<Category>) -> String {
     }
     trim_blank_edges(&mut collapsed);
     collapsed.join("\n")
+}
+
+fn nonblank_line_count(text: &str) -> usize {
+    text.split('\n').filter(|l| pystr::has_content(l)).count()
 }
 
 pub(crate) fn trim_blank_edges(lines: &mut Vec<String>) {
@@ -470,10 +508,24 @@ pub fn split_html_parts(html: &str) -> HtmlParts {
     }
     let seg = segment(html);
     let segments = &seg.segments;
+    let mut novel: &[Category] = &[Category::Novel];
+    let mut signature: &[Category] = &[Category::Signature];
+    let first = segments
+        .iter()
+        .position(|s| matches!(s, Segment::Text(Category::Composed, _)));
+    if let Some(first) = first {
+        let composed = nonblank_line_count(&render(segments, Some(&[Category::Composed])));
+        let above = nonblank_line_count(&render(&segments[..first], Some(&[Category::Novel])));
+        if composed > above {
+            novel = &[Category::Novel, Category::Composed];
+        } else {
+            signature = &[Category::Signature, Category::Composed];
+        }
+    }
     HtmlParts {
-        novel_text: render(segments, Some(Category::Novel)),
-        quoted_text: render(segments, Some(Category::Quoted)),
-        signature_text: render(segments, Some(Category::Signature)),
+        novel_text: render(segments, Some(novel)),
+        quoted_text: render(segments, Some(&[Category::Quoted])),
+        signature_text: render(segments, Some(signature)),
         has_share_container: seg.has_share_container,
     }
 }

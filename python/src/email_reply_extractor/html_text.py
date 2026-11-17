@@ -58,6 +58,11 @@ _NOVEL = "novel"
 _QUOTED = "quoted"
 #: Text inside a signature container that is not itself inside a quoted one.
 _SIGNATURE = "signature"
+#: Text inside a composed-signature container (see
+#: :data:`_COMPOSED_SIGNATURE_CLASSES`) that is not inside a quoted or a
+#: signature container. :func:`split_html_parts` renders it as novel or as
+#: signature text.
+_COMPOSED = "composed-signature"
 
 # --- tag sets -----------------------------------------------------------------
 
@@ -141,6 +146,14 @@ _SIGNATURE_CLASSES = frozenset(
 )
 #: ``id`` value Outlook uses for its signature ``<div>``.
 _SIGNATURE_ID = "Signature"
+#: ``class`` tokens and ``id`` values of signature containers the author can
+#: type into: Proton Mail's ``protonmail_signature_block``, Outlook mobile's
+#: ``ms-outlook-mobile-signature`` and the ``composer_signature`` of Samsung and
+#: other Android clients. Such a container usually holds a signature, but a reply
+#: typed into it lands inside it, so its category is decided per document (see
+#: :func:`split_html_parts`).
+_COMPOSED_SIGNATURE_CLASSES = frozenset({"protonmail_signature_block"})
+_COMPOSED_SIGNATURE_IDS = frozenset({"ms-outlook-mobile-signature", "composer_signature"})
 #: ``class`` tokens of Apple Mail's Share-sheet wrapper. The Share sheet places
 #: the text the author composed in another app inside a ``<blockquote
 #: type="cite">`` that is a direct child of an element carrying one of these
@@ -224,6 +237,7 @@ class _Segmenter(HTMLParser):
         self._open_counts: dict[str, int] = {}
         self._quoted_depth = 0
         self._signature_depth = 0
+        self._composed_depth = 0
         self._skip_depth = 0
         #: Gmail wrapper instances (document-order index) that hold a
         #: ``<blockquote>`` and are therefore transparent (see
@@ -243,6 +257,8 @@ class _Segmenter(HTMLParser):
             return _QUOTED
         if self._signature_depth > 0:
             return _SIGNATURE
+        if self._composed_depth > 0:
+            return _COMPOSED
         return _NOVEL
 
     def _container_category(self, tag: str, classes: list[str], el_id: str) -> str | None:
@@ -268,6 +284,11 @@ class _Segmenter(HTMLParser):
             return None if index in self._interleaved_wrappers else _QUOTED
         if any(c in _SIGNATURE_CLASSES for c in classes) or el_id == _SIGNATURE_ID:
             return _SIGNATURE
+        if (
+            any(c in _COMPOSED_SIGNATURE_CLASSES for c in classes)
+            or el_id in _COMPOSED_SIGNATURE_IDS
+        ):
+            return _COMPOSED
         return None
 
     # -- HTMLParser hooks -----------------------------------------------------
@@ -294,6 +315,8 @@ class _Segmenter(HTMLParser):
             self._quoted_depth += 1
         elif category == _SIGNATURE:
             self._signature_depth += 1
+        elif category == _COMPOSED:
+            self._composed_depth += 1
         # Emit the block break *after* pushing so the break is attributed to this
         # block's own region (irrelevant to text content, but keeps structure
         # tidy). Category-less newlines flush every stream anyway.
@@ -317,6 +340,8 @@ class _Segmenter(HTMLParser):
                 self._quoted_depth -= 1
             elif category == _SIGNATURE:
                 self._signature_depth -= 1
+            elif category == _COMPOSED:
+                self._composed_depth -= 1
         del self._stack[idx:]
         if tag in _BLOCK_TAGS and self._skip_depth == 0:
             self.segments.append(("nl",))
@@ -330,8 +355,9 @@ class _Segmenter(HTMLParser):
 # --- rendering ----------------------------------------------------------------
 
 
-def _render(segments: list[tuple[str, ...]], wanted: str | None) -> str:
-    """Render ``segments`` to text, keeping only ``wanted``-category text runs.
+def _render(segments: list[tuple[str, ...]], wanted: tuple[str, ...] | None) -> str:
+    """Render ``segments`` to text, keeping only text runs whose category is in
+    ``wanted``.
 
     ``wanted=None`` keeps every category. Newline segments always flush the
     current line, so runs of a different category leave a break rather than
@@ -346,7 +372,7 @@ def _render(segments: list[tuple[str, ...]], wanted: str | None) -> str:
             buf = []
         else:
             _kind, category, text = seg
-            if wanted is None or category == wanted:
+            if wanted is None or category in wanted:
                 buf.append(text)
     lines.append("".join(buf))
 
@@ -361,6 +387,10 @@ def _render(segments: list[tuple[str, ...]], wanted: str | None) -> str:
     while collapsed and not collapsed[-1]:
         collapsed.pop()
     return "\n".join(collapsed)
+
+
+def _nonblank_line_count(text: str) -> int:
+    return sum(1 for line in text.split("\n") if line.strip())
 
 
 class _WrapperScanner(HTMLParser):
@@ -495,6 +525,15 @@ def split_html_parts(html: str) -> HtmlParts:
       ``<div id="Signature">`` matches on the id) — but only when it is **not**
       inside a quoted container, since a quoted message's signature is part of
       the quote.
+    - **Composed signature** — everything inside an element whose ``class``
+      list contains ``protonmail_signature_block`` or whose ``id`` is
+      ``ms-outlook-mobile-signature`` or ``composer_signature``, when it is
+      inside neither a quoted nor a signature container. These clients put the
+      signature in a container the author can type into, and a reply typed
+      there lands inside it. The text of all such containers is rendered as
+      signature text when its non-blank lines number no more than the
+      non-blank lines of novel text before the first of them (the author's
+      text above the signature), and as novel text otherwise.
     - **Novel** — everything else.
 
     ``has_share_container`` reports whether such a Share-sheet container
@@ -507,9 +546,21 @@ def split_html_parts(html: str) -> HtmlParts:
         return HtmlParts(novel_text="", quoted_text="", signature_text="")
     parser = _segment(html)
     segments = parser.segments
+    novel: tuple[str, ...] = (_NOVEL,)
+    signature: tuple[str, ...] = (_SIGNATURE,)
+    first = next(
+        (k for k, seg in enumerate(segments) if seg[0] == "text" and seg[1] == _COMPOSED), None
+    )
+    if first is not None:
+        composed = _nonblank_line_count(_render(segments, (_COMPOSED,)))
+        above = _nonblank_line_count(_render(segments[:first], (_NOVEL,)))
+        if composed > above:
+            novel = (_NOVEL, _COMPOSED)
+        else:
+            signature = (_SIGNATURE, _COMPOSED)
     return HtmlParts(
-        novel_text=_render(segments, _NOVEL),
-        quoted_text=_render(segments, _QUOTED),
-        signature_text=_render(segments, _SIGNATURE),
+        novel_text=_render(segments, novel),
+        quoted_text=_render(segments, (_QUOTED,)),
+        signature_text=_render(segments, signature),
         has_share_container=parser.has_share_container,
     )

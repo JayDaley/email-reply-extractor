@@ -381,6 +381,27 @@ impl Re {
         }
     }
 
+    /// The byte spans of the named groups in the first match (`None` without
+    /// a match; a group that did not take part is `None`).
+    pub(crate) fn named_spans(
+        &self,
+        s: &str,
+        names: &[&str],
+    ) -> Option<Vec<Option<(usize, usize)>>> {
+        let span = |m: Option<regex::Match<'_>>| m.map(|m| (m.start(), m.end()));
+        match &self.inner {
+            Inner::Plain(r) => r
+                .captures(s)
+                .map(|c| names.iter().map(|n| span(c.name(n))).collect()),
+            Inner::Fancy(r) => r.captures(s).ok().flatten().map(|c| {
+                names
+                    .iter()
+                    .map(|n| c.name(n).map(|m| (m.start(), m.end())))
+                    .collect()
+            }),
+        }
+    }
+
     /// The text of the named group in the first match.
     pub(crate) fn named<'t>(&self, s: &'t str, name: &str) -> Option<&'t str> {
         match &self.inner {

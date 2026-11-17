@@ -1,0 +1,489 @@
+{
+ "format": 1,
+ "function": "learn_signature_lines",
+ "module": "cleaning",
+ "public": true,
+ "parameters": [
+  {
+   "name": "texts",
+   "kind": "positional_or_keyword"
+  },
+  {
+   "name": "subjects",
+   "kind": "keyword_only",
+   "default": null
+  }
+ ],
+ "returns": "tuple[str, ...]",
+ "vectors": [
+  {
+   "args": {
+    "texts": [
+     "Body 0 text here.\n\nGeschäftsführer: Straße 1",
+     "Body 1 text here.\n\nGeschäftsführer: Straße 1",
+     "Body 2 text here.\n\nGeschäftsführer: Straße 1",
+     "Body 3 text here.\n\nGeschäftsführer: Straße 1",
+     "Body 4 text here.\n\nGeschäftsführer: Straße 1"
+    ]
+   },
+   "result": [
+    "geschäftsführer: strasse 1"
+   ]
+  },
+  {
+   "args": {
+    "texts": [
+     "Body 0 text here.\n\nJane Example\nLet me know if you have questions.",
+     "Body 1 text here.\n\nJane Example\nLet me know if you have questions.",
+     "Body 2 text here.\n\nJane Example\nLet me know if you have questions.",
+     "Body 3 text here.\n\nUnique line 3\nLet me know if you have questions.",
+     "Body 4 text here.\n\nUnique line 4\nLet me know if you have questions."
+    ]
+   },
+   "result": [
+    "jane example",
+    "let me know if you have questions."
+   ]
+  },
+  {
+   "args": {
+    "texts": [
+     "Body 0 text here.\n\nUnique line 0\nContact:",
+     "Body 1 text here.\n\nUnique line 1\nContact:",
+     "Body 2 text here.\n\nUnique line 2\nContact:",
+     "Body 3 text here.\n\nUnique line 3\nContact:",
+     "Body 4 text here.\n\nUnique line 4\nContact:"
+    ]
+   },
+   "result": []
+  },
+  {
+   "args": {
+    "texts": [
+     "Body 0 text here.\n\nUnique line 0\nLet me know if you have questions.",
+     "Body 1 text here.\n\nUnique line 1\nLet me know if you have questions.",
+     "Body 2 text here.\n\nUnique line 2\nLet me know if you have questions.",
+     "Body 3 text here.\n\nUnique line 3\nLet me know if you have questions.",
+     "Body 4 text here.\n\nUnique line 4\nLet me know if you have questions."
+    ]
+   },
+   "result": []
+  },
+  {
+   "args": {
+    "texts": [
+     "Body 0.\n\nCheers,\n  Jane   Example\n",
+     "Body 1.\n\nCheers,\n  Jane   Example\n",
+     "Body 2.\n\nCheers,\n  Jane   Example\n",
+     "Body 3.\n\nCheers,\n  Jane   Example\n",
+     "Body 4.\n\nCheers,\n  Jane   Example\n"
+    ]
+   },
+   "result": [
+    "cheers,",
+    "jane example"
+   ]
+  },
+  {
+   "args": {
+    "texts": [
+     "Body 0.\n\nUnique 0\nLet me know if you have questions.",
+     "Body 1.\n\nUnique 1\nLet me know if you have questions.",
+     "Body 2.\n\nUnique 2\nLet me know if you have questions.",
+     "Body 3.\n\nUnique 3\nLet me know if you have questions.",
+     "Body 4.\n\nUnique 4\nLet me know if you have questions."
+    ]
+   },
+   "result": []
+  },
+  {
+   "args": {
+    "texts": [
+     "Body.\nJane Example\nLine 0\nLine 1\nLine 2\nLine 3\nLine 4\nLine 5\nLine 6\nLine 7\nLine 8 0",
+     "Body.\nJane Example\nLine 0\nLine 1\nLine 2\nLine 3\nLine 4\nLine 5\nLine 6\nLine 7\nLine 8 1",
+     "Body.\nJane Example\nLine 0\nLine 1\nLine 2\nLine 3\nLine 4\nLine 5\nLine 6\nLine 7\nLine 8 2",
+     "Body.\nJane Example\nLine 0\nLine 1\nLine 2\nLine 3\nLine 4\nLine 5\nLine 6\nLine 7\nLine 8 3",
+     "Body.\nJane Example\nLine 0\nLine 1\nLine 2\nLine 3\nLine 4\nLine 5\nLine 6\nLine 7\nLine 8 4"
+    ]
+   },
+   "result": [
+    "jane example",
+    "line 0",
+    "line 1",
+    "line 2",
+    "line 3",
+    "line 4",
+    "line 5",
+    "line 6",
+    "line 7"
+   ]
+  },
+  {
+   "args": {
+    "texts": [
+     "Body.\nJane Example\nLine 0\nLine 1\nLine 2\nLine 3\nLine 4\nLine 5\nLine 6\nLine 7\nLine 8\nLine 9 0",
+     "Body.\nJane Example\nLine 0\nLine 1\nLine 2\nLine 3\nLine 4\nLine 5\nLine 6\nLine 7\nLine 8\nLine 9 1",
+     "Body.\nJane Example\nLine 0\nLine 1\nLine 2\nLine 3\nLine 4\nLine 5\nLine 6\nLine 7\nLine 8\nLine 9 2",
+     "Body.\nJane Example\nLine 0\nLine 1\nLine 2\nLine 3\nLine 4\nLine 5\nLine 6\nLine 7\nLine 8\nLine 9 3",
+     "Body.\nJane Example\nLine 0\nLine 1\nLine 2\nLine 3\nLine 4\nLine 5\nLine 6\nLine 7\nLine 8\nLine 9 4"
+    ]
+   },
+   "result": [
+    "line 0",
+    "line 1",
+    "line 2",
+    "line 3",
+    "line 4",
+    "line 5",
+    "line 6",
+    "line 7",
+    "line 8"
+   ]
+  },
+  {
+   "args": {
+    "texts": [
+     "Message 0 body text.\n\nJane Example",
+     "Message 1 body text.\n\nJane Example",
+     "Message 2 body text.",
+     "Message 3 body text.",
+     "Message 4 body text."
+    ]
+   },
+   "result": []
+  },
+  {
+   "args": {
+    "texts": [
+     "Message 0 body text.\n\nJane Example",
+     "Message 1 body text.\n\nJane Example",
+     "Message 2 body text.\n\nJane Example",
+     "Message 3 body text.",
+     "Message 4 body text.",
+     "Message 5 body text.",
+     "Message 6 body text.",
+     "Message 7 body text.",
+     "Message 8 body text.",
+     "Message 9 body text.",
+     "Message 10 body text.",
+     "Message 11 body text.",
+     "Message 12 body text.",
+     "Message 13 body text.",
+     "Message 14 body text.",
+     "Message 15 body text."
+    ]
+   },
+   "result": []
+  },
+  {
+   "args": {
+    "texts": [
+     "Message 0 body text.\n\nJane Example",
+     "Message 1 body text.\n\nJane Example",
+     "Message 2 body text.\n\nJane Example",
+     "Message 3 body text.",
+     "Message 4 body text.",
+     "Message 5 body text.",
+     "Message 6 body text.",
+     "Message 7 body text.",
+     "Message 8 body text.",
+     "Message 9 body text.",
+     "Message 10 body text.",
+     "Message 11 body text.",
+     "Message 12 body text.",
+     "Message 13 body text.",
+     "Message 14 body text."
+    ]
+   },
+   "result": [
+    "jane example"
+   ]
+  },
+  {
+   "args": {
+    "texts": [
+     "Message 0 body text.\n\nJane Example",
+     "Message 1 body text.\n\nJane Example",
+     "Message 2 body text.\n\nJane Example",
+     "Message 3 body text.",
+     "Message 4 body text."
+    ],
+    "subjects": [
+     "Draft A",
+     "",
+     null
+    ]
+   },
+   "result": []
+  },
+  {
+   "args": {
+    "texts": [
+     "Message 0 body text.\n\nJane Example",
+     "Message 1 body text.\n\nJane Example",
+     "Message 2 body text.\n\nJane Example",
+     "Message 3 body text.",
+     "Message 4 body text."
+    ],
+    "subjects": [
+     "Draft A",
+     "Draft A",
+     "Draft C",
+     "x",
+     "y",
+     "Draft D",
+     "Draft E"
+    ]
+   },
+   "result": []
+  },
+  {
+   "args": {
+    "texts": [
+     "Message 0 body text.\n\nJane Example",
+     "Message 1 body text.\n\nJane Example",
+     "Message 2 body text.\n\nJane Example",
+     "Message 3 body text.",
+     "Message 4 body text."
+    ],
+    "subjects": [
+     "Draft A",
+     "Draft A",
+     "Draft C",
+     "x",
+     "y"
+    ]
+   },
+   "result": []
+  },
+  {
+   "args": {
+    "texts": [
+     "Message 0 body text.\n\nJane Example",
+     "Message 1 body text.\n\nJane Example",
+     "Message 2 body text.\n\nJane Example",
+     "Message 3 body text.",
+     "Message 4 body text."
+    ],
+    "subjects": [
+     "Draft A",
+     "Draft B",
+     "",
+     ""
+    ]
+   },
+   "result": [
+    "jane example"
+   ]
+  },
+  {
+   "args": {
+    "texts": [
+     "Message 0 body text.\n\nJane Example",
+     "Message 1 body text.\n\nJane Example",
+     "Message 2 body text.\n\nJane Example",
+     "Message 3 body text.",
+     "Message 4 body text."
+    ],
+    "subjects": [
+     "Draft A",
+     "Draft B",
+     ""
+    ]
+   },
+   "result": [
+    "jane example"
+   ]
+  },
+  {
+   "args": {
+    "texts": [
+     "Message 0 body text.\n\nJane Example",
+     "Message 1 body text.\n\nJane Example",
+     "Message 2 body text.\n\nJane Example",
+     "Message 3 body text.",
+     "Message 4 body text."
+    ],
+    "subjects": [
+     "Draft A",
+     "Draft B",
+     "Draft C",
+     "x",
+     "y",
+     "z"
+    ]
+   },
+   "result": [
+    "jane example"
+   ]
+  },
+  {
+   "args": {
+    "texts": [
+     "Message 0 body text.\n\nJane Example",
+     "Message 1 body text.\n\nJane Example",
+     "Message 2 body text.\n\nJane Example",
+     "Message 3 body text.",
+     "Message 4 body text."
+    ],
+    "subjects": [
+     "Draft A",
+     "Draft B",
+     "Draft C",
+     "x",
+     "y"
+    ]
+   },
+   "result": [
+    "jane example"
+   ]
+  },
+  {
+   "args": {
+    "texts": [
+     "Message 0 body text.\n\nJane Example",
+     "Message 1 body text.\n\nJane Example",
+     "Message 2 body text.\n\nJane Example",
+     "Message 3 body text.",
+     "Message 4 body text."
+    ],
+    "subjects": [
+     "Draft A",
+     "Draft B"
+    ]
+   },
+   "result": [
+    "jane example"
+   ]
+  },
+  {
+   "args": {
+    "texts": [
+     "Message 0 body text.\n\nJane Example",
+     "Message 1 body text.\n\nJane Example",
+     "Message 2 body text.\n\nJane Example",
+     "Message 3 body text.",
+     "Message 4 body text."
+    ],
+    "subjects": [
+     "Draft A",
+     "Re: [list] AW: draft   a",
+     "Draft C",
+     "x",
+     "y"
+    ]
+   },
+   "result": []
+  },
+  {
+   "args": {
+    "texts": [
+     "Message 0 body text.\n\nJane Example",
+     "Message 1 body text.\n\nJane Example",
+     "Message 2 body text.\n\nJane Example",
+     "Message 3 body text.",
+     "Message 4 body text."
+    ],
+    "subjects": [
+     "Draft A"
+    ]
+   },
+   "result": []
+  },
+  {
+   "args": {
+    "texts": [
+     "Message 0 body text.\n\nJane Example",
+     "Message 1 body text.\n\nJane Example",
+     "Message 2 body text.\n\nJane Example",
+     "Message 3 body text.",
+     "Message 4 body text."
+    ],
+    "subjects": []
+   },
+   "result": []
+  },
+  {
+   "args": {
+    "texts": [
+     "Message 0 body text.\n\nJane Example",
+     "Message 1 body text.\n\nJane Example",
+     "Message 2 body text.\n\nJane Example",
+     "Message 3 body text.",
+     "Message 4 body text."
+    ]
+   },
+   "result": [
+    "jane example"
+   ]
+  },
+  {
+   "args": {
+    "texts": [
+     "Message 0 body text.\n\nJane Example",
+     "Message 1 body text.\n\nJane Example",
+     "Message 2 body text.\n\nJane Example",
+     "Message 3 body text.\n\nJane Example",
+     "Message 4 body text.",
+     "Message 5 body text.",
+     "Message 6 body text.",
+     "Message 7 body text.",
+     "Message 8 body text.",
+     "Message 9 body text.",
+     "Message 10 body text.",
+     "Message 11 body text.",
+     "Message 12 body text.",
+     "Message 13 body text.",
+     "Message 14 body text.",
+     "Message 15 body text.",
+     "Message 16 body text.",
+     "Message 17 body text.",
+     "Message 18 body text.",
+     "Message 19 body text.",
+     "Message 20 body text."
+    ]
+   },
+   "result": []
+  },
+  {
+   "args": {
+    "texts": [
+     "Message 0 body text.\n\nJane Example",
+     "Message 1 body text.\n\nJane Example",
+     "Message 2 body text.\n\nJane Example",
+     "Message 3 body text.\n\nJane Example",
+     "Message 4 body text.",
+     "Message 5 body text.",
+     "Message 6 body text.",
+     "Message 7 body text.",
+     "Message 8 body text.",
+     "Message 9 body text.",
+     "Message 10 body text.",
+     "Message 11 body text.",
+     "Message 12 body text.",
+     "Message 13 body text.",
+     "Message 14 body text.",
+     "Message 15 body text.",
+     "Message 16 body text.",
+     "Message 17 body text.",
+     "Message 18 body text.",
+     "Message 19 body text."
+    ]
+   },
+   "result": [
+    "jane example"
+   ]
+  },
+  {
+   "args": {
+    "texts": [
+     "Message 0 body text.\n\nJane Example",
+     "Message 1 body text.\n\nJane Example",
+     "Message 2 body text.\n\nJane Example",
+     "Message 3 body text.\n\nJane Example"
+    ]
+   },
+   "result": []
+  }
+ ]
+}

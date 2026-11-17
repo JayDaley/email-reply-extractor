@@ -13,7 +13,8 @@ exact composite output, and one signed fixture is pinned at the stage boundary
 Stage-2 cleaning (signature/greeting/sign-off removal) is exercised in
 ``tests/test_cleaning.py``; this module covers stage-1 concerns only: quote and
 attribution stripping, the sign-off *boundary*, forwarded/quote-header blocks,
-the over-strip guard, and the parent-diff assist.
+generic attribution lines, wrap remainders, dividers, and the parent-diff
+assist with its marking mode.
 """
 
 from __future__ import annotations
@@ -25,7 +26,6 @@ from email_reply_extractor.equivalence import tolerant_lines
 from email_reply_extractor.cleaning import clean_for_scoring
 from email_reply_extractor.extraction import (
     ExtractionResult,
-    count_unquoted_content_lines,
     custom_clean,
     extract_new_text,
     find_quote_header_block,
@@ -113,7 +113,7 @@ def test_pinned_pointbypoint():
     Pins the composite (stage 1 + stage 2) — the exact text scored.
     """
     result = extract_new_text(fixture_body("interleaved-pointbypoint-lastcall-01"))
-    assert result.method == "erp"
+    assert result.method == "custom"
     assert clean_for_scoring(result.text).text == (
         "Some quick replies.\n"
         "\n"
@@ -138,7 +138,7 @@ def test_pinned_pointbypoint():
 def test_pinned_indented_quotes():
     """Indented-``>`` quotes: pins the custom indented-quote + attribution pass."""
     result = extract_new_text(fixture_body("interleaved-indented-quotes-lastcall-01"))
-    assert result.method == "erp+custom"
+    assert result.method == "custom"
     assert clean_for_scoring(result.text).text == (
         "Correct.\n"
         "We believe that we understood your point of view.\n"
@@ -263,26 +263,17 @@ def test_custom_clean_keeps_greeting_and_closing():
     assert "Songbo" in cleaned
 
 
-# --- unit tests: over-strip guard ---------------------------------------------
-
-
-def test_count_unquoted_content_lines_excludes_quotes_keeps_signature():
-    # The denominator now mirrors stage 1: it excludes quoted lines but KEEPS the
-    # signature region (stage 1 retains ERP signature fragments).
-    body = "line one\n> quoted\nline two\n-- \nsignature stuff\nmore sig"
-    assert count_unquoted_content_lines(body) == 5
+# --- unit tests: dashed rules ---------------------------------------------------
 
 
 def test_dashed_digest_content_is_preserved():
-    # A dashed-separator "digest" makes ERP label the table a signature; stage 1
-    # keeps signature fragments, so the whole table is recovered without a
-    # custom-fallback. (Before the extraction/cleaning split, ERP's parse_reply
-    # dropped the table and the over-strip guard rebuilt it via custom-fallback.)
+    # A dashed-separator "digest": the "---" rule is not a boundary, so the
+    # whole table is kept.
     body = "Header row of a report\n----------+----------\n" + "\n".join(
         f"data row {i}" for i in range(10)
     )
     result = extract_new_text(body)
-    assert result.method != "custom-fallback"
+    assert result.method == "custom"
     assert "data row 9" in result.text
     assert "Header row of a report" in result.text
 
@@ -361,15 +352,13 @@ def test_toppost_signoff_unquoted_fixture_extracts_author_only():
     stem = "toppost-signoff-unquoted-wimse-01"
     body = fixture_body(stem)
     result = extract_new_text(body)
-    assert result.method != "custom-fallback"
+    assert result.method == "custom"
     composite = clean_for_scoring(result.text).text
     # The "Best, / Songbo" framing is stripped by stage 2 along with the thread.
     assert composite.strip().splitlines()[-1].startswith("vector vocabulary only")
     assert "possession-side rows" in composite  # author's text kept
     assert "Karthik, Songbo, all," not in composite  # quoted thread dropped
     assert tolerant_lines(composite) == tolerant_lines(expected_text(stem))
-    # The guard denominator must exclude everything after the sign-off too.
-    assert count_unquoted_content_lines(normalize_body(body)) < 30
 
 
 # --- unit tests: forwarded / quote-header block detection ---------------------
@@ -476,8 +465,7 @@ def test_find_quote_header_block_requires_signal_field():
 
 
 def test_find_quote_header_block_not_blocked_by_signature_contact_line():
-    # ERP fragment re-joining can glue a signature's last lines directly above
-    # the quote header. "Tel:"/"Email:" are header-shaped but not transport
+    # A signature's last lines can sit directly above the quote header. "Tel:"/"Email:" are header-shaped but not transport
     # fields, so they must not disqualify the From: below them.
     lines = (
         "Thanks for clarifying.\n\n"
@@ -559,7 +547,7 @@ def test_glued_signature_quote_header_extracts_author_only():
     )
     result = extract_new_text(body)
     assert result.status == "ok"
-    assert result.method == "erp+custom"
+    assert result.method == "custom"
     assert "Amaury Chamayou" not in result.text
     assert "CWT Claims" not in result.text
     assert "Tel: +1 978-555-0100" in result.text  # signature survives stage 1
@@ -643,26 +631,19 @@ def test_strip_after_chinese_quote_header_drops_dangling_divider():
 def test_toppost_outlook_quoteheader_fixture_extracts_author_only():
     """The Phase 7.2 defect: an Outlook top-post must not ship the quoted review.
 
-    ERP's non-quoted fragments now include the header-introduced quoted review;
-    the fix is that stage 1's ``strip_after_quote_header_block`` truncates it, and
-    the over-strip guard must NOT then fire (so it does not fall back to
-    custom-fallback on the whole body). Method should therefore be ``erp+custom``.
+    Stage 1's ``strip_after_quote_header_block`` truncates the
+    header-introduced quoted review.
     """
     stem = "toppost-outlook-quoteheader-lastcall-01"
     body = fixture_body(stem)
     result = extract_new_text(body)
-    assert result.method != "custom-fallback"
-    assert result.method == "erp+custom"
+    assert result.method == "custom"
     composite = clean_for_scoring(result.text).text
     # Only the author's content lines survive; no framing, none of the review.
     assert "Nate" not in composite
     assert "Reviewer: Wesley Eddy" not in composite
     assert "congestion" not in composite
     assert tolerant_lines(composite) == tolerant_lines(expected_text(stem))
-    # The guard's denominator excludes the quote-header block and everything
-    # after it, so a ~1.7 KB body reduces to the author's few framing/content
-    # lines (greeting + two content lines + sign-off are all kept in stage 1).
-    assert count_unquoted_content_lines(body) == 4
 
 
 # --- unit tests: Latin-script localized quote-header blocks (generation 6) -----
@@ -923,7 +904,7 @@ def test_quote_only_body_is_empty():
 
 
 def test_bom_prefixed_quote_is_stripped_end_to_end():
-    # Without normalization ERP would leak the BOM-prefixed quote line.
+    # Without normalization the BOM-prefixed quote line would leak.
     body = "﻿> Given the proposal\n\nMy actual reply here."
     result = extract_new_text(body)
     assert "Given the proposal" not in result.text
@@ -1061,7 +1042,7 @@ def test_share_container_recovers_text_the_plain_part_quotes():
     assert extract_new_text(body).status == "empty"  # the plain part alone
     result = extract_new_text(body, html_body=html)
     assert result.status == "ok"
-    assert result.method == "html-erp"
+    assert result.method == "html-custom"
     assert result.text == "Carol,\n\n" + "\n".join(_SHARE_PROSE) + "\n\nAlice"
 
 
@@ -1140,14 +1121,14 @@ def test_share_container_passes_the_parent_to_the_core_path():
     html = _share_html(inner)
     body = _cite([_SHARE_PROSE[0], "", *parent.split("\n")])
     result = extract_new_text(body, parent_body=parent, html_body=html)
-    assert result.method == "html-erp+parent-diff"
+    assert result.method == "html-custom+parent-diff"
     assert result.text == _SHARE_PROSE[0]
 
 
 def test_share_sheet_fixture_derives_text_from_html():
     stem = "toppost-share-sheet-synthetic-01"
     result = extract_new_text(fixture_body(stem), html_body=fixture_html(stem))
-    assert result.method == "html-erp+custom"
+    assert result.method == "html-custom"
     assert result.text.startswith("Hi Carol,\n\nThank you for the review.")
     assert result.text.endswith("Best,\nAlice")
     assert "wrote:" not in result.text
@@ -1289,7 +1270,7 @@ def test_parent_diff_removes_a_reproduced_block_out_of_order():
     )
     result = extract_new_text(child, parent)
     assert result.text == "I moved the open issues to the end, since Carol joins late."
-    assert result.method == "erp+parent-diff"
+    assert result.method == "custom+parent-diff"
 
 
 def test_parent_diff_none_is_identical_to_no_argument():
@@ -1683,14 +1664,442 @@ def test_html_inline_reply_parts_come_from_the_full_rendering():
 
 
 def test_unaligned_text_is_one_part():
-    # The scanner joins a wrapped attribution onto one line, which then has no
-    # counterpart in the body; the alignment is abandoned.
-    body = "Reply text.\n\nOn Tue, Jan 28, 2025 at 10:38 AM\nSomeone <s@example.com> wrote:\n> q\n"
+    # The author's prefix cut before a mid-line divider has no equal line in
+    # the body; the alignment is abandoned.
+    body = "Reply text.\n\n> q\n\nMore text.-----Original Message-----From: x\n"
     result = extract_new_text(body)
-    assert result.status == "ok"
+    assert result.text == "Reply text.\n\n\nMore text."
     assert result.part_starts == ()
 
 
 def test_empty_and_failed_results_have_no_parts():
     assert extract_new_text("").part_starts == ()
     assert extract_new_text("> only quoted\n").part_starts == ()
+
+
+# --- generation 10: attribution lines and the sign-off boundary ------------------
+
+
+def test_signoff_before_attribution_above_quote_keeps_inline_replies():
+    # The attribution introduces ">"-quoted text: it heads an interleaved
+    # quote, not an unmarked quoted thread, so the inline answers stay.
+    lines = [
+        "Thanks Bob.",
+        "",
+        "Best,",
+        "Ana",
+        "",
+        "On Mon, 2 Mar 2026, Bob <bob@example.org> wrote:",
+        "",
+        "> Question one?",
+        "Answer one.",
+        "> Question two?",
+        "Answer two.",
+    ]
+    assert find_signoff_boundary(lines) is None
+    result = extract_new_text("\n".join(lines))
+    assert result.text == "Thanks Bob.\n\nBest,\nAna\n\n\nAnswer one.\nAnswer two."
+
+
+def test_signoff_before_attribution_above_unmarked_text_truncates():
+    lines = [
+        "Thanks Bob.",
+        "",
+        "Best,",
+        "Ana",
+        "",
+        "On Mon, 2 Mar 2026, Bob <bob@example.org> wrote:",
+        "Question one?",
+        "> an older quote",
+    ]
+    assert find_signoff_boundary(lines) == 4
+
+
+def test_attribution_after_dashes():
+    assert is_attribution_line("--On Mon, 2 Mar 2026, Bob Smith wrote:")
+    assert not is_attribution_line("-On Mon, 2 Mar 2026, Bob Smith wrote:")
+    assert not is_attribution_line("---On Mon, 2 Mar 2026, Bob Smith wrote:")
+
+
+def test_wrapped_attribution_after_quote_markers_and_dashes():
+    assert strip_attribution_lines(
+        [">> On Mon, 2 Mar 2026 at 10:15, Bob Smith", "<bob@example.org> wrote:", "kept"]
+    ) == ["kept"]
+    assert strip_attribution_lines(
+        ["--On Monday, 2 March 2026 10:15 -0500 Bob Smith", "<bob@example.org> wrote:", "kept"]
+    ) == ["kept"]
+
+
+def test_wrapped_attribution_spans_at_most_four_lines():
+    head = ["On Monday, 2 March 2026 10:15", "Bob Smith", "<bob@example.org>", "at the office"]
+    assert strip_attribution_lines([*head, "wrote:", "kept"]) == ["kept"]
+    lines = [*head, "and elsewhere", "wrote:", "kept"]
+    assert strip_attribution_lines(lines) == lines
+
+
+def test_wrapped_attribution_holds_at_most_400_characters():
+    start = "On Monday, 2 March 2026, Bob Smith"
+    filler = "x" * (400 - len(start) - len(" wrote:"))
+    assert strip_attribution_lines([start, filler + " wrote:", "kept"]) == ["kept"]
+    lines = [start, filler + "x wrote:", "kept"]
+    assert strip_attribution_lines(lines) == lines
+
+
+def test_wrapped_attribution_never_ends_at_a_complete_attribution():
+    # "On Monday," does not open a wrapped attribution whose tail is a
+    # complete "On … wrote:" line of its own; that line is removed by itself.
+    lines = ["On Monday,", "On Mon, 2 Mar 2026, Bob Smith wrote:", "kept"]
+    assert strip_attribution_lines(lines) == ["On Monday,", "kept"]
+
+
+# --- generation 10: generic attribution lines ------------------------------------
+
+
+@pytest.mark.parametrize(
+    "attribution",
+    [
+        # Cue: an e-mail address.
+        "Le 3 mars 2026 à 10:15, Ana Lima <ana@example.org> a écrit :",
+        "Ana Lima <ana@example.org> on the list:",
+        # Cue: a clock time and a date.
+        "Monday 2 March 2026 at 10:15, Ana Lima:",
+        "02.03. 19h30, Ana Lima:",
+        "2026年3月2日 10:15 Ana Lima：",
+        # Speech verbs.
+        "Ana Lima said:",
+        "I wrote:",
+        "Bob Jones schreibt:",
+        "Ana Lima and Bob Jones both clearly said:",
+    ],
+)
+def test_generic_attribution_above_a_quote_is_removed(attribution):
+    body = f"My answer.\n\n{attribution}\n> The quoted line.\nMy second answer."
+    assert extract_new_text(body).text == "My answer.\n\nMy second answer."
+
+
+@pytest.mark.parametrize(
+    "lead_in",
+    [
+        "the following:",
+        "Section 2.3 says:",
+        "Section 2.3 of the draft said:",
+        "OLD:",
+        "NEW:",
+        "What the draft said:",
+        "It said:",
+        "* Ana said:",
+        "Ana Lima and Bob Jones both had clearly said:",  # 9 words
+        "2 March 2026, Ana Lima:",  # a date without a clock time
+        "Ana <ana@example.org> pointed to https://example.org/x:",
+        "Ana <ana@example.org> proposed as follows:",
+        "Ana <ana@example.org> wrote the following:",
+    ],
+)
+def test_lead_in_above_a_quote_stays(lead_in):
+    body = f"My answer.\n\n{lead_in}\n> The quoted line.\nMy second answer."
+    assert extract_new_text(body).text == f"My answer.\n\n{lead_in}\nMy second answer."
+
+
+def test_generic_attribution_cue_word_limit():
+    words = " ".join(f"w{k}" for k in range(23))
+    kept = f"{words} x <ana@example.org>:"  # 25 words
+    assert extract_new_text(f"{kept}\n> q\nAnswer.").text == "Answer."
+    over = f"{words} x y <ana@example.org>:"  # 26 words
+    assert extract_new_text(f"{over}\n> q\nAnswer.").text == f"{over}\nAnswer."
+
+
+def test_generic_attribution_character_limit():
+    head = "Ana Lima <ana@example.org> "
+    line = head + "x" * (400 - len(head) - 1) + ":"
+    assert len(line) == 400
+    assert extract_new_text(f"{line}\n> q\nAnswer.").text == "Answer."
+    line = head + "x" * (400 - len(head)) + ":"
+    assert extract_new_text(f"{line}\n> q\nAnswer.").text == f"{line}\nAnswer."
+
+
+def test_generic_attribution_allows_one_blank_line_before_the_quote():
+    assert extract_new_text("Ana Lima said:\n\n> q\nAnswer.").text == "Answer."
+    body = "Ana Lima said:\n\n\n> q\nAnswer."
+    assert extract_new_text(body).text == "Ana Lima said:\n\n\nAnswer."
+
+
+def test_generic_attribution_without_a_quote_below_stays():
+    body = "Ana Lima <ana@example.org>:\nUnmarked text."
+    assert extract_new_text(body).text == body
+
+
+def test_generic_attribution_unit_wraps_over_three_lines():
+    # "from ana" and the two lines below it start lowercase or with a non-letter,
+    # so each continues the line above it; the unit stops after three lines.
+    body = (
+        "Intro text.\n\nPlease see 1 reply\nfrom ana\n<ana@example.org>\non 2 March 2026:\n> quoted"
+    )
+    assert extract_new_text(body).text == "Intro text.\n\nPlease see 1 reply"
+
+
+def test_generic_attribution_unit_joins_an_attribution_opener():
+    # "Am …" without closing punctuation opens the unit; a line ending in "."
+    # does not.
+    body = "Text.\n\nAm Montag, 2. März 2026 um 10:15\nAna Lima <ana@example.org>:\n> q"
+    assert extract_new_text(body).text == "Text."
+    body = "Text.\n\nWe met on Monday.\nAna Lima <ana@example.org>:\n> q"
+    assert extract_new_text(body).text == "Text.\n\nWe met on Monday."
+
+
+def test_generic_attribution_ends_the_text_at_a_signoff():
+    # A generic attribution with no quote line below it proves a sign-off
+    # boundary.
+    lines = [
+        "Reply.",
+        "",
+        "Best,",
+        "Ana",
+        "",
+        "Bob Jones <bob@example.org> said on Monday:",
+        "Unmarked quoted text.",
+    ]
+    assert find_signoff_boundary(lines) == 4
+    assert extract_new_text("\n".join(lines)).text == "Reply.\n\nBest,\nAna"
+
+
+def test_generic_attribution_above_a_quote_does_not_end_the_text_at_a_signoff():
+    body = "Reply.\n\nBest,\nAna\n\nBob Jones <bob@example.org> said on Monday:\n> q\nLate answer."
+    assert extract_new_text(body).text == "Reply.\n\nBest,\nAna\n\nLate answer."
+
+
+# --- generation 10: wrap remainders -----------------------------------------------
+
+_LONG_QUOTE = "> The working group discussed the registry policy and reached a rough"
+
+
+@pytest.mark.parametrize("remainder", ["consensus", "consensus on"])
+def test_wrap_remainder_between_quote_lines_is_removed(remainder):
+    body = f"Answer above.\n{_LONG_QUOTE}\n{remainder}\n> on the next point.\nAnswer below."
+    assert extract_new_text(body).text == "Answer above.\nAnswer below."
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "consensus is good",  # three words
+        "Consensus",  # uppercase
+        "agreed",  # an answer word
+        "ok then",
+        "https://example.org",
+    ],
+)
+def test_short_answer_between_quote_lines_stays(line):
+    body = f"{_LONG_QUOTE}\n{line}\n> on the next point."
+    assert extract_new_text(body).text == line
+
+
+def test_wrap_remainder_needs_a_long_open_quote_line_above():
+    above = "> " + "x" * 58  # 60 characters
+    assert extract_new_text(f"{above}\nrest\n> q").status == "empty"
+    above = "> " + "x" * 57  # 59 characters
+    assert extract_new_text(f"{above}\nrest\n> q").text == "rest"
+    assert extract_new_text(f"{_LONG_QUOTE}.\nrest\n> q").text == "rest"
+
+
+def test_wrap_remainder_needs_a_quote_line_below():
+    assert extract_new_text(f"{_LONG_QUOTE}\nconsensus\nMore.").text == "consensus\nMore."
+
+
+# --- generation 10: dividers ---------------------------------------------------
+
+
+def test_divider_inside_a_quote_does_not_truncate():
+    lines = ["My reply.", "", "> -----Original Message-----", "> From: Bob", "My inline answer."]
+    assert strip_after_original_message_divider(lines) == lines
+    assert extract_new_text("\n".join(lines)).text == "My reply.\n\nMy inline answer."
+
+
+@pytest.mark.parametrize(
+    "divider",
+    [
+        "------------------ Original ------------------",
+        "------------------&nbsp;Original&nbsp;------------------",
+        "--- Original Messages ---",
+        "-- Original Message --",
+        "------------------ 邮件原文 ------------------",
+    ],
+)
+def test_short_original_divider_truncates(divider):
+    lines = ["My reply.", "", divider, "From: Bob", "Old text."]
+    assert strip_after_original_message_divider(lines) == ["My reply.", ""]
+
+
+def test_bare_original_line_above_from_truncates():
+    lines = ["My reply.", "", "Original", "", "From: Bob <bob@example.org>", "Old text."]
+    assert strip_after_original_message_divider(lines) == ["My reply.", ""]
+    lines = ["My reply.", "", "Original", "", "Old text."]
+    assert strip_after_original_message_divider(lines) == lines
+
+
+def test_bare_original_line_above_a_quote_header_is_dropped():
+    body = (
+        "My reply.\n\nOriginal\nFrom: Bob <bob@example.org>\n"
+        "Date: Mon, 2 Mar 2026 10:15\nTo: list@example.org\nSubject: Re: plan\n\nOld text."
+    )
+    assert extract_new_text(body).text == "My reply."
+
+
+def test_short_divider_below_an_inline_note_is_ignored():
+    lines = [
+        "My answers are inline below, tagged [AL].",
+        "",
+        "------------------ Original ------------------",
+        "From: Bob",
+        "Question?",
+        "[AL] Answer.",
+    ]
+    assert strip_after_original_message_divider(lines) == lines
+    lines[2] = "-----Original Message-----"
+    assert strip_after_original_message_divider(lines) == lines[:2]
+
+
+def test_outlook_boundary_line_is_separated_from_the_line_above():
+    assert custom_clean("Reply text\n__________\nmore") == "Reply text\n\n__________\nmore"
+    assert custom_clean("Reply text\n -------\nmore") == "Reply text\n\n -------\nmore"
+    # Six characters, two leading spaces, or a blank line above: unchanged.
+    assert custom_clean("Reply text\n______\nmore") == "Reply text\n______\nmore"
+    assert custom_clean("Reply text\n  _______\nmore") == "Reply text\n  _______\nmore"
+    assert custom_clean("Reply text\n\n_______\nmore") == "Reply text\n\n_______\nmore"
+
+
+def test_nul_is_removed_by_normalization():
+    assert normalize_body("a\x00b\n\x00c") == "ab\nc"
+    assert extract_new_text("\x00Hello there.\n").text == "Hello there."
+
+
+# --- generation 10: parent-diff marking mode -------------------------------------
+
+_MM_PARENT_LINES = [
+    "Hi all,",
+    "",
+    "Here is the proposed change for the registry section of the draft:",
+    "",
+    "OLD: The registry is maintained by the working group chairs for now.",
+    "NEW: The registry is maintained by the designated experts from now on.",
+    "",
+    "Please send comments before the end of the week to the list.",
+    "",
+    "> An earlier participant asked whether the registry needs a new policy.",
+    "> The same participant also asked about the expiry of old entries.",
+    "",
+    "Bob",
+]
+_MM_PARENT = "\n".join(_MM_PARENT_LINES)
+
+
+def _quoted_parent(lines: list[str]) -> str:
+    return "\n".join(
+        ">" + (" " + line if line and not line.startswith(">") else line) for line in lines
+    )
+
+
+def test_marking_mode_keeps_a_pasted_old_new_block():
+    child = (
+        "I support the change. For the record, the text would then read:\n\n"
+        "OLD: The registry is maintained by the working group chairs for now.\n"
+        "NEW: The registry is maintained by the designated experts from now on.\n\n"
+        "Ana\n\nOn Mon, 2 Mar 2026, Bob <bob@example.org> wrote:\n"
+        + _quoted_parent(_MM_PARENT_LINES)
+    )
+    result = extract_new_text(child, _MM_PARENT)
+    assert "OLD: The registry" in result.text
+    assert "NEW: The registry" in result.text
+
+
+def test_marking_mode_is_off_with_fewer_than_three_deepened_lines():
+    # Only two quote lines of at least four words appear in the parent at a
+    # smaller depth: the pasted block is parent content and is removed.
+    quoted = [
+        "> Here is the proposed change for the registry section of the draft:",
+        "> Please send comments before the end of the week to the list.",
+    ]
+    child = (
+        "I support the change. For the record, the text would then read:\n\n"
+        "OLD: The registry is maintained by the working group chairs for now.\n"
+        "NEW: The registry is maintained by the designated experts from now on.\n\n"
+        "Ana\n\nOn Mon, 2 Mar 2026, Bob <bob@example.org> wrote:\n" + "\n".join(quoted)
+    )
+    result = extract_new_text(child, _MM_PARENT)
+    assert result.method == "custom+parent-diff"
+    assert "OLD: The registry" not in result.text
+    quoted.append("> Hi all, here is the proposed change.")  # not in the parent
+    result = extract_new_text(child + "\n" + quoted[-1], _MM_PARENT)
+    assert "OLD: The registry" not in result.text
+    quoted.append(">> An earlier participant asked whether the registry needs a new policy.")
+    result = extract_new_text(child + "\n" + "\n".join(quoted[-2:]), _MM_PARENT)
+    assert "OLD: The registry" in result.text  # the third deepened line
+
+
+def test_marking_mode_keeps_a_resent_paragraph():
+    child = (
+        "Re-sending the request, since nobody answered it:\n\n"
+        "Please send comments before the end of the week to the list.\n\n"
+        "On Mon, 2 Mar 2026, Bob <bob@example.org> wrote:\n" + _quoted_parent(_MM_PARENT_LINES)
+    )
+    result = extract_new_text(child, _MM_PARENT)
+    assert result.text == (
+        "Re-sending the request, since nobody answered it:\n\n"
+        "Please send comments before the end of the week to the list."
+    )
+
+
+def test_marking_mode_still_removes_an_unmarked_line_inside_a_quoted_block():
+    child = (
+        "Two answers below.\n\n"
+        "> Here is the proposed change for the registry section of the draft:\n"
+        "OLD: The registry is maintained by the working group chairs for now.\n"
+        "> NEW: The registry is maintained by the designated experts from now on.\n"
+        "Fine with me.\n\n"
+        "> Please send comments before the end of the week to the list.\n"
+        ">> An earlier participant asked whether the registry needs a new policy.\n"
+    )
+    result = extract_new_text(child, _MM_PARENT)
+    assert result.text == "Two answers below.\n\nFine with me."
+    assert result.method == "custom+parent-diff"
+
+
+def test_marking_mode_stops_at_an_attribution_above_unmarked_text():
+    # The unmarked copy below "Bob wrote:" (no ">" below the attribution) is
+    # the client's reproduction of the parent, not the author's.
+    child = (
+        "> Here is the proposed change for the registry section of the draft:\n"
+        "> Please send comments before the end of the week to the list.\n"
+        ">> An earlier participant asked whether the registry needs a new policy.\n"
+        "Agreed.\n\n"
+        "Bob Jones <bob@example.org> wrote:\n\n"
+        "OLD: The registry is maintained by the working group chairs for now.\n"
+        "NEW: The registry is maintained by the designated experts from now on.\n"
+    )
+    result = extract_new_text(child, _MM_PARENT)
+    assert result.text == "Agreed."
+    assert result.method == "custom+parent-diff"
+
+
+def _point_by_point(paragraphs: int) -> tuple[str, str]:
+    """A parent of ``paragraphs`` three-line paragraphs, and a child that
+    copies each one unmarked and answers it, above a marked quotation."""
+    paras = [
+        [f"Paragraph {k} line {j} carries enough words to count as parent text." for j in range(3)]
+        for k in range(paragraphs)
+    ]
+    parent = "\n\n".join("\n".join(p) for p in paras)
+    child = "\n\n".join("\n".join(p) + f"\n\nAnswer {k}." for k, p in enumerate(paras))
+    child += "\n\nOn Mon, 2 Mar 2026, Bob <bob@example.org> wrote:\n" + "\n".join(
+        "> " + p[0] for p in paras[:3]
+    )
+    return child, parent
+
+
+def test_marking_mode_many_runs_lose_protection():
+    child, parent = _point_by_point(8)
+    result = extract_new_text(child, parent)
+    assert result.text == "\n\n".join(f"Answer {k}." for k in range(8))
+    child, parent = _point_by_point(7)
+    result = extract_new_text(child, parent)
+    assert "Paragraph 6 line 2" in result.text
+    assert result.method == "custom"

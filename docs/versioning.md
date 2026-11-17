@@ -21,13 +21,15 @@ bumps only the package version.
 ## What EXTRACTION_VERSION identifies
 
 The generation of the text-deriving routine, meaning `extraction.py`,
-`cleaning.py`, `html_text.py` and the vendored `_fragments.py` taken together
-(and their counterparts in the TypeScript and Rust ports). Two runs of the
+`cleaning.py`, `html_text.py` and the private modules `_names.py` and
+`_greetings.py` taken together (and their counterparts in the TypeScript and
+Rust ports). Through generation 9 the routine also included the vendored
+fragment scanner `_fragments.py`, which generation 10 removed. Two runs of the
 library, in any of the three languages, that report the same
 `EXTRACTION_VERSION` derive the
 same text from the same input.
 
-It is currently **9**. Nine generations exist; the first four shipped in the
+It is currently **10**. Ten generations exist; the first four shipped in the
 origin application, `mailing-list-ai-check`:
 
 | Generation | First shipped | What changed |
@@ -41,6 +43,7 @@ origin application, `mailing-list-ai-check`:
 | 7 | email-reply-extractor v1.3.0 | The parent-diff aligned-run rule aligns around the longest common run of lines instead of `difflib.SequenceMatcher`, and the parent-diff assist runs in linear time; the fragment scanner inserts the collapsed attribution header literally (see [generation-7.md](generation-7.md)). |
 | 8 | email-reply-extractor v1.4.0 | A `<blockquote>` whose parent element carries Apple Mail's Share-sheet class `Apple-Mail-URLShareWrapperClass` is the author's own text, not a quote, and a message holding such a container outside any quote derives its text from the HTML part (see [generation-8.md](generation-8.md)). |
 | 9 | email-reply-extractor v1.5.0 | A matched run of lines that the message also carries inside its own marked quotation is kept by the parent-diff assist when its block of consecutive non-blank lines is mostly unmatched text; `strip_parent_content` takes the marked quotation as a new optional argument (see [generation-9.md](generation-9.md)). |
+| 10 | email-reply-extractor v1.6.0 | The vendored fragment scanner, the quote-header pre-truncation and the over-strip guard are removed, and the cleanup pass runs on the whole body (method `custom`); generic attribution lines, short "Original" dividers, wrap remainders, the parent-diff marking mode and composed-signature HTML containers are added. `clean_for_scoring` takes the sender's and addressees' display names and the sender's learned signature lines (`learn_signature_lines`) as evidence for sender-name sign-off, greeting and signature-line rules, and removes more greetings and sign-off forms without evidence (see [generation-10.md](generation-10.md)). |
 
 `email-reply-extractor` 1.0.0 ships generation 4 unchanged: vendoring the
 fragment scanner left every corpus output byte-identical, and a differential
@@ -49,7 +52,7 @@ implementation.
 
 ## The rules
 
-- **Increment by one, by hand, in the same commit** as any change to those four
+- **Increment by one, by hand, in the same commit** as any change to those
   modules that could alter the extracted text, the cleaned text, or an
   extraction's status — a whitespace-only difference included. A change that
   could alter the part boundaries (`ExtractionResult.part_starts`,
@@ -57,7 +60,7 @@ implementation.
   that stores the parts re-derives them on the same stamp. The corpus digest
   does not cover the parts; the conformance vectors do.
 - **Do not increment** for comments, docstrings, type annotations, or refactors
-  that keep every output byte identical, and not for changes outside those four
+  that keep every output byte identical, and not for changes outside those
   modules.
 - **It only ever increases.** Consumers compare with `<` (see below), so
   ordering is what lets an older consumer read a store written by a newer

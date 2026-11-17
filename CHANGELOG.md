@@ -39,6 +39,58 @@ Any other line (headings above level 2, blank lines, prose in this Format
 section) is not part of a release record and can be ignored. Outside fenced
 code blocks, no release section appears before the first `## [` header.
 
+## [1.6.0] - 2026-11-17
+
+Summary: Generation 10: the vendored fragment scanner is removed and stage 1 gains rules for attribution lines, dividers, re-wrapped quote remainders and unmarked text the author placed; stage 2 takes the sender's and addressees' names and the sender's learned signature lines as evidence.
+
+- Bump `EXTRACTION_VERSION` to 10 and re-record the corpus digest.
+- Removed the vendored `email-reply-parser` fragment scanner (`_fragments.py`); the cleanup pass runs on the whole normalized body.
+- Removed the quote-header pre-truncation that ran before the fragment scan.
+- Removed the over-strip guard.
+- The base method label is `custom` for every extraction; `erp`, `erp+custom` and `custom-fallback` no longer occur (`html-custom`, `custom+parent-diff`, `custom+html-quote`).
+- An attribution line may follow `--` ("--On … wrote:"), and a wrapped attribution's start line may follow `>` markers and `--`.
+- A wrapped attribution's terminator may lie on any of the 4 lines below its start line, within 400 characters in total, and the wrap stops at a complete attribution line.
+- A blank line is inserted between a non-empty line and an Outlook boundary line (7 or more `_` or `-`) directly below it.
+- An "Original message" divider on a quote line no longer truncates.
+- An attribution followed by a quote line no longer ends the text at a sign-off boundary.
+- Generic attribution lines: a unit of one to three lines ending in a colon above a quote line is removed when it holds an e-mail address, or a clock time and a date, within 25 words, or ends in a speech verb within 8 words.
+- A generic attribution unit with no quote line below it counts as the attribution of a sign-off boundary.
+- The short "Original" dividers (`--- Original ---`, `--- Original Messages ---`, `--- 邮件原文 ---`) and a bare "Original" line above a `From:` line truncate like the dashed dividers, except below a line that says the author answers inline.
+- Wrap remainders: an unmarked line of at most two words starting lowercase, between two quote lines, below a quote line of at least 60 characters with no closing punctuation, is removed with the quote.
+- Parent-diff marking mode: when at least 3 quote-marked lines of at least 4 words occur in the parent at a smaller depth, unmarked parent text in a quote-free block above any attribution that introduces unmarked text is kept, unless 8 or more such runs of more than 2 lines occur.
+- `split_html_parts` treats the containers `protonmail_signature_block` (class), `ms-outlook-mobile-signature` and `composer_signature` (id) as signature text when they hold no more non-blank lines than the novel text above them, and as novel text otherwise.
+- `normalize_body` removes U+0000.
+- Added the keyword argument `author_name` to `clean_for_scoring`: the sender's display name.
+- Added the keyword argument `addressee_names` to `clean_for_scoring`: the display names of the people the message answers or is addressed to.
+- Added the keyword argument `signature_lines` to `clean_for_scoring`: the sender's learned signature lines.
+- Added the export `learn_signature_lines(texts, *, subjects=None)`: the lines among the last 10 non-blank lines of at least 3 and at least a fifth of one sender's stage-1 texts, with at least 3 distinct subjects when given; fewer than 5 texts learn nothing.
+- With `author_name`, a sender-name sign-off is removed with its attached signature lines when only non-blocking lines (footnotes, links, signature debris, taglines, rule lines) follow, keeping footnotes and a postscript.
+- With `author_name`, a last line that is the sender's name, or a decorated first initial, is removed.
+- With `author_name`, a salutation followed by the sender's name, and a one-line sign-off with the sender's name, are removed anywhere in the text.
+- With `author_name`, a lone sender-name line between paragraphs is removed, except speaker labels, list items and lists of names.
+- With `author_name`, a one-line thanks form on the last line is kept when a sentence follows the name, or when the name matches an addressee and not the sender.
+- With `addressee_names`, an opening line of one to six words that are addressee names, name prefixes, titles, initials or group words is a greeting.
+- With `signature_lines`, the learned lines in the trailing zone of the text are removed after the passes converge; the pass cap rises from 4 to 8.
+- Without evidence, the closing sign-off accepts more salutations, two joined salutations, full-width and other punctuation after the salutation, and a decorated, indented or lower-case name.
+- Without evidence, up to two opening greeting lines are removed, and a greeting word with name-like words, a line of group addressees and a short capitalized addressing line are greetings.
+- Without evidence, an opening greeting line that runs into a sentence ("Hi Jane, apologies for the delay.") is kept.
+- Added the greeting words "Hiya", "Howdy", "Moin", "Re-" and "Good morning/afternoon/evening/day all/everyone/folks".
+- Added the private modules `_names.py` (display-name folding and sender-name lines) and `_greetings.py` (opening-greeting rules).
+- Five fixture expectations drop a greeting or sign-off line that the rules needing no evidence remove: `bottompost-clean-quic-01`, `interleaved-deep-thread-tls-01`, `signature-pgp-german-attribution-tls-01`, `toppost-flowed-ietf-01`, `toppost-originalmsg-divider-agent2agent-01`.
+- Over the 154,394 messages of the origin application's corpus, with all evidence passed, the cleaned text of 81,747 messages changes; on a held-out audit of 160 messages, messages with any error fall from 104 to 36.
+- Without the evidence arguments, the stage-2 changes alter the cleaned text of 19,910 of those messages.
+- Abandoned part-boundary alignments over the corpus fall from 72 to 10.
+- Added adversarial inputs for the new code paths to the complexity tests and Python-specific semantics of the new rules to `test_port_hazards.py`.
+- Added `docs/generation-10.md`.
+- `learn_signature_lines` treats a text without a corresponding subject as having the empty subject and ignores subjects beyond the last text.
+- TypeScript: added the options `authorName`, `addresseeNames` and `signatureLines` to `cleanForScoring` (`CleanOptions`).
+- TypeScript: added the export `learnSignatureLines(texts, { subjects })` and the type `LearnOptions`.
+- Rust: added the struct `CleanOptions` and the function `clean_for_scoring_with_options(extracted_text, &options)`, which takes every optional argument of `clean_for_scoring`.
+- Rust: added the function `learn_signature_lines(texts, subjects)`, with `subjects: Option<&[&str]>`.
+- The TypeScript and Rust ports lower-case with `str.lower()` mapping and Final_Sigma tables generated from Python 3.14.6 (Unicode 16.0.0) instead of the runtime's lower-casing.
+- The TypeScript and Rust ports copy the name-folding table from `_names.py` through their table generators (`typescript/tools/generate_tables.py`, `rust/tools/gen_tables.py`); `python/tools/gen_fold_table.py` generates the table in `_names.py`.
+- Removed the TypeScript and Rust fragment scanners (`src/fragments.ts`, `src/fragments.rs`).
+
 ## [1.5.0] - 2026-11-16
 
 Summary: Generation 9: the parent-diff assist keeps a line the author repeated from the thread parent when the message also carries it inside its own marked quotation.

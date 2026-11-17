@@ -47,6 +47,7 @@ test("the public exports", () => {
     "cleanForScoring",
     "extractNewText",
     "htmlToText",
+    "learnSignatureLines",
     "splitHtmlParts",
     "stripParentContent",
     "textsEquivalent",
@@ -60,18 +61,21 @@ test("VERSION equals package.json version", () => {
 });
 
 test("constants", () => {
-  assert.equal(EXTRACTION_VERSION, 9);
+  assert.equal(EXTRACTION_VERSION, 10);
   assert.deepStrictEqual([STATUS_OK, STATUS_EMPTY, STATUS_FAILED], ["ok", "empty", "failed"]);
 });
 
 test("quickstart example", () => {
   const result: ExtractionResult = extractNewText(BODY);
   assert.equal(result.status, "ok");
-  assert.equal(result.method, "erp");
-  assert.equal(result.text, "Hi Dan,\n\nTwo comments below.\n\nAgreed, and the draft already says so.\n\nBest,\nLucas");
+  assert.equal(result.method, "custom");
+  assert.equal(
+    result.text,
+    "Hi Dan,\n\nTwo comments below.\n\n\nAgreed, and the draft already says so.\n\nBest,\nLucas",
+  );
   const cleaned: CleanResult = cleanForScoring(result.text);
   assert.equal(cleaned.text, "Two comments below.\n\nAgreed, and the draft already says so.");
-  assert.deepStrictEqual(cleaned.ignoredLines, [0, 6, 7]);
+  assert.deepStrictEqual(cleaned.ignoredLines, [0, 7, 8]);
   assert.deepStrictEqual(cleaned.parts, [cleaned.text]);
 });
 
@@ -104,7 +108,7 @@ test("missing and blank bodies", () => {
 test("options objects: omitted, undefined and null are equivalent", () => {
   const html = "<div>Hello there, this is new.</div><blockquote>old text</blockquote>";
   const a = extractNewText(null, { htmlBody: html });
-  assert.equal(a.method, "html-erp");
+  assert.equal(a.method, "html-custom");
   assert.equal(a.text, "Hello there, this is new.");
   assert.deepStrictEqual(extractNewText(BODY, { parentBody: null, htmlBody: null }), extractNewText(BODY));
   assert.deepStrictEqual(extractNewText(BODY, {}), extractNewText(BODY));
@@ -113,11 +117,11 @@ test("options objects: omitted, undefined and null are equivalent", () => {
   assert.equal(stripParentContent("a\n\n\nb", "zzz", { continuation: true }), "a\n\nb");
 });
 
-test("backslashes in a collapsed attribution are kept literally", () => {
+test("backslashes in an attribution line do not disturb extraction", () => {
   const body = "My reply.\n\nOn Mon, Jan 1, 2026 at 10:00 C:\\Users\\x wrote:\n> quoted\n";
   assert.deepStrictEqual(
     { ...extractNewText(body) },
-    { text: "My reply.", method: "erp", status: "ok", partStarts: [] },
+    { text: "My reply.", method: "custom", status: "ok", partStarts: [] },
   );
 });
 

@@ -2,21 +2,24 @@
  * New-text extraction: recover the author's novel content (stage 1 of 2).
  *
  * Port of the reference's `extraction.py`. Its module docstring is the design
- * documentation; docs/extraction.md restructures it. The fragment scanner
- * ("ERP") is in {@link readFragments}; the HTML oracle in {@link splitHtmlParts}.
+ * documentation; docs/extraction.md restructures it. The HTML oracle is in
+ * {@link splitHtmlParts}.
  *
  * @module
  */
 
-import { readFragments } from "./fragments.js";
 import { absorb, finish, GramTable, HASH_START, StringTable, Transitions } from "./hashTables.js";
 import { htmlToText, splitHtmlParts } from "./htmlText.js";
 import {
   codePointAt,
   cpLen,
+  cpTail,
   firstIsUpper,
   hasPyDigit,
   isBlank,
+  isPyAlpha,
+  isPyLower,
+  isSpaceCode,
   PyPattern,
   pyRstrip,
   pyRstripChars,
@@ -29,12 +32,11 @@ import {
 // --- generation stamp -----------------------------------------------------------
 
 /**
- * The generation of the text-deriving routine (this module, `cleaning`,
- * `htmlText` and `fragments` together, and their counterparts in the other
- * ports). Consumers stamp stored derived text with it and compare with `<`, so
+ * The generation of the text-deriving routine (this module, `cleaning` and
+ * `htmlText` together, and their counterparts in the other ports). Consumers stamp stored derived text with it and compare with `<`, so
  * it only ever increases. See docs/versioning.md.
  */
-export const EXTRACTION_VERSION = 9;
+export const EXTRACTION_VERSION = 10;
 
 // --- result -------------------------------------------------------------------
 
@@ -56,9 +58,9 @@ export interface ExtractionResult {
   /** The author's newly written text, furniture included (may be empty). */
   readonly text: string;
   /**
-   * Which path produced the text: `none`, `erp`, `erp+custom`,
-   * `custom-fallback` or `failed`, with an optional `html-` prefix and
-   * `+parent-diff` / `+html-quote` suffixes.
+   * Which path produced the text: `none`, `custom` (the cleanup pass) or
+   * `failed`, with an optional `html-` prefix and `+parent-diff` /
+   * `+html-quote` suffixes.
    */
   readonly method: string;
   /** One of `ok`, `empty`, `failed`. */
@@ -92,13 +94,16 @@ export interface LocalizedOptions {
 
 // --- pre-normalization --------------------------------------------------------
 
-/** BOM / zero-width space / zero-width non-joiner / zero-width joiner / word-joiner. */
+/**
+ * BOM / zero-width space / zero-width non-joiner / zero-width joiner /
+ * word-joiner. U+0000 is removed as well (see {@link GENERIC_ATTRIBUTION_MARK}).
+ */
 // biome-ignore lint/complexity/useRegexLiterals: escapes keep the invisible characters readable
 const ZERO_WIDTH_RE = new RegExp("[\\ufeff\\u200b\\u200c\\u200d\\u2060]", "gu");
 
-/** Normalize line endings and strip BOM / zero-width characters. */
+/** Normalize line endings and strip BOM / zero-width characters and U+0000. */
 export function normalizeBody(body: string): string {
-  return body.replaceAll("\r\n", "\n").replaceAll("\r", "\n").replace(ZERO_WIDTH_RE, "");
+  return body.replaceAll("\r\n", "\n").replaceAll("\r", "\n").replaceAll("\0", "").replace(ZERO_WIDTH_RE, "");
 }
 
 // --- line classifiers ---------------------------------------------------------
@@ -119,7 +124,9 @@ export function isQuoteLine(line: string): boolean {
 // decided by a linear helper that accepts exactly the strings the original
 // pattern (given in its comment) accepts under `re.match`.
 const ATTRIBUTION_RES: readonly PyPattern[] = [
-  new PyPattern(String.raw`^[ \t]*On\b.*wrote:[ \t]*$`),
+  // "On <date>, <who> wrote:", also after a "--". No word boundary before
+  // "wrote": an unwrapped attribution can glue the address onto it.
+  new PyPattern(String.raw`^[ \t]*(?:--)?On\b.*wrote:[ \t]*$`),
   new PyPattern(String.raw`^[ \t]*\d{4}(?:年|[/.-]).*のメール:[ \t]*$`),
 ];
 
@@ -199,7 +206,15 @@ function isGermanAttribution(line: string): boolean {
   return schrieb !== null && body.endsWith(":") && body.length - 1 >= schrieb.index + schrieb[0].length;
 }
 
-const ATTRIBUTION_START_RE = new PyPattern(String.raw`^[ \t]*(?:(?:On|Am|Le|El|El día)\b|\d{4}(?:年|[/.-]))`);
+/**
+ * A wrapped attribution's start token, optionally after `>` markers and blanks
+ * and then a "--".
+ */
+const ATTRIBUTION_START_RE = new PyPattern(String.raw`^[ \t>]*(?:--)?(?:(?:On|Am|Le|El|El día)\b|\d{4}(?:年|[/.-]))`);
+/** A wrapped attribution's terminator lies on one of this many lines below its start line ... */
+const WRAPPED_ATTRIBUTION_MAX_LINES = 4;
+/** ... and the lines from the start line through the terminator line hold at most this many code points. */
+const WRAPPED_ATTRIBUTION_MAX_CHARS = 400;
 /**
  * The terminators, except `\bschrieb\b.*:`, which {@link hasAttributionEnd}
  * decides separately: under `search` the engine retried `.*:` from every
@@ -230,27 +245,46 @@ function hasAttributionEnd(line: string): boolean {
   return schrieb !== null && schrieb.index + schrieb[0].length <= colon;
 }
 
-/** True if `line` on its own is a complete attribution line. */
+/**
+ * True if `line` on its own is a complete attribution line, or a line of a
+ * generic attribution unit marked by {@link markGenericAttributions}.
+ */
 export function isAttributionLine(line: string): boolean {
-  return ATTRIBUTION_RES.some((pat) => pat.test(line)) || isAddressAttribution(line) || isGermanAttribution(line);
+  return (
+    line.startsWith(GENERIC_ATTRIBUTION_MARK) ||
+    ATTRIBUTION_RES.some((pat) => pat.test(line)) ||
+    isAddressAttribution(line) ||
+    isGermanAttribution(line)
+  );
 }
 
 /**
- * If `lines[i]` opens a wrapped attribution whose terminator lands on the next
- * line or two, with no blank between, return the terminator line's index.
+ * If `lines[i]` opens a wrapped attribution, return the index of its
+ * terminator line, else `null`.
+ *
+ * A start line ({@link ATTRIBUTION_START_RE}) without a terminator of its own,
+ * followed by the first line `j` within {@link WRAPPED_ATTRIBUTION_MAX_LINES}
+ * lines that holds a terminator, where no line from `i + 1` through `j` is
+ * blank or is itself a complete attribution line matching the start pattern,
+ * and the lines `i` through `j` hold at most
+ * {@link WRAPPED_ATTRIBUTION_MAX_CHARS} code points in total.
  */
 export function wrappedAttributionEnd(lines: readonly string[], i: number): number | null {
   const line = lines[i] as string;
   if (!ATTRIBUTION_START_RE.test(line) || hasAttributionEnd(line)) return null;
-  for (let j = i + 1; j < Math.min(i + 3, lines.length); j++) {
+  let total = cpLen(line);
+  for (let j = i + 1; j < Math.min(i + 1 + WRAPPED_ATTRIBUTION_MAX_LINES, lines.length); j++) {
     const next = lines[j] as string;
     if (isBlank(next)) return null;
+    total += cpLen(next);
+    if (total > WRAPPED_ATTRIBUTION_MAX_CHARS) return null;
+    if (ATTRIBUTION_START_RE.test(next) && isAttributionLine(next)) return null;
     if (hasAttributionEnd(next)) return j;
   }
   return null;
 }
 
-/** Drop attribution lines, including forms wrapped across up to two lines. */
+/** Drop attribution lines, wrapped forms and marked generic attribution lines included. */
 export function stripAttributionLines(lines: readonly string[]): string[] {
   const out: string[] = [];
   let i = 0;
@@ -271,10 +305,246 @@ export function stripAttributionLines(lines: readonly string[]): string[] {
   return out;
 }
 
+// --- generic attribution lines ------------------------------------------------
+//
+// A generic attribution unit is one to three lines, the last ending in a colon,
+// whose text names its source by a cue (an e-mail address, or a clock time and
+// a date) or ends in a speech verb. A unit directly above a quote line, with at
+// most one blank line between, is removed with the attribution lines; a unit
+// with no quote line below can end the new text at a sign-off boundary. The
+// rules are stated in the reference's comment above
+// `_generic_attribution_start`. Lengths are code points, word counts are
+// `len(str.split())`.
+
+/** The longest generic attribution unit, and its last line, in code points. */
+const GENERIC_ATTRIBUTION_MAX_CHARS = 400;
+/** The most words a head with a cue may hold. */
+const CUE_ATTRIBUTION_MAX_WORDS = 25;
+/** The most words a head ending in a speech verb may hold. */
+const VERB_ATTRIBUTION_MAX_WORDS = 8;
+/** The character before the "@" of an e-mail address, and the domain after it. */
+const EMAIL_LOCAL_CHAR_RE = new PyPattern(String.raw`[\w.+=-]`);
+const EMAIL_DOMAIN_RE = new PyPattern(String.raw`[\w-]+(?:\.[\w-]+)+`);
+/** A clock time: "9:30", "19:30", "19h30". */
+const CLOCK_TIME_RE = new PyPattern(String.raw`(?<!\d)\d{1,2}(?::\d{2}|h\d{2}\b)`);
+/** A date cue: a year from 1900 to 2099, a day and month, a CJK month, or a day and month with dots. */
+const DATE_CUE_RE = new PyPattern(
+  String.raw`(?<!\d)(?:19|20)\d{2}(?!\d)|(?<![\d.])\d{1,2}[./-]\d{1,2}(?!\d)|\d{1,2}月|\d{1,2}\.\s?\d{1,2}\.`,
+);
+/** The opening of an attribution whose rest wraps onto the next line. */
+const ATTRIBUTION_OPENER_RE = new PyPattern(
+  String.raw`^[ \t]*(?:-*On|Le|Am|El|Il|Op|Den|Ar|At|In|Em|Dne|W dniu|Pe|Às|\d)\b`,
+);
+/** A head that opens with a document reference, optionally after "(". */
+const DOCUMENT_REFERENCE_RE = new PyPattern(
+  String.raw`^[ \t]*(?:\(?(?:sections?|sec\.|§|figures?|fig\.|tables?|appendix|rfc|old|new|current` +
+    String.raw`|proposed)\b)`,
+  { ignoreCase: true },
+);
+/** A head that ends in a URL or in a phrase announcing text below. */
+const LEAD_IN_TAIL_RE = new PyPattern(String.raw`(?:https?://|www\.)\S*$|\b(?:as follows|following|below)$`, {
+  ignoreCase: true,
+});
+/** A speech verb at the end of a head; applied to the last {@link SPEECH_VERB_SPAN} code points. */
+const SPEECH_VERB_RE = new PyPattern(
+  String.raw`(?:\b(?:wrote|writes|said|schrieb|schreibt|[ée]crit|escribi[óo]|escribe|scritto|scrisse` +
+    String.raw`|scrive|schreef|schrijft|skrev|skriver|kirjoitti|napisa[łl]a?|escreveu|ysgrifennodd` +
+    String.raw`|написал|написала|пишет)|写道|寫道|쓴[ \t]*글)$`,
+  { ignoreCase: true },
+);
+const SPEECH_VERB_SPAN = 24;
+/** A head that introduces quoted content rather than a person. */
+const CONTENT_LEAD_IN_RE = new PyPattern(
+  String.raw`\b(?:it|this|that|what|text|draft|document|spec|section|rfc|paragraph|figure)\b` +
+    String.raw`|^[ \t]*[*•-]`,
+  { ignoreCase: true },
+);
+
+/**
+ * Prefixed to every line of a generic attribution unit found above a quote
+ * line (see {@link markGenericAttributions}). {@link normalizeBody} removes
+ * U+0000 from every body, so no other line carries it.
+ */
+const GENERIC_ATTRIBUTION_MARK = "\0";
+
+/** `line.rstrip().endswith((":", "："))`. */
+function endsWithColon(line: string): boolean {
+  const tail = pyRstrip(line);
+  return tail.endsWith(":") || tail.endsWith("：");
+}
+
+/**
+ * `re.search(r"[\w.+=-]+@[\w-]+(?:\.[\w-]+)+", text)`, in linear time: some
+ * "@" has a local-part character directly before it and the domain pattern
+ * directly after it. The character before the "@" is read as a code point (a
+ * surrogate pair is matched from its first unit).
+ */
+function hasEmailAddress(text: string): boolean {
+  let at = text.indexOf("@");
+  while (at >= 0) {
+    if (at > 0) {
+      let prev = at - 1;
+      const c = text.charCodeAt(prev);
+      if (prev > 0 && c >= 0xdc00 && c <= 0xdfff) {
+        const h = text.charCodeAt(prev - 1);
+        if (h >= 0xd800 && h <= 0xdbff) prev--;
+      }
+      if (EMAIL_LOCAL_CHAR_RE.match(text, prev) !== null && EMAIL_DOMAIN_RE.match(text, at + 1) !== null) return true;
+    }
+    at = text.indexOf("@", at + 1);
+  }
+  return false;
+}
+
+/** The first code point of `line.lstrip()`, or -1 for a blank line. */
+function firstNonSpaceCodePoint(line: string): number {
+  for (let i = 0; i < line.length; i++) {
+    if (!isSpaceCode(line.charCodeAt(i))) return codePointAt(line, i);
+  }
+  return -1;
+}
+
+/**
+ * True when `line` reads as the wrapped continuation of `above`: its first
+ * non-blank character is lowercase, is not a letter, or lies in U+3000 to
+ * U+D7AF; or `above`, without trailing whitespace, does not end in ".", "!",
+ * "?" or ":" and opens like an attribution ({@link ATTRIBUTION_OPENER_RE}).
+ */
+function continues(above: string, line: string): boolean {
+  const first = firstNonSpaceCodePoint(line);
+  if (first >= 0 && (isPyLower(first) || !isPyAlpha(first) || (first >= 0x3000 && first <= 0xd7af))) return true;
+  const tail = pyRstrip(above);
+  return tail.length > 0 && !".!?:".includes(tail.charAt(tail.length - 1)) && ATTRIBUTION_OPENER_RE.test(above);
+}
+
+/** The first line of the generic attribution unit whose last line is `lines[e]`: up to two lines above it join. */
+function unitStart(lines: readonly string[], e: number): number {
+  let s = e;
+  while (s > e - 2 && s > 0) {
+    const above = lines[s - 1] as string;
+    if (isBlank(above) || isQuoteLine(above) || !continues(above, lines[s] as string)) break;
+    s--;
+  }
+  return s;
+}
+
+/** Step 5 of the generic attribution rules, for a unit's `text` ending in a colon. */
+function isGenericAttributionText(text: string): boolean {
+  if (cpLen(text) > GENERIC_ATTRIBUTION_MAX_CHARS) return false;
+  const head = pyRstripChars(text.slice(0, -1), " \t\u00a0");
+  if (!head || DOCUMENT_REFERENCE_RE.test(head) || LEAD_IN_TAIL_RE.search(head) !== null) return false;
+  const words = pyWordCount(head);
+  if (
+    words <= CUE_ATTRIBUTION_MAX_WORDS &&
+    (hasEmailAddress(head) || (CLOCK_TIME_RE.search(head) !== null && DATE_CUE_RE.search(head) !== null))
+  ) {
+    return true;
+  }
+  return (
+    words <= VERB_ATTRIBUTION_MAX_WORDS &&
+    SPEECH_VERB_RE.search(cpTail(head, SPEECH_VERB_SPAN)) !== null &&
+    CONTENT_LEAD_IN_RE.search(head) === null
+  );
+}
+
+/** The first line of the generic attribution unit whose last line is `lines[e]`, or `null`. */
+function genericAttributionStart(lines: readonly string[], e: number): number | null {
+  const line = lines[e] as string;
+  if (!endsWithColon(line) || isQuoteLine(line) || cpLen(line) > GENERIC_ATTRIBUTION_MAX_CHARS) return null;
+  for (let k = Math.max(0, e - WRAPPED_ATTRIBUTION_MAX_LINES); k < e; k++) {
+    if (wrappedAttributionEnd(lines, k) === e) return null;
+  }
+  if (ATTRIBUTION_START_RE.test(line) && isAttributionLine(line)) return null;
+  const s = unitStart(lines, e);
+  if (s === e && isAttributionLine(line)) return null;
+  const unitText = lines
+    .slice(s, e + 1)
+    .map(pyStrip)
+    .join(" ");
+  if (!isGenericAttributionText(unitText)) return null;
+  return s;
+}
+
+// --- wrap remainders ----------------------------------------------------------
+//
+// The tail of a long quote line that a client re-wrapped without marking: an
+// unmarked line of at most 2 words that starts lowercase, between two quote
+// lines, below a quote line of at least 60 code points with no closing
+// punctuation (see the reference's comment above `_is_wrap_remainder`).
+
+const WRAP_REMAINDER_MIN_ABOVE = 60;
+const WRAP_REMAINDER_MAX_WORDS = 2;
+/** An answer word or a URL at the start of a line. */
+const ANSWER_WORD_RE = new PyPattern(
+  String.raw`^(?:ok(?:ay)?|yes|yep|no|nope|agreed?|done|sure|fine|ack|right|true|correct|see|thanks?` +
+    String.raw`|https?://|www\.)\b`,
+  { ignoreCase: true },
+);
+
+/** True when `line`, between `above` and `below`, is a wrap remainder. */
+function isWrapRemainder(above: string, line: string, below: string): boolean {
+  const text = pyStrip(line);
+  if (!text || isQuoteLine(line) || !isQuoteLine(above) || !isQuoteLine(below)) return false;
+  const tail = pyRstrip(above);
+  if (cpLen(tail) < WRAP_REMAINDER_MIN_ABOVE || pyWordCount(text) > WRAP_REMAINDER_MAX_WORDS) return false;
+  if (!isPyLower(codePointAt(text, 0)) || ANSWER_WORD_RE.test(text)) return false;
+  return !'.?!:;)"'.includes(tail.charAt(tail.length - 1));
+}
+
+/**
+ * Mark the generic attribution units and wrap remainders of `text`: every line
+ * of a unit whose last line is followed by a quote line (directly or after one
+ * blank line) is prefixed with {@link GENERIC_ATTRIBUTION_MARK}; a wrap
+ * remainder is prefixed with `"> "` instead. Each is decided on the unmarked
+ * lines. The line count is unchanged.
+ */
+function markGenericAttributions(text: string): string {
+  const lines = text.split("\n");
+  const n = lines.length;
+  const prefix: string[] = new Array<string>(n).fill("");
+  for (let e = 0; e < n; e++) {
+    let j = e + 1;
+    if (j < n && isBlank(lines[j] as string)) j++;
+    if (j >= n || !isQuoteLine(lines[j] as string)) continue;
+    const start = genericAttributionStart(lines, e);
+    if (start !== null) {
+      for (let k = start; k <= e; k++) prefix[k] = GENERIC_ATTRIBUTION_MARK;
+    }
+  }
+  for (let i = 1; i < n - 1; i++) {
+    if (isWrapRemainder(lines[i - 1] as string, lines[i] as string, lines[i + 1] as string)) prefix[i] = "> ";
+  }
+  return lines.map((line, i) => (prefix[i] as string) + line).join("\n");
+}
+
+/**
+ * The last line of an attribution that starts at `lines[k]`, or `null`: a run
+ * of marked generic attribution lines, a complete attribution line, a wrapped
+ * attribution, or a generic attribution unit that starts at `k` (whose last
+ * line is the first line ending in a colon among `lines[k]` and the two lines
+ * below it, with no blank or quote line before it).
+ */
+function attributionEndAt(lines: readonly string[], k: number): number | null {
+  if ((lines[k] as string).startsWith(GENERIC_ATTRIBUTION_MARK)) {
+    let e = k;
+    while (e + 1 < lines.length && (lines[e + 1] as string).startsWith(GENERIC_ATTRIBUTION_MARK)) e++;
+    return e;
+  }
+  if (isAttributionLine(lines[k] as string)) return k;
+  const end = wrappedAttributionEnd(lines, k);
+  if (end !== null) return end;
+  for (let e = k; e < Math.min(k + 3, lines.length); e++) {
+    const line = lines[e] as string;
+    if (isBlank(line) || isQuoteLine(line)) return null;
+    if (endsWithColon(line)) return genericAttributionStart(lines, e) === k ? e : null;
+  }
+  return null;
+}
+
 // --- sign-off boundary ----------------------------------------------------------
 
 /** Sign-off salutations, ordered longest-first (shared with `cleaning`). */
-const SIGNOFF_SALUTATIONS =
+export const SIGNOFF_SALUTATIONS =
   // English
   String.raw`all\s+the\s+best|best\s+(?:regards|wishes)|kind\s+regards|warm(?:est)?\s+regards|` +
   String.raw`many\s+thanks|thanks\s+again|thank\s+you|yours(?:\s+(?:sincerely|truly|faithfully))?|` +
@@ -361,7 +631,11 @@ export function signoffNameIndex(lines: readonly string[], i: number): number | 
 
 /**
  * Return the index just past a sign-off (salutation + name) that is directly
- * followed by an attribution line, or `null`.
+ * followed by an attribution introducing unmarked text, or `null`.
+ *
+ * The attribution is the next non-blank line after the name, recognized by
+ * {@link attributionEndAt}; it must not be followed, after any blank lines, by
+ * a quote line (it would head an interleaved quote).
  */
 export function findSignoffBoundary(lines: readonly string[]): number | null {
   const n = lines.length;
@@ -371,9 +645,12 @@ export function findSignoffBoundary(lines: readonly string[]): number | null {
     let k = nameIdx + 1;
     while (k < n && isBlank(lines[k] as string)) k++;
     if (k >= n) continue;
-    if (isAttributionLine(lines[k] as string) || wrappedAttributionEnd(lines, k) !== null) {
-      return nameIdx + 1;
-    }
+    const end = attributionEndAt(lines, k);
+    if (end === null) continue;
+    let q = end + 1;
+    while (q < n && isBlank(lines[q] as string)) q++;
+    if (q < n && isQuoteLine(lines[q] as string)) continue;
+    return nameIdx + 1;
   }
   return null;
 }
@@ -535,13 +812,18 @@ export function findQuoteHeaderBlock(lines: readonly string[], options: Localize
 /** The separator Alibaba Mail draws directly above its quote-header block. */
 const QUOTE_HEADER_DIVIDER_RE = new PyPattern(String.raw`^[ \t]*-{6,}[ \t]*$`);
 
-/** Truncate everything from a forwarded/quote-header block to the end. */
+/**
+ * Truncate everything from a forwarded/quote-header block to the end. A dashed
+ * divider line directly above the block, or failing that a bare "Original"
+ * line, is dropped with it.
+ */
 export function stripAfterQuoteHeaderBlock(lines: readonly string[], options: LocalizedOptions = {}): string[] {
   const idx = findQuoteHeaderBlock(lines, options);
   if (idx === null) return [...lines];
   const out = lines.slice(0, idx);
   while (out.length > 0 && isBlank(out[out.length - 1] as string)) out.pop();
-  if (out.length > 0 && QUOTE_HEADER_DIVIDER_RE.test(out[out.length - 1] as string)) out.pop();
+  const last = out.length > 0 ? (out[out.length - 1] as string) : null;
+  if (last !== null && (QUOTE_HEADER_DIVIDER_RE.test(last) || BARE_ORIGINAL_RE.test(last))) out.pop();
   return out;
 }
 
@@ -570,9 +852,47 @@ const LOCALIZED_DIVIDER_RE = new PyPattern(
   { ignoreCase: true },
 );
 
-/** The first "Original message" divider in `line`, or `null`. */
-function findDivider(line: string, localized: boolean): RegExpExecArray | null {
+// The short "Original" dividers of QQ Mail, Foxmail and similar clients
+// ("------------------ Original ------------------", "--- Original Message(s)
+// ---", the Chinese 邮件原文), the spacing possibly U+00A0, U+3000 or a literal
+// "&nbsp;". The `(?<!-)` is the same linear-time guard.
+const DIVIDER_SPACE = String.raw`(?:[ \t\u00a0\u3000]|&nbsp;)`;
+const SHORT_ORIGINAL_DIVIDER_RE = new PyPattern(
+  String.raw`(?<!-)-{2,}${DIVIDER_SPACE}*(?:Original(?:${DIVIDER_SPACE}+Messages?)?|邮件原文)` +
+    String.raw`${DIVIDER_SPACE}*-{2,}`,
+  { ignoreCase: true },
+);
+/** A bare "Original" line, drawn by QQ Mail and Foxmail above their quote header. */
+const BARE_ORIGINAL_RE = new PyPattern(String.raw`^[ \t]*Original[ \t]*$`);
+/** The `From:` (or 发件人) line a bare "Original" line must stand above. */
+const BARE_ORIGINAL_FROM_RE = new PyPattern(String.raw`^[ \t*]*(?:From|发件人)[ \t]*[:：]`);
+/** A note that the author answers inline ("replies inline", "in-line"). */
+const INLINE_NOTE_RE = new PyPattern(String.raw`\bin-?line\b`, { ignoreCase: true });
+
+/**
+ * True when `lines[i]` is a bare "Original" line and the first non-blank line
+ * among the four below it is a `From:` / 发件人 line.
+ */
+function isBareOriginalDivider(lines: readonly string[], i: number): boolean {
+  if (!BARE_ORIGINAL_RE.test(lines[i] as string)) return false;
+  for (let j = i + 1; j < Math.min(i + 5, lines.length); j++) {
+    const line = lines[j] as string;
+    if (!isBlank(line)) return BARE_ORIGINAL_FROM_RE.test(line);
+  }
+  return false;
+}
+
+/**
+ * The first "Original message" divider in `line`, or `null`. `short: false`
+ * leaves out the short "Original" forms.
+ */
+function findDivider(line: string, localized: boolean, short = true): RegExpExecArray | null {
   let found = ORIGINAL_MESSAGE_DIVIDER_RE.search(line);
+  // min(found, key=start): the first of equal starts wins.
+  if (short) {
+    const m = SHORT_ORIGINAL_DIVIDER_RE.search(line);
+    if (m && (found === null || m.index < found.index)) found = m;
+  }
   if (localized) {
     const m = LOCALIZED_DIVIDER_RE.search(line);
     // min(found, key=start): the first of equal starts wins.
@@ -581,13 +901,29 @@ function findDivider(line: string, localized: boolean): RegExpExecArray | null {
   return found;
 }
 
-/** Truncate everything from a dashed "Original/Forwarded message" divider. */
+/**
+ * Truncate everything from a dashed "Original/Forwarded message" divider.
+ *
+ * A divider on a quote line never truncates; a bare "Original" line above a
+ * `From:` line truncates like a divider; once a line above holds an inline note
+ * ({@link INLINE_NOTE_RE}), the short forms are ignored.
+ */
 export function stripAfterOriginalMessageDivider(lines: readonly string[], options: LocalizedOptions = {}): string[] {
   const localized = options.localized ?? true;
+  let inlineNote = false;
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i] as string;
+    if (isQuoteLine(line)) {
+      if (!inlineNote && INLINE_NOTE_RE.search(line) !== null) inlineNote = true;
+      continue;
+    }
+    if (!inlineNote && isBareOriginalDivider(lines, i)) return lines.slice(0, i);
     const m = findDivider(line, localized);
-    if (m === null) continue;
+    if (m === null) {
+      if (!inlineNote && INLINE_NOTE_RE.search(line) !== null) inlineNote = true;
+      continue;
+    }
+    if (inlineNote && findDivider(line, localized, false) === null) continue;
     const out = lines.slice(0, i);
     const prefix = pyRstrip(line.slice(0, m.index));
     if (prefix) out.push(prefix);
@@ -596,11 +932,26 @@ export function stripAfterOriginalMessageDivider(lines: readonly string[], optio
   return [...lines];
 }
 
+// --- Outlook boundary lines -----------------------------------------------------
+
+/** A line Outlook draws above a quoted message: an optional space, then at least seven underscores or hyphens. */
+const OUTLOOK_BOUNDARY_RE = new PyPattern(" ?[_-]{7,}");
+
+/** Insert a blank line between a non-empty line and an Outlook boundary line directly below it. */
+function separateOutlookBoundaries(lines: readonly string[]): string[] {
+  const out: string[] = [];
+  for (const line of lines) {
+    if (out.length > 0 && out[out.length - 1] && OUTLOOK_BOUNDARY_RE.test(line)) out.push("");
+    out.push(line);
+  }
+  return out;
+}
+
 // --- custom cleanup pass ------------------------------------------------------
 
 /** Apply the stage-1 quote/attribution cleanup to `text`. */
 export function customClean(text: string, options: LocalizedOptions = {}): string {
-  let lines = text.split("\n");
+  let lines = separateOutlookBoundaries(text.split("\n"));
   lines = stripAfterQuoteHeaderBlock(lines, options);
   lines = stripAfterOriginalMessageDivider(lines, options);
   lines = stripAfterSignoffBoundary(lines);
@@ -614,25 +965,6 @@ export function customClean(text: string, options: LocalizedOptions = {}): strin
   while (start < end && !lines[start]) start++;
   while (end > start && !lines[end - 1]) end--;
   return lines.slice(start, end).join("\n");
-}
-
-// --- over-strip guard ---------------------------------------------------------
-
-/** Fraction of plainly unquoted content lines the primary path must keep. */
-const GUARD_MIN_RETAINED = 0.6;
-
-/** Count non-blank body lines that are plainly authored content. */
-export function countUnquotedContentLines(body: string, options: LocalizedOptions = {}): number {
-  let lines = stripAfterQuoteHeaderBlock(body.split("\n"), options);
-  lines = stripAfterOriginalMessageDivider(lines, options);
-  lines = stripAfterSignoffBoundary(lines);
-  let count = 0;
-  for (const line of lines) {
-    if (isBlank(line)) continue;
-    if (isQuoteLine(line) || isAttributionLine(line)) continue;
-    count++;
-  }
-  return count;
 }
 
 function nonblankLineCount(text: string): number {
@@ -1119,6 +1451,106 @@ function restoredByOwnQuotation(
   return isProtected;
 }
 
+// --- marking mode: unmarked parent text the author placed ---------------------
+//
+// The reference's comment above `_MARKING_MODE_MIN_LINES` is the specification:
+// with enough evidence that the client marks its quotation (step 1), unmarked
+// lines of a block holding no quote line, above the stop line (step 2), are
+// protected (steps 3-4), unless many long runs of them match (step 5).
+
+const MARKING_MODE_MIN_LINES = 3;
+const MARKING_MODE_MIN_WORDS = 4;
+const MARKING_MODE_SHORT_RUN = 2;
+const MARKING_MODE_MANY_RUNS = 8;
+
+/** The leading quote-marker run of a line (ASCII only, no backtracking across lines). */
+const QUOTE_DEPTH_RE = /^[ \t]*(?:\.{2,}[ \t]*)?((?:>[ \t]*)+)/;
+
+/** `[depth, content]` of `line` (step 1). */
+function quoteDepth(line: string): [number, string] {
+  const m = QUOTE_DEPTH_RE.exec(line);
+  if (m === null) return [0, pySplit(line).join(" ")];
+  let depth = 0;
+  for (const ch of m[1] as string) if (ch === ">") depth++;
+  return [depth, pySplit(line.slice(m[0].length)).join(" ")];
+}
+
+/** Step 1: whether marking mode is on. */
+function markingMode(bodyLines: readonly string[], parentBody: string): boolean {
+  const parentDepth = new Map<string, number>();
+  for (const line of normalizeBody(parentBody).split("\n")) {
+    const [depth, content] = quoteDepth(line);
+    if (!content) continue;
+    const seen = parentDepth.get(content);
+    if (seen === undefined || depth < seen) parentDepth.set(content, depth);
+  }
+  let count = 0;
+  for (const line of bodyLines) {
+    const [depth, content] = quoteDepth(line);
+    if (depth === 0 || !content) continue;
+    const seen = parentDepth.get(content);
+    if (seen === undefined) continue;
+    if (pyWordCount(content) < MARKING_MODE_MIN_WORDS) continue;
+    if (depth > seen) count++;
+  }
+  return count >= MARKING_MODE_MIN_LINES;
+}
+
+/** Step 2: the stop line of the marked body `lines`. */
+function unmarkedQuoteStart(lines: readonly string[]): number {
+  const n = lines.length;
+  for (let k = 0; k < n; k++) {
+    const line = lines[k] as string;
+    if (isBlank(line) || isQuoteLine(line)) continue;
+    const end = attributionEndAt(lines, k);
+    if (end === null) continue;
+    let q = end + 1;
+    while (q < n && isBlank(lines[q] as string)) q++;
+    if (q < n && !isQuoteLine(lines[q] as string)) return q;
+  }
+  return n;
+}
+
+/** Step 3: the protected normalized lines. */
+function markingProtectedLines(bodyLines: readonly string[], stop: number): Set<string> {
+  const isProtected = new Set<string>();
+  let i = 0;
+  while (i < stop) {
+    if (isBlank(bodyLines[i] as string)) {
+      i++;
+      continue;
+    }
+    let j = i;
+    while (j < stop && !isBlank(bodyLines[j] as string)) j++;
+    const block = bodyLines.slice(i, j);
+    if (!block.some(isQuoteLine)) {
+      for (const line of block) isProtected.add(normalizeLineForDiff(line));
+    }
+    i = j;
+  }
+  return isProtected;
+}
+
+/**
+ * Step 5: the runs `[start, end)` that lose their protection. `own[k]` is
+ * true for a line protected by step 4 and not by rule (d).
+ */
+function runsLosingProtection(own: readonly boolean[], marks: readonly boolean[]): [number, number][] {
+  const count = own.length;
+  const longRuns: [number, number][] = [];
+  let k = 0;
+  while (k < count) {
+    if (!(own[k] && marks[k])) {
+      k++;
+      continue;
+    }
+    const start = k;
+    while (k < count && own[k] && marks[k]) k++;
+    if (k - start > MARKING_MODE_SHORT_RUN) longRuns.push([start, k]);
+  }
+  return longRuns.length >= MARKING_MODE_MANY_RUNS ? longRuns : [];
+}
+
 /** Options of {@link stripParentContent}. */
 export interface StripParentOptions {
   /** Apply the continuation rule (default `false`). */
@@ -1137,6 +1569,20 @@ export interface StripParentOptions {
  * aligned-run, rewrap, continuation and own-quotation rules.
  */
 export function stripParentContent(text: string, parentBody: string, options: StripParentOptions = {}): string {
+  return stripParentContentMarking(text, parentBody, options, null);
+}
+
+/**
+ * {@link stripParentContent} with marking mode (`_strip_parent_content`):
+ * `protectedLines` is the set of step 3 of the marking-mode rules (`null` or
+ * empty: marking mode is off).
+ */
+function stripParentContentMarking(
+  text: string,
+  parentBody: string,
+  options: StripParentOptions,
+  protectedLines: ReadonlySet<string> | null,
+): string {
   const continuation = options.continuation ?? false;
   const quotedText = options.quotedText ?? null;
   const childRaw = normalizeBody(text).split("\n");
@@ -1185,6 +1631,19 @@ export function stripParentContent(text: string, parentBody: string, options: St
           .map(normalizeLineForDiff)
           .filter((norm) => norm);
   const isProtected = restoredByOwnQuotation(childPairs, marks, quotedSeq);
+  if (protectedLines !== null && protectedLines.size > 0) {
+    const own: boolean[] = new Array<boolean>(count).fill(false);
+    for (let k = 0; k < count; k++) {
+      const [i, norm] = childPairs[k] as [number, string];
+      if (protectedLines.has(norm) && !isQuoteLine(childRaw[i] as string)) {
+        own[k] = !isProtected[k];
+        isProtected[k] = true;
+      }
+    }
+    for (const [start, end] of runsLosingProtection(own, marks)) {
+      for (let k = start; k < end; k++) isProtected[k] = false;
+    }
+  }
   if (isProtected.includes(true)) {
     seeds = seeds.map((flag, k) => flag && !isProtected[k]);
     marks = seeds;
@@ -1232,7 +1691,8 @@ function firstQuoteBoundary(lines: readonly string[], localized: boolean): numbe
   const found = findQuoteHeaderBlock(lines, { localized });
   const end = found === null ? lines.length : found;
   for (let i = 0; i < end; i++) {
-    if (findDivider(lines[i] as string, localized)) return i;
+    const line = lines[i] as string;
+    if (!isQuoteLine(line) && findDivider(line, localized)) return i;
   }
   return end;
 }
@@ -1386,47 +1846,29 @@ function nameInHead(head: string, names: readonly string[]): boolean {
 
 // --- public entry point -------------------------------------------------------
 
-/** Run the ERP + custom + over-strip-guard + parent-diff pipeline; returns `[text, method]`. */
+/** Run the cleanup pass and the parent-diff assist; returns `[text, method]`. */
 function coreExtract(body: string, parentBody: string | null): [string, string] {
-  let normalized = normalizeBody(body);
-  // The marked quotation is taken from the whole body, before any truncation.
+  const normalized = normalizeBody(body);
+  // The marked quotation and the marking-mode reading are taken from the
+  // whole body, before any truncation or marking.
   const quotedText = markedQuotation(normalized);
+  const bodyLines = normalized.split("\n");
+  const marked = markGenericAttributions(normalized);
 
-  // Truncate at a forwarded/quote-header block before ERP (see the reference).
-  const lines = normalized.split("\n");
+  // The Latin-script localized blocks and dividers are not applied to an
+  // inline reply written below one (see localizedInlineReply).
+  const lines = marked.split("\n");
   const localized = !localizedInlineReply(lines, parentBody);
-  const pretruncated = findQuoteHeaderBlock(lines, { localized }) !== null;
-  if (pretruncated) normalized = stripAfterQuoteHeaderBlock(lines, { localized }).join("\n");
+  let text = customClean(marked, { localized });
+  let method = "custom";
 
-  // Primary: join every ERP fragment that is not quoted, signatures included.
-  const erpOut = readFragments(normalized)
-    .filter((frag) => !frag.quoted)
-    .map((frag) => frag.content)
-    .join("\n");
-  const cleaned = customClean(erpOut, { localized });
-  const customChanged = pretruncated || cleaned !== pyStrip(erpOut);
-
-  // Over-strip guard.
-  const unquoted = countUnquotedContentLines(normalized, { localized });
-  let text: string;
-  let method: string;
-  if (unquoted > 0 && nonblankLineCount(cleaned) < GUARD_MIN_RETAINED * unquoted) {
-    const fallback = customClean(normalized, { localized });
-    if (!isBlank(fallback)) {
-      text = fallback;
-      method = "custom-fallback";
-    } else {
-      text = cleaned;
-      method = customChanged ? "erp+custom" : "erp";
-    }
-  } else {
-    text = cleaned;
-    method = customChanged ? "erp+custom" : "erp";
-  }
-
-  // Parent-diff assist, after guard resolution.
+  // Parent-diff assist: adopted only when it dropped a content line.
   if (parentBody !== null && !isBlank(text)) {
-    const assisted = stripParentContent(text, parentBody, { continuation: true, quotedText });
+    let protectedLines: Set<string> | null = null;
+    if (markingMode(bodyLines, parentBody)) {
+      protectedLines = markingProtectedLines(bodyLines, unmarkedQuoteStart(lines));
+    }
+    const assisted = stripParentContentMarking(text, parentBody, { continuation: true, quotedText }, protectedLines);
     if (nonblankLineCount(assisted) < nonblankLineCount(text)) {
       text = assisted;
       method += "+parent-diff";

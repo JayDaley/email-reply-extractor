@@ -2,8 +2,8 @@
 
 Cover the block-structure conversion, entity handling, skipped script/style/head,
 the blockquote / gmail_quote / signature container splits (including a signature
-nested inside a quote, which counts as quoted), the Apple Mail Share-sheet
-container, and defensive handling of malformed markup — unclosed tags, stray
+nested inside a quote, which counts as quoted), the composed-signature
+containers, the Apple Mail Share-sheet container, and defensive handling of malformed markup — unclosed tags, stray
 closes, and empty/garbage input never raise.
 """
 
@@ -315,6 +315,61 @@ def test_unclosed_share_container_does_not_raise():
     parts = split_html_parts(html)
     assert parts.novel_text == "typed in Mail\n\nshared text with no close"
     assert parts.has_share_container is True
+
+
+# --- composed-signature containers --------------------------------------------
+
+
+def test_composed_signature_below_the_reply_is_a_signature():
+    html = (
+        "<div>Thanks, see below.</div>"
+        '<div id="ms-outlook-mobile-signature">Sent from Outlook for iOS</div>'
+    )
+    parts = split_html_parts(html)
+    assert parts.novel_text == "Thanks, see below."
+    assert parts.signature_text == "Sent from Outlook for iOS"
+
+
+def test_reply_typed_into_a_composed_signature_is_novel():
+    html = (
+        '<div id="composer_signature"><div>Line one of the reply.</div>'
+        "<div>Line two of the reply.</div><div>Sent from my phone</div></div>"
+    )
+    parts = split_html_parts(html)
+    assert (
+        parts.novel_text == "Line one of the reply.\n\nLine two of the reply.\n\nSent from my phone"
+    )
+    assert parts.signature_text == ""
+
+
+@pytest.mark.parametrize(("above", "category"), [(2, "signature"), (1, "novel")])
+def test_composed_signature_compares_with_the_text_above_it(above, category):
+    # Two signature lines: a signature when the author's text above holds at
+    # least as many lines, novel text when it holds fewer.
+    reply = "".join(f"<div>Reply line {k}.</div>" for k in range(above))
+    html = (
+        reply + '<div class="protonmail_signature_block"><div>Ana Lima</div>'
+        "<div>Sent with Proton Mail</div></div><div>Text after.</div><div>More after.</div>"
+    )
+    parts = split_html_parts(html)
+    signature = "Ana Lima\n\nSent with Proton Mail"
+    if category == "signature":
+        assert parts.signature_text == signature
+        assert "Ana Lima" not in parts.novel_text
+    else:
+        assert parts.signature_text == ""
+        assert signature in parts.novel_text
+
+
+def test_composed_signature_inside_a_quote_or_signature_keeps_that_category():
+    html = '<blockquote><div id="composer_signature">Quoted sig</div></blockquote><p>Hi</p>'
+    parts = split_html_parts(html)
+    assert parts.quoted_text == "Quoted sig"
+    assert parts.novel_text == "Hi"
+    html = '<p>Hi</p><div class="gmail_signature"><div id="composer_signature">S1</div></div>'
+    parts = split_html_parts(html)
+    assert parts.signature_text == "S1"
+    assert parts.novel_text == "Hi"
 
 
 # --- malformed markup ---------------------------------------------------------

@@ -14,6 +14,106 @@
   {
    "args": {
     "lines": [
+     "--On Monday, 2 March 2026 10:15 -0500 Bob Smith",
+     "<bob@example.org> wrote:",
+     "kept"
+    ]
+   },
+   "result": [
+    "kept"
+   ]
+  },
+  {
+   "args": {
+    "lines": [
+     ">> On Mon, 2 Mar 2026 at 10:15, Bob Smith",
+     "<bob@example.org> wrote:",
+     "kept"
+    ]
+   },
+   "result": [
+    "kept"
+   ]
+  },
+  {
+   "args": {
+    "lines": [
+     "On Monday, 2 March 2026 10:15",
+     "Bob Smith",
+     "<bob@example.org>",
+     "at the office",
+     "and elsewhere",
+     "wrote:",
+     "kept"
+    ]
+   },
+   "result": [
+    "On Monday, 2 March 2026 10:15",
+    "Bob Smith",
+    "<bob@example.org>",
+    "at the office",
+    "and elsewhere",
+    "wrote:",
+    "kept"
+   ]
+  },
+  {
+   "args": {
+    "lines": [
+     "On Monday, 2 March 2026 10:15",
+     "Bob Smith",
+     "<bob@example.org>",
+     "at the office",
+     "wrote:",
+     "kept"
+    ]
+   },
+   "result": [
+    "kept"
+   ]
+  },
+  {
+   "args": {
+    "lines": [
+     "On Monday, 2 March 2026, Bob Smith",
+     "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx wrote:",
+     "kept"
+    ]
+   },
+   "result": [
+    "kept"
+   ]
+  },
+  {
+   "args": {
+    "lines": [
+     "On Monday, 2 March 2026, Bob Smith",
+     "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx wrote:",
+     "kept"
+    ]
+   },
+   "result": [
+    "On Monday, 2 March 2026, Bob Smith",
+    "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx wrote:",
+    "kept"
+   ]
+  },
+  {
+   "args": {
+    "lines": [
+     "On Monday,",
+     "On Mon, 2 Mar 2026, Bob Smith wrote:",
+     "kept"
+    ]
+   },
+   "result": [
+    "On Monday,",
+    "kept"
+   ]
+  },
+  {
+   "args": {
+    "lines": [
      "On something happened",
      "",
      "wrote: this is real prose"

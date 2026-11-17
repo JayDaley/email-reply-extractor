@@ -17,6 +17,21 @@
    "name": "part_starts",
    "kind": "keyword_only",
    "default": []
+  },
+  {
+   "name": "author_name",
+   "kind": "keyword_only",
+   "default": null
+  },
+  {
+   "name": "addressee_names",
+   "kind": "keyword_only",
+   "default": null
+  },
+  {
+   "name": "signature_lines",
+   "kind": "keyword_only",
+   "default": null
   }
  ],
  "returns": "CleanResult",
@@ -55,6 +70,22 @@
   },
   {
    "args": {
+    "extracted_text": "++ Jane and Joe.\n\nThe body text follows.",
+    "addressee_names": [
+     "Jane Doe",
+     "Joseph Other"
+    ]
+   },
+   "result": {
+    "text": "++ Jane and Joe.\n\nThe body text follows.",
+    "ignored_lines": [],
+    "parts": [
+     "++ Jane and Joe.\n\nThe body text follows."
+    ]
+   }
+  },
+  {
+   "args": {
     "extracted_text": "A plain paragraph with no furniture.\nAnd a second content line here.",
     "html_signature_text": null
    },
@@ -80,13 +111,43 @@
   },
   {
    "args": {
+    "extracted_text": "Actually,\n\nThe body text follows.",
+    "addressee_names": null
+   },
+   "result": {
+    "text": "Actually,\n\nThe body text follows.",
+    "ignored_lines": [],
+    "parts": [
+     "Actually,\n\nThe body text follows."
+    ]
+   }
+  },
+  {
+   "args": {
     "extracted_text": "All,\n\nThree quick questions for everyone, since the thread is working through where the artifacts sit:\n\n1) How does your work function without identity? If identity was a part of something else, how would this work?\n\n2) Can this work validate external scope, or does it define its own?\n\n3) How would this work in an open market with available web traffic and development?\n\nOne note of point, this thread feels more like an application design as opposed to a standards review.\n\nChris"
    },
    "result": {
-    "text": "All,\n\nThree quick questions for everyone, since the thread is working through where the artifacts sit:\n\n1) How does your work function without identity? If identity was a part of something else, how would this work?\n\n2) Can this work validate external scope, or does it define its own?\n\n3) How would this work in an open market with available web traffic and development?\n\nOne note of point, this thread feels more like an application design as opposed to a standards review.\n\nChris",
-    "ignored_lines": [],
+    "text": "Three quick questions for everyone, since the thread is working through where the artifacts sit:\n\n1) How does your work function without identity? If identity was a part of something else, how would this work?\n\n2) Can this work validate external scope, or does it define its own?\n\n3) How would this work in an open market with available web traffic and development?\n\nOne note of point, this thread feels more like an application design as opposed to a standards review.\n\nChris",
+    "ignored_lines": [
+     0
+    ],
     "parts": [
-     "All,\n\nThree quick questions for everyone, since the thread is working through where the artifacts sit:\n\n1) How does your work function without identity? If identity was a part of something else, how would this work?\n\n2) Can this work validate external scope, or does it define its own?\n\n3) How would this work in an open market with available web traffic and development?\n\nOne note of point, this thread feels more like an application design as opposed to a standards review.\n\nChris"
+     "Three quick questions for everyone, since the thread is working through where the artifacts sit:\n\n1) How does your work function without identity? If identity was a part of something else, how would this work?\n\n2) Can this work validate external scope, or does it define its own?\n\n3) How would this work in an open market with available web traffic and development?\n\nOne note of point, this thread feels more like an application design as opposed to a standards review.\n\nChris"
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "All:\n\nThe body text follows.",
+    "addressee_names": null
+   },
+   "result": {
+    "text": "The body text follows.",
+    "ignored_lines": [
+     0
+    ],
+    "parts": [
+     "The body text follows."
     ]
    }
   },
@@ -106,6 +167,52 @@
     "parts": [
      "Answer one.",
      "Answer two."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Answer.\n\nBest -Jane\n\nThe forwarded discussion continues here with more words.",
+    "author_name": "Jane Example"
+   },
+   "result": {
+    "text": "Answer.\n\nThe forwarded discussion continues here with more words.",
+    "ignored_lines": [
+     2
+    ],
+    "parts": [
+     "Answer.\n\nThe forwarded discussion continues here with more words."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Answer.\n\nCheers, Jane\n\nThe forwarded discussion continues here with more words.",
+    "author_name": "Jane Example"
+   },
+   "result": {
+    "text": "Answer.\n\nThe forwarded discussion continues here with more words.",
+    "ignored_lines": [
+     2
+    ],
+    "parts": [
+     "Answer.\n\nThe forwarded discussion continues here with more words."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Answer.\n\nThanks,\nJane\n\nThe forwarded discussion continues here with more words.",
+    "author_name": "Jane Example"
+   },
+   "result": {
+    "text": "Answer.\n\nThe forwarded discussion continues here with more words.",
+    "ignored_lines": [
+     2,
+     3
+    ],
+    "parts": [
+     "Answer.\n\nThe forwarded discussion continues here with more words."
     ]
    }
   },
@@ -131,6 +238,32 @@
   },
   {
    "args": {
+    "extracted_text": "Attendees:\nJohn Doe\nJane Example\nBob Smith\n\nNotes follow.",
+    "author_name": "Jane Example"
+   },
+   "result": {
+    "text": "Attendees:\nJohn Doe\nJane Example\nBob Smith\n\nNotes follow.",
+    "ignored_lines": [],
+    "parts": [
+     "Attendees:\nJohn Doe\nJane Example\nBob Smith\n\nNotes follow."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Basically,\n\nThe body text follows.",
+    "addressee_names": null
+   },
+   "result": {
+    "text": "Basically,\n\nThe body text follows.",
+    "ignored_lines": [],
+    "parts": [
+     "Basically,\n\nThe body text follows."
+    ]
+   }
+  },
+  {
+   "args": {
     "extracted_text": "Beste Jan,\n\nThe actual content."
    },
    "result": {
@@ -140,6 +273,86 @@
     ],
     "parts": [
      "The actual content."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Body text here.\n\n> EXAMPLE   University\nok then",
+    "signature_lines": [
+     "example university"
+    ]
+   },
+   "result": {
+    "text": "Body text here.\n\nok then",
+    "ignored_lines": [
+     2
+    ],
+    "parts": [
+     "Body text here.\n\nok then"
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Body text here.\n\nExample University\nThis sentence has many more words than four.",
+    "signature_lines": [
+     "Jane Example",
+     "Example University"
+    ]
+   },
+   "result": {
+    "text": "Body text here.\n\nExample University\nThis sentence has many more words than four.",
+    "ignored_lines": [],
+    "parts": [
+     "Body text here.\n\nExample University\nThis sentence has many more words than four."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Body text here.\n\nExample University\none two three four five",
+    "signature_lines": [
+     "Jane Example",
+     "Example University"
+    ]
+   },
+   "result": {
+    "text": "Body text here.\n\nExample University\none two three four five",
+    "ignored_lines": [],
+    "parts": [
+     "Body text here.\n\nExample University\none two three four five"
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Body text here.\n\nExample University\none two three four",
+    "signature_lines": [
+     "Jane Example",
+     "Example University"
+    ]
+   },
+   "result": {
+    "text": "Body text here.\n\none two three four",
+    "ignored_lines": [
+     2
+    ],
+    "parts": [
+     "Body text here.\n\none two three four"
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Body text here.\n\nLet me know if you have questions.",
+    "signature_lines": []
+   },
+   "result": {
+    "text": "Body text here.\n\nLet me know if you have questions.",
+    "ignored_lines": [],
+    "parts": [
+     "Body text here.\n\nLet me know if you have questions."
     ]
    }
   },
@@ -359,6 +572,25 @@
   },
   {
    "args": {
+    "extracted_text": "Body.\n\nRegards,\nJane Example\nExample University",
+    "signature_lines": [
+     "Example University"
+    ]
+   },
+   "result": {
+    "text": "Body.",
+    "ignored_lines": [
+     2,
+     3,
+     4
+    ],
+    "parts": [
+     "Body."
+    ]
+   }
+  },
+  {
+   "args": {
     "extracted_text": "Body.\n\nThi Nguyen-Huu | CEO"
    },
    "result": {
@@ -501,6 +733,24 @@
   },
   {
    "args": {
+    "extracted_text": "Dr. Doe,\n\nThe body text follows.",
+    "addressee_names": [
+     "Jane Doe",
+     "Joseph Other"
+    ]
+   },
+   "result": {
+    "text": "The body text follows.",
+    "ignored_lines": [
+     0
+    ],
+    "parts": [
+     "The body text follows."
+    ]
+   }
+  },
+  {
+   "args": {
     "extracted_text": "Events without label \"editorial\"\n\nIssues\n------\n* quicwg/qmux (+1/-0/💬1)\n  1 issues created:\n  - Revisit graceful close? (by Lukasa)\n    https://github.com/quicwg/qmux/issues/67\n\n  1 issues received 1 new comments:\n  - #67 Revisit graceful close? (1 by LPardue)\n    https://github.com/quicwg/qmux/issues/67\n\n* quicwg/receive-ts (+0/-0/💬1)\n  1 issues received 1 new comments:\n  - #9 Write Security Considerations (1 by jbeshay)\n    https://github.com/quicwg/receive-ts/issues/9\n\n\n\nPull requests\n\n-------------\n* quicwg/qmux (+1/-0/💬1)\n  1 pull requests submitted:\n  -  (by KernelPanic2id)\n\n\n  1 pull requests received 1 new comments:\n  - #66 Fix typo: PATH_REPONSE -> PATH_RESPONSE (1 by kazuho)\n    https://github.com/quicwg/qmux/pull/66\n\n* quicwg/receive-ts (+2/-0/💬0)\n  2 pull requests submitted:\n  -  (by jbeshay)\n\n  -  (by jbeshay)\n\n\n\nRepositories tracked by this digest:\n\n-----------------------------------\n* https://github.com/quicwg/base-drafts\n* https://github.com/quicwg/ops-drafts\n* https://github.com/quicwg/datagram\n* https://github.com/quicwg/load-balancers\n* https://github.com/quicwg/version-negotiation\n* https://github.com/quicwg/quic-bit-grease\n* https://github.com/quicwg/qlog\n* https://github.com/quicwg/quic-v2\n* https://github.com/quicwg/multipath\n* https://github.com/quicwg/ack-frequency\n* https://github.com/quicwg/reliable-stream-reset\n* https://github.com/quicwg/qmux\n* https://github.com/quicwg/receive-ts\n* https://github.com/quicwg/extended-key-update\n* https://github.com/quicwg/address-discovery\n\n\n--\nTo have a summary like this sent to your list, see: https://github.com/ietf-github-services/activity-summary"
    },
    "result": {
@@ -511,6 +761,19 @@
     ],
     "parts": [
      "Events without label \"editorial\"\n\nIssues\n------\n* quicwg/qmux (+1/-0/💬1)\n  1 issues created:\n  - Revisit graceful close? (by Lukasa)\n    https://github.com/quicwg/qmux/issues/67\n\n  1 issues received 1 new comments:\n  - #67 Revisit graceful close? (1 by LPardue)\n    https://github.com/quicwg/qmux/issues/67\n\n* quicwg/receive-ts (+0/-0/💬1)\n  1 issues received 1 new comments:\n  - #9 Write Security Considerations (1 by jbeshay)\n    https://github.com/quicwg/receive-ts/issues/9\n\nPull requests\n\n-------------\n* quicwg/qmux (+1/-0/💬1)\n  1 pull requests submitted:\n  -  (by KernelPanic2id)\n\n  1 pull requests received 1 new comments:\n  - #66 Fix typo: PATH_REPONSE -> PATH_RESPONSE (1 by kazuho)\n    https://github.com/quicwg/qmux/pull/66\n\n* quicwg/receive-ts (+2/-0/💬0)\n  2 pull requests submitted:\n  -  (by jbeshay)\n\n  -  (by jbeshay)\n\nRepositories tracked by this digest:\n\n-----------------------------------\n* https://github.com/quicwg/base-drafts\n* https://github.com/quicwg/ops-drafts\n* https://github.com/quicwg/datagram\n* https://github.com/quicwg/load-balancers\n* https://github.com/quicwg/version-negotiation\n* https://github.com/quicwg/quic-bit-grease\n* https://github.com/quicwg/qlog\n* https://github.com/quicwg/quic-v2\n* https://github.com/quicwg/multipath\n* https://github.com/quicwg/ack-frequency\n* https://github.com/quicwg/reliable-stream-reset\n* https://github.com/quicwg/qmux\n* https://github.com/quicwg/receive-ts\n* https://github.com/quicwg/extended-key-update\n* https://github.com/quicwg/address-discovery"
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Finally,\n\nThe body text follows.",
+    "addressee_names": null
+   },
+   "result": {
+    "text": "Finally,\n\nThe body text follows.",
+    "ignored_lines": [],
+    "parts": [
+     "Finally,\n\nThe body text follows."
     ]
    }
   },
@@ -568,6 +831,21 @@
     ],
     "parts": [
      "The actual content."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Good morning everyone,\n\nThe body text follows.",
+    "addressee_names": null
+   },
+   "result": {
+    "text": "The body text follows.",
+    "ignored_lines": [
+     0
+    ],
+    "parts": [
+     "The body text follows."
     ]
    }
   },
@@ -852,34 +1130,36 @@
     "extracted_text": "Hi Dennis,\n\nthanks for sharing. But this only reflects parts of the discussion.\n\nSince I too provide public mail listings for my users, I know, this is\na difficult issue.\n\nFrom my point of view, this IETF Web-based ML is dysfunctional because\nit is difficult to digest the important topics.\n\nSubscribers often express their oppinion not matching the topic\n(Subject). This is bad for readers and digesting.\n\nRegards.\n--eh.\n\n\n\n--\nDr. Erwin Hoffmann | www.fehcom.de\nPGP key-id: 36553F7F9C58D1CC\nPGP key-fingerprint:  950B 5555 0B08 5A2A 1C00 9594 3655 3F7F 9C58 D1CC"
    },
    "result": {
-    "text": "thanks for sharing. But this only reflects parts of the discussion.\n\nSince I too provide public mail listings for my users, I know, this is\na difficult issue.\n\nFrom my point of view, this IETF Web-based ML is dysfunctional because\nit is difficult to digest the important topics.\n\nSubscribers often express their oppinion not matching the topic\n(Subject). This is bad for readers and digesting.\n\nRegards.\n--eh.",
+    "text": "thanks for sharing. But this only reflects parts of the discussion.\n\nSince I too provide public mail listings for my users, I know, this is\na difficult issue.\n\nFrom my point of view, this IETF Web-based ML is dysfunctional because\nit is difficult to digest the important topics.\n\nSubscribers often express their oppinion not matching the topic\n(Subject). This is bad for readers and digesting.",
     "ignored_lines": [
      0,
+     13,
+     14,
      18,
      19,
      20,
      21
     ],
     "parts": [
-     "thanks for sharing. But this only reflects parts of the discussion.\n\nSince I too provide public mail listings for my users, I know, this is\na difficult issue.\n\nFrom my point of view, this IETF Web-based ML is dysfunctional because\nit is difficult to digest the important topics.\n\nSubscribers often express their oppinion not matching the topic\n(Subject). This is bad for readers and digesting.\n\nRegards.\n--eh."
+     "thanks for sharing. But this only reflects parts of the discussion.\n\nSince I too provide public mail listings for my users, I know, this is\na difficult issue.\n\nFrom my point of view, this IETF Web-based ML is dysfunctional because\nit is difficult to digest the important topics.\n\nSubscribers often express their oppinion not matching the topic\n(Subject). This is bad for readers and digesting."
     ]
    }
   },
   {
    "args": {
-    "extracted_text": "Hi Gyan,\n\nI am the Document Shepherd. Thanks for your review.\nDhruv: This sentence\n\nsimply clarifies that the new metric types are not limited.\n\nDhruv: Section 5.2 only restates the existing number space.\n\nThanks!\nDhruv",
+    "extracted_text": "Hi Gyan,\n\nI am the Document Shepherd. Thanks for your review.\n\n\nDhruv: This sentence\n\n\nsimply clarifies that the new metric types are not limited.\n\n\n\nDhruv: Section 5.2 only restates the existing number space.\n\nThanks!\nDhruv",
     "part_starts": [
-     3,
      5,
-     7
+     8,
+     12
     ]
    },
    "result": {
-    "text": "I am the Document Shepherd. Thanks for your review.\nDhruv: This sentence\n\nsimply clarifies that the new metric types are not limited.\n\nDhruv: Section 5.2 only restates the existing number space.",
+    "text": "I am the Document Shepherd. Thanks for your review.\n\nDhruv: This sentence\n\nsimply clarifies that the new metric types are not limited.\n\nDhruv: Section 5.2 only restates the existing number space.",
     "ignored_lines": [
      0,
-     9,
-     10
+     14,
+     15
     ],
     "parts": [
      "I am the Document Shepherd. Thanks for your review.",
@@ -891,17 +1171,17 @@
   },
   {
    "args": {
-    "extracted_text": "Hi Gyan,\n\nI am the Document Shepherd. Thanks for your review.\nDhruv: This sentence\n\nsimply clarifies that the new metric types are not limited.\n\nDhruv: Section 5.2 only restates the existing number space.\n\nThanks!\nDhruv"
+    "extracted_text": "Hi Gyan,\n\nI am the Document Shepherd. Thanks for your review.\n\n\nDhruv: This sentence\n\n\nsimply clarifies that the new metric types are not limited.\n\n\n\nDhruv: Section 5.2 only restates the existing number space.\n\nThanks!\nDhruv"
    },
    "result": {
-    "text": "I am the Document Shepherd. Thanks for your review.\nDhruv: This sentence\n\nsimply clarifies that the new metric types are not limited.\n\nDhruv: Section 5.2 only restates the existing number space.",
+    "text": "I am the Document Shepherd. Thanks for your review.\n\nDhruv: This sentence\n\nsimply clarifies that the new metric types are not limited.\n\nDhruv: Section 5.2 only restates the existing number space.",
     "ignored_lines": [
      0,
-     9,
-     10
+     14,
+     15
     ],
     "parts": [
-     "I am the Document Shepherd. Thanks for your review.\nDhruv: This sentence\n\nsimply clarifies that the new metric types are not limited.\n\nDhruv: Section 5.2 only restates the existing number space."
+     "I am the Document Shepherd. Thanks for your review.\n\nDhruv: This sentence\n\nsimply clarifies that the new metric types are not limited.\n\nDhruv: Section 5.2 only restates the existing number space."
     ]
    }
   },
@@ -918,6 +1198,19 @@
     ],
     "parts": [
      "Forwarding to regext, fwiw.\n\nFeel free to share more context and your plans with this document :-)"
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Hi Jane, apologies for the late reply.\n\nThe body text follows.",
+    "addressee_names": null
+   },
+   "result": {
+    "text": "Hi Jane, apologies for the late reply.\n\nThe body text follows.",
+    "ignored_lines": [],
+    "parts": [
+     "Hi Jane, apologies for the late reply.\n\nThe body text follows."
     ]
    }
   },
@@ -984,17 +1277,17 @@
   },
   {
    "args": {
-    "extracted_text": "Hi Roy,\n\nMinor nit:\n[...]\n\nWhen reading \"the Delegation Type RRsets and NSEC (or NSEC3) records can be replaced\", I was briefly confused regarding what about their RRSIGs.\n\nSuggest adding \"signed\" before \"Delegation Type RRsets\", or \"and their signatures\" after \"records\".\n\nCheers,\nPeter"
+    "extracted_text": "Hi Roy,\n\nMinor nit:\n\n[...]\n\nWhen reading \"the Delegation Type RRsets and NSEC (or NSEC3) records can be replaced\", I was briefly confused regarding what about their RRSIGs.\n\nSuggest adding \"signed\" before \"Delegation Type RRsets\", or \"and their signatures\" after \"records\".\n\nCheers,\nPeter"
    },
    "result": {
-    "text": "Minor nit:\n[...]\n\nWhen reading \"the Delegation Type RRsets and NSEC (or NSEC3) records can be replaced\", I was briefly confused regarding what about their RRSIGs.\n\nSuggest adding \"signed\" before \"Delegation Type RRsets\", or \"and their signatures\" after \"records\".",
+    "text": "Minor nit:\n\n[...]\n\nWhen reading \"the Delegation Type RRsets and NSEC (or NSEC3) records can be replaced\", I was briefly confused regarding what about their RRSIGs.\n\nSuggest adding \"signed\" before \"Delegation Type RRsets\", or \"and their signatures\" after \"records\".",
     "ignored_lines": [
      0,
-     9,
-     10
+     10,
+     11
     ],
     "parts": [
-     "Minor nit:\n[...]\n\nWhen reading \"the Delegation Type RRsets and NSEC (or NSEC3) records can be replaced\", I was briefly confused regarding what about their RRSIGs.\n\nSuggest adding \"signed\" before \"Delegation Type RRsets\", or \"and their signatures\" after \"records\"."
+     "Minor nit:\n\n[...]\n\nWhen reading \"the Delegation Type RRsets and NSEC (or NSEC3) records can be replaced\", I was briefly confused regarding what about their RRSIGs.\n\nSuggest adding \"signed\" before \"Delegation Type RRsets\", or \"and their signatures\" after \"records\"."
     ]
    }
   },
@@ -1063,16 +1356,29 @@
   },
   {
    "args": {
-    "extracted_text": "Hi,\n\n(..)\n\n\nThis is Ok. Note that here the term \"random bit generator\" (RBG) is used.\nOf course we wouldn't expect a RBG to give any information about other\noutputs or the state, since it is a RBG (see below), but it may as well be\nmentioned.\n\n\nObviously the mentioned reveal also applies to hybrids such as\nX25519MLKEM768 as well ( the hybrid key derivation is not a black box to\nthe recipient. )\n\n\nHere the text talks of a \"raw random number generator\" which it\nabbreviates refers\nto as PRNG (\"P\" is for pseudo.). This is not a well defined term, and I\nagree with Quynh that it is better adjusted as  “The disclosure of the\noutput(s) of an insecure random number generator (RNG) when used in TLS and\nother protocols can be used in an attack to compromise the state of the\ninsecure RNG itself as described in [DUALEC-TLS].\"\n\n\nThe term \"raw RNG\" here seems ok -- it is undefined but I guess it means\n\"insecure RNG.\"\n\n\nHere, the term PRNG makes a comeback. Perhaps change it to RNG for\nconsistency. FIPS 203 does not offer PRNG guidance, but RBG guidance. An\nRBG may or may not be deterministic.\n\n\nTo recap: RNG is an incredibly vague term as it implies no clearly defined\nsecurity properties -- but this is what the IETF has been using. As noted,\nFIPS land talks of RBGs (and defines what they are), as does a part of the\nCC land. CC also uses the AIS 20/31 terminology and classification, in\nwhich RNG is essentially a catch-all, and protection profiles impose\nadditional, more detailed requirements for entropy generation and\npost-processing.\n\n\nFIPS 203 actually asks for an RBG, which implies:\n\n- seeding from a sufficient amount of entropy, and also\n\n- cryptographically secure post-processing where any number of output bits\ndo not offer an advantage in predicting or determining unrevealed output\nbits, assuming cryptographic security of SHA2 or AES, etc.\n\n\nThe more casual mathematical term PRNG implies neither cryptographic\nsecurity nor sufficient entropy seeding — simply determinism. Often PRNGs\nare distinguished from RNGs specifically because they do not have\nsufficient seeding.\n\n\nAmerican standard terminology has a class of RBGs called DRBGs\n(Deterministic Random Bit Generators). Because DRBGs are deteministic,\ntechnically they are PRNGs, but they are also RBGs -- when instantiated,\nthe standards (and testing labs) require adequate seeding and an\nappropriate level of security in post-processing components (for example, a\nDRBG based on AES-128 is not sufficient for a 256-bit security level).\n\nThere is also the \"CRA land\" in Europe, and ECCG & ENISA is searching for a\nsuitable compromise for entropy in lower-assurance products (non-CC.). But\nat this point acceptable DRBGs are listed in the ACM (they all have\ncryptographically secure post-processing). It has been of course proposed\nthat, e.g., Linux Random would be considered ok as an entropy source for\nconsumer products, for obvious practical reasons.\n\n\nBest Regards,\n-markku\n\nDr. Markku-Juhani O. Saarinen <mjos@iki.fi>"
+    "extracted_text": "Hi, I'm writing about the draft.\n\nThe body text follows.",
+    "addressee_names": null
    },
    "result": {
-    "text": "(..)\n\nThis is Ok. Note that here the term \"random bit generator\" (RBG) is used.\nOf course we wouldn't expect a RBG to give any information about other\noutputs or the state, since it is a RBG (see below), but it may as well be\nmentioned.\n\nObviously the mentioned reveal also applies to hybrids such as\nX25519MLKEM768 as well ( the hybrid key derivation is not a black box to\nthe recipient. )\n\nHere the text talks of a \"raw random number generator\" which it\nabbreviates refers\nto as PRNG (\"P\" is for pseudo.). This is not a well defined term, and I\nagree with Quynh that it is better adjusted as  “The disclosure of the\noutput(s) of an insecure random number generator (RNG) when used in TLS and\nother protocols can be used in an attack to compromise the state of the\ninsecure RNG itself as described in [DUALEC-TLS].\"\n\nThe term \"raw RNG\" here seems ok -- it is undefined but I guess it means\n\"insecure RNG.\"\n\nHere, the term PRNG makes a comeback. Perhaps change it to RNG for\nconsistency. FIPS 203 does not offer PRNG guidance, but RBG guidance. An\nRBG may or may not be deterministic.\n\nTo recap: RNG is an incredibly vague term as it implies no clearly defined\nsecurity properties -- but this is what the IETF has been using. As noted,\nFIPS land talks of RBGs (and defines what they are), as does a part of the\nCC land. CC also uses the AIS 20/31 terminology and classification, in\nwhich RNG is essentially a catch-all, and protection profiles impose\nadditional, more detailed requirements for entropy generation and\npost-processing.\n\nFIPS 203 actually asks for an RBG, which implies:\n\n- seeding from a sufficient amount of entropy, and also\n\n- cryptographically secure post-processing where any number of output bits\ndo not offer an advantage in predicting or determining unrevealed output\nbits, assuming cryptographic security of SHA2 or AES, etc.\n\nThe more casual mathematical term PRNG implies neither cryptographic\nsecurity nor sufficient entropy seeding — simply determinism. Often PRNGs\nare distinguished from RNGs specifically because they do not have\nsufficient seeding.\n\nAmerican standard terminology has a class of RBGs called DRBGs\n(Deterministic Random Bit Generators). Because DRBGs are deteministic,\ntechnically they are PRNGs, but they are also RBGs -- when instantiated,\nthe standards (and testing labs) require adequate seeding and an\nappropriate level of security in post-processing components (for example, a\nDRBG based on AES-128 is not sufficient for a 256-bit security level).\n\nThere is also the \"CRA land\" in Europe, and ECCG & ENISA is searching for a\nsuitable compromise for entropy in lower-assurance products (non-CC.). But\nat this point acceptable DRBGs are listed in the ACM (they all have\ncryptographically secure post-processing). It has been of course proposed\nthat, e.g., Linux Random would be considered ok as an entropy source for\nconsumer products, for obvious practical reasons.\n\nBest Regards,\n-markku",
+    "text": "Hi, I'm writing about the draft.\n\nThe body text follows.",
+    "ignored_lines": [],
+    "parts": [
+     "Hi, I'm writing about the draft.\n\nThe body text follows."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Hi,\nHello,\nHey,\n\nThe body text follows."
+   },
+   "result": {
+    "text": "Hey,\n\nThe body text follows.",
     "ignored_lines": [
      0,
-     76
+     1
     ],
     "parts": [
-     "(..)\n\nThis is Ok. Note that here the term \"random bit generator\" (RBG) is used.\nOf course we wouldn't expect a RBG to give any information about other\noutputs or the state, since it is a RBG (see below), but it may as well be\nmentioned.\n\nObviously the mentioned reveal also applies to hybrids such as\nX25519MLKEM768 as well ( the hybrid key derivation is not a black box to\nthe recipient. )\n\nHere the text talks of a \"raw random number generator\" which it\nabbreviates refers\nto as PRNG (\"P\" is for pseudo.). This is not a well defined term, and I\nagree with Quynh that it is better adjusted as  “The disclosure of the\noutput(s) of an insecure random number generator (RNG) when used in TLS and\nother protocols can be used in an attack to compromise the state of the\ninsecure RNG itself as described in [DUALEC-TLS].\"\n\nThe term \"raw RNG\" here seems ok -- it is undefined but I guess it means\n\"insecure RNG.\"\n\nHere, the term PRNG makes a comeback. Perhaps change it to RNG for\nconsistency. FIPS 203 does not offer PRNG guidance, but RBG guidance. An\nRBG may or may not be deterministic.\n\nTo recap: RNG is an incredibly vague term as it implies no clearly defined\nsecurity properties -- but this is what the IETF has been using. As noted,\nFIPS land talks of RBGs (and defines what they are), as does a part of the\nCC land. CC also uses the AIS 20/31 terminology and classification, in\nwhich RNG is essentially a catch-all, and protection profiles impose\nadditional, more detailed requirements for entropy generation and\npost-processing.\n\nFIPS 203 actually asks for an RBG, which implies:\n\n- seeding from a sufficient amount of entropy, and also\n\n- cryptographically secure post-processing where any number of output bits\ndo not offer an advantage in predicting or determining unrevealed output\nbits, assuming cryptographic security of SHA2 or AES, etc.\n\nThe more casual mathematical term PRNG implies neither cryptographic\nsecurity nor sufficient entropy seeding — simply determinism. Often PRNGs\nare distinguished from RNGs specifically because they do not have\nsufficient seeding.\n\nAmerican standard terminology has a class of RBGs called DRBGs\n(Deterministic Random Bit Generators). Because DRBGs are deteministic,\ntechnically they are PRNGs, but they are also RBGs -- when instantiated,\nthe standards (and testing labs) require adequate seeding and an\nappropriate level of security in post-processing components (for example, a\nDRBG based on AES-128 is not sufficient for a 256-bit security level).\n\nThere is also the \"CRA land\" in Europe, and ECCG & ENISA is searching for a\nsuitable compromise for entropy in lower-assurance products (non-CC.). But\nat this point acceptable DRBGs are listed in the ACM (they all have\ncryptographically secure post-processing). It has been of course proposed\nthat, e.g., Linux Random would be considered ok as an entropy source for\nconsumer products, for obvious practical reasons.\n\nBest Regards,\n-markku"
+     "Hey,\n\nThe body text follows."
     ]
    }
   },
@@ -1092,29 +1398,34 @@
   },
   {
    "args": {
-    "extracted_text": "Hi,\n\nSince this draft isn't tagged for any WG, not even gen-dispatch which seems appropriate, I'll post here, on one aspect only.\n\nAn IETF process document cannot define RPC duties. That would need a draft submitted to the RSWG, or rephrasing as the IETF's _expectations_ of the RPC.\n\nAlso:\n\nThat is already made clear at [1], points 1 and 3. It is not unknown for the RPC to discover poor grammar that conceals a technical ambiguity or technical error, so point 3 is not academic. Such late clarifications are to everyone's benefit. (I agree that they should be public knowledge, like everything that happens during AUTH48.)\n\n[1] https://www.rfc-editor.org/rfc/rfc9920.html#name-rpc-responsibilities\n\nRegards/Ngā mihi\n    Brian Carpenter"
+    "extracted_text": "Hi,\n\nSince this draft isn't tagged for any WG, not even gen-dispatch which seems appropriate, I'll post here, on one aspect only.\n\n\nAn IETF process document cannot define RPC duties. That would need a draft submitted to the RSWG, or rephrasing as the IETF's _expectations_ of the RPC.\n\nAlso:\n\n\nThat is already made clear at [1], points 1 and 3. It is not unknown for the RPC to discover poor grammar that conceals a technical ambiguity or technical error, so point 3 is not academic. Such late clarifications are to everyone's benefit. (I agree that they should be public knowledge, like everything that happens during AUTH48.)\n\n[1] https://www.rfc-editor.org/rfc/rfc9920.html#name-rpc-responsibilities\n\nRegards/Ngā mihi\n    Brian Carpenter"
    },
    "result": {
-    "text": "Since this draft isn't tagged for any WG, not even gen-dispatch which seems appropriate, I'll post here, on one aspect only.\n\nAn IETF process document cannot define RPC duties. That would need a draft submitted to the RSWG, or rephrasing as the IETF's _expectations_ of the RPC.\n\nAlso:\n\nThat is already made clear at [1], points 1 and 3. It is not unknown for the RPC to discover poor grammar that conceals a technical ambiguity or technical error, so point 3 is not academic. Such late clarifications are to everyone's benefit. (I agree that they should be public knowledge, like everything that happens during AUTH48.)\n\n[1] https://www.rfc-editor.org/rfc/rfc9920.html#name-rpc-responsibilities\n\nRegards/Ngā mihi\n    Brian Carpenter",
+    "text": "Since this draft isn't tagged for any WG, not even gen-dispatch which seems appropriate, I'll post here, on one aspect only.\n\nAn IETF process document cannot define RPC duties. That would need a draft submitted to the RSWG, or rephrasing as the IETF's _expectations_ of the RPC.\n\nAlso:\n\nThat is already made clear at [1], points 1 and 3. It is not unknown for the RPC to discover poor grammar that conceals a technical ambiguity or technical error, so point 3 is not academic. Such late clarifications are to everyone's benefit. (I agree that they should be public knowledge, like everything that happens during AUTH48.)\n\n[1] https://www.rfc-editor.org/rfc/rfc9920.html#name-rpc-responsibilities",
     "ignored_lines": [
-     0
+     0,
+     14,
+     15
     ],
     "parts": [
-     "Since this draft isn't tagged for any WG, not even gen-dispatch which seems appropriate, I'll post here, on one aspect only.\n\nAn IETF process document cannot define RPC duties. That would need a draft submitted to the RSWG, or rephrasing as the IETF's _expectations_ of the RPC.\n\nAlso:\n\nThat is already made clear at [1], points 1 and 3. It is not unknown for the RPC to discover poor grammar that conceals a technical ambiguity or technical error, so point 3 is not academic. Such late clarifications are to everyone's benefit. (I agree that they should be public knowledge, like everything that happens during AUTH48.)\n\n[1] https://www.rfc-editor.org/rfc/rfc9920.html#name-rpc-responsibilities\n\nRegards/Ngā mihi\n    Brian Carpenter"
+     "Since this draft isn't tagged for any WG, not even gen-dispatch which seems appropriate, I'll post here, on one aspect only.\n\nAn IETF process document cannot define RPC duties. That would need a draft submitted to the RSWG, or rephrasing as the IETF's _expectations_ of the RPC.\n\nAlso:\n\nThat is already made clear at [1], points 1 and 3. It is not unknown for the RPC to discover poor grammar that conceals a technical ambiguity or technical error, so point 3 is not academic. Such late clarifications are to everyone's benefit. (I agree that they should be public knowledge, like everything that happens during AUTH48.)\n\n[1] https://www.rfc-editor.org/rfc/rfc9920.html#name-rpc-responsibilities"
     ]
    }
   },
   {
    "args": {
-    "extracted_text": "Hi\nYou might also be interested in Marco and Marten's draft https://datatracker.ietf.org/doc/draft-munizaga-quic-alternative-server-address/"
+    "extracted_text": "Hi,\n\n\n\n(..)\n\n\n\n\n\n\n\n\n\nThis is Ok. Note that here the term \"random bit generator\" (RBG) is used.\nOf course we wouldn't expect a RBG to give any information about other\noutputs or the state, since it is a RBG (see below), but it may as well be\nmentioned.\n\n\nObviously the mentioned reveal also applies to hybrids such as\nX25519MLKEM768 as well ( the hybrid key derivation is not a black box to\nthe recipient. )\n\n\n\n\n\n\n\n\n\nHere the text talks of a \"raw random number generator\" which it\nabbreviates refers\nto as PRNG (\"P\" is for pseudo.). This is not a well defined term, and I\nagree with Quynh that it is better adjusted as  “The disclosure of the\noutput(s) of an insecure random number generator (RNG) when used in TLS and\nother protocols can be used in an attack to compromise the state of the\ninsecure RNG itself as described in [DUALEC-TLS].\"\n\n\n\n\n\nThe term \"raw RNG\" here seems ok -- it is undefined but I guess it means\n\"insecure RNG.\"\n\n\n\n\n\n\nHere, the term PRNG makes a comeback. Perhaps change it to RNG for\nconsistency. FIPS 203 does not offer PRNG guidance, but RBG guidance. An\nRBG may or may not be deterministic.\n\n\nTo recap: RNG is an incredibly vague term as it implies no clearly defined\nsecurity properties -- but this is what the IETF has been using. As noted,\nFIPS land talks of RBGs (and defines what they are), as does a part of the\nCC land. CC also uses the AIS 20/31 terminology and classification, in\nwhich RNG is essentially a catch-all, and protection profiles impose\nadditional, more detailed requirements for entropy generation and\npost-processing.\n\n\nFIPS 203 actually asks for an RBG, which implies:\n\n- seeding from a sufficient amount of entropy, and also\n\n- cryptographically secure post-processing where any number of output bits\ndo not offer an advantage in predicting or determining unrevealed output\nbits, assuming cryptographic security of SHA2 or AES, etc.\n\n\nThe more casual mathematical term PRNG implies neither cryptographic\nsecurity nor sufficient entropy seeding — simply determinism. Often PRNGs\nare distinguished from RNGs specifically because they do not have\nsufficient seeding.\n\n\nAmerican standard terminology has a class of RBGs called DRBGs\n(Deterministic Random Bit Generators). Because DRBGs are deteministic,\ntechnically they are PRNGs, but they are also RBGs -- when instantiated,\nthe standards (and testing labs) require adequate seeding and an\nappropriate level of security in post-processing components (for example, a\nDRBG based on AES-128 is not sufficient for a 256-bit security level).\n\nThere is also the \"CRA land\" in Europe, and ECCG & ENISA is searching for a\nsuitable compromise for entropy in lower-assurance products (non-CC.). But\nat this point acceptable DRBGs are listed in the ACM (they all have\ncryptographically secure post-processing). It has been of course proposed\nthat, e.g., Linux Random would be considered ok as an entropy source for\nconsumer products, for obvious practical reasons.\n\n\nBest Regards,\n-markku\n\nDr. Markku-Juhani O. Saarinen <mjos@iki.fi>"
    },
    "result": {
-    "text": "You might also be interested in Marco and Marten's draft https://datatracker.ietf.org/doc/draft-munizaga-quic-alternative-server-address/",
+    "text": "(..)\n\nThis is Ok. Note that here the term \"random bit generator\" (RBG) is used.\nOf course we wouldn't expect a RBG to give any information about other\noutputs or the state, since it is a RBG (see below), but it may as well be\nmentioned.\n\nObviously the mentioned reveal also applies to hybrids such as\nX25519MLKEM768 as well ( the hybrid key derivation is not a black box to\nthe recipient. )\n\nHere the text talks of a \"raw random number generator\" which it\nabbreviates refers\nto as PRNG (\"P\" is for pseudo.). This is not a well defined term, and I\nagree with Quynh that it is better adjusted as  “The disclosure of the\noutput(s) of an insecure random number generator (RNG) when used in TLS and\nother protocols can be used in an attack to compromise the state of the\ninsecure RNG itself as described in [DUALEC-TLS].\"\n\nThe term \"raw RNG\" here seems ok -- it is undefined but I guess it means\n\"insecure RNG.\"\n\nHere, the term PRNG makes a comeback. Perhaps change it to RNG for\nconsistency. FIPS 203 does not offer PRNG guidance, but RBG guidance. An\nRBG may or may not be deterministic.\n\nTo recap: RNG is an incredibly vague term as it implies no clearly defined\nsecurity properties -- but this is what the IETF has been using. As noted,\nFIPS land talks of RBGs (and defines what they are), as does a part of the\nCC land. CC also uses the AIS 20/31 terminology and classification, in\nwhich RNG is essentially a catch-all, and protection profiles impose\nadditional, more detailed requirements for entropy generation and\npost-processing.\n\nFIPS 203 actually asks for an RBG, which implies:\n\n- seeding from a sufficient amount of entropy, and also\n\n- cryptographically secure post-processing where any number of output bits\ndo not offer an advantage in predicting or determining unrevealed output\nbits, assuming cryptographic security of SHA2 or AES, etc.\n\nThe more casual mathematical term PRNG implies neither cryptographic\nsecurity nor sufficient entropy seeding — simply determinism. Often PRNGs\nare distinguished from RNGs specifically because they do not have\nsufficient seeding.\n\nAmerican standard terminology has a class of RBGs called DRBGs\n(Deterministic Random Bit Generators). Because DRBGs are deteministic,\ntechnically they are PRNGs, but they are also RBGs -- when instantiated,\nthe standards (and testing labs) require adequate seeding and an\nappropriate level of security in post-processing components (for example, a\nDRBG based on AES-128 is not sufficient for a 256-bit security level).\n\nThere is also the \"CRA land\" in Europe, and ECCG & ENISA is searching for a\nsuitable compromise for entropy in lower-assurance products (non-CC.). But\nat this point acceptable DRBGs are listed in the ACM (they all have\ncryptographically secure post-processing). It has been of course proposed\nthat, e.g., Linux Random would be considered ok as an entropy source for\nconsumer products, for obvious practical reasons.",
     "ignored_lines": [
-     0
+     0,
+     96,
+     97,
+     99
     ],
     "parts": [
-     "You might also be interested in Marco and Marten's draft https://datatracker.ietf.org/doc/draft-munizaga-quic-alternative-server-address/"
+     "(..)\n\nThis is Ok. Note that here the term \"random bit generator\" (RBG) is used.\nOf course we wouldn't expect a RBG to give any information about other\noutputs or the state, since it is a RBG (see below), but it may as well be\nmentioned.\n\nObviously the mentioned reveal also applies to hybrids such as\nX25519MLKEM768 as well ( the hybrid key derivation is not a black box to\nthe recipient. )\n\nHere the text talks of a \"raw random number generator\" which it\nabbreviates refers\nto as PRNG (\"P\" is for pseudo.). This is not a well defined term, and I\nagree with Quynh that it is better adjusted as  “The disclosure of the\noutput(s) of an insecure random number generator (RNG) when used in TLS and\nother protocols can be used in an attack to compromise the state of the\ninsecure RNG itself as described in [DUALEC-TLS].\"\n\nThe term \"raw RNG\" here seems ok -- it is undefined but I guess it means\n\"insecure RNG.\"\n\nHere, the term PRNG makes a comeback. Perhaps change it to RNG for\nconsistency. FIPS 203 does not offer PRNG guidance, but RBG guidance. An\nRBG may or may not be deterministic.\n\nTo recap: RNG is an incredibly vague term as it implies no clearly defined\nsecurity properties -- but this is what the IETF has been using. As noted,\nFIPS land talks of RBGs (and defines what they are), as does a part of the\nCC land. CC also uses the AIS 20/31 terminology and classification, in\nwhich RNG is essentially a catch-all, and protection profiles impose\nadditional, more detailed requirements for entropy generation and\npost-processing.\n\nFIPS 203 actually asks for an RBG, which implies:\n\n- seeding from a sufficient amount of entropy, and also\n\n- cryptographically secure post-processing where any number of output bits\ndo not offer an advantage in predicting or determining unrevealed output\nbits, assuming cryptographic security of SHA2 or AES, etc.\n\nThe more casual mathematical term PRNG implies neither cryptographic\nsecurity nor sufficient entropy seeding — simply determinism. Often PRNGs\nare distinguished from RNGs specifically because they do not have\nsufficient seeding.\n\nAmerican standard terminology has a class of RBGs called DRBGs\n(Deterministic Random Bit Generators). Because DRBGs are deteministic,\ntechnically they are PRNGs, but they are also RBGs -- when instantiated,\nthe standards (and testing labs) require adequate seeding and an\nappropriate level of security in post-processing components (for example, a\nDRBG based on AES-128 is not sufficient for a 256-bit security level).\n\nThere is also the \"CRA land\" in Europe, and ECCG & ENISA is searching for a\nsuitable compromise for entropy in lower-assurance products (non-CC.). But\nat this point acceptable DRBGs are listed in the ACM (they all have\ncryptographically secure post-processing). It has been of course proposed\nthat, e.g., Linux Random would be considered ok as an entropy source for\nconsumer products, for obvious practical reasons."
     ]
    }
   },
@@ -1134,6 +1445,35 @@
   },
   {
    "args": {
+    "extracted_text": "Hi\n\nYou might also be interested in Marco and Marten's draft https://datatracker.ietf.org/doc/draft-munizaga-quic-alternative-server-address/"
+   },
+   "result": {
+    "text": "You might also be interested in Marco and Marten's draft https://datatracker.ietf.org/doc/draft-munizaga-quic-alternative-server-address/",
+    "ignored_lines": [
+     0
+    ],
+    "parts": [
+     "You might also be interested in Marco and Marten's draft https://datatracker.ietf.org/doc/draft-munizaga-quic-alternative-server-address/"
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Hiya Jane,\n\nThe body text follows.",
+    "addressee_names": null
+   },
+   "result": {
+    "text": "The body text follows.",
+    "ignored_lines": [
+     0
+    ],
+    "parts": [
+     "The body text follows."
+    ]
+   }
+  },
+  {
+   "args": {
     "extracted_text": "Hola Maria,\n\nThe actual content."
    },
    "result": {
@@ -1143,6 +1483,313 @@
     ],
     "parts": [
      "The actual content."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Howdy\n\nThe body text follows.",
+    "addressee_names": null
+   },
+   "result": {
+    "text": "The body text follows.",
+    "ignored_lines": [
+     0
+    ],
+    "parts": [
+     "The body text follows."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Inline:\n\nThe body text follows.",
+    "addressee_names": null
+   },
+   "result": {
+    "text": "Inline:\n\nThe body text follows.",
+    "ignored_lines": [],
+    "parts": [
+     "Inline:\n\nThe body text follows."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Jan,\n\nThe body text follows.",
+    "addressee_names": [
+     "Jane Doe",
+     "Joseph Other"
+    ]
+   },
+   "result": {
+    "text": "The body text follows.",
+    "ignored_lines": [
+     0
+    ],
+    "parts": [
+     "The body text follows."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Jan.\n\nThe body text follows.",
+    "addressee_names": [
+     "Jane Doe",
+     "Joseph Other"
+    ]
+   },
+   "result": {
+    "text": "Jan.\n\nThe body text follows.",
+    "ignored_lines": [],
+    "parts": [
+     "Jan.\n\nThe body text follows."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Jane Doe:\n\nThe body text follows.",
+    "addressee_names": [
+     "Jane Doe",
+     "Joseph Other"
+    ]
+   },
+   "result": {
+    "text": "The body text follows.",
+    "ignored_lines": [
+     0
+    ],
+    "parts": [
+     "The body text follows."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Jane Example\nExample University",
+    "signature_lines": [
+     "Jane Example",
+     "Example University"
+    ]
+   },
+   "result": {
+    "text": "Jane Example\nExample University",
+    "ignored_lines": [],
+    "parts": [
+     "Jane Example\nExample University"
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Jane Example\nExample University\n\nThe body text follows here with more words.",
+    "signature_lines": [
+     "Jane Example",
+     "Example University"
+    ]
+   },
+   "result": {
+    "text": "Jane Example\nExample University\n\nThe body text follows here with more words.",
+    "ignored_lines": [],
+    "parts": [
+     "Jane Example\nExample University\n\nThe body text follows here with more words."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Jane, Joe and all,\n\nThe body text follows.",
+    "addressee_names": [
+     "Jane Doe",
+     "Joseph Other"
+    ]
+   },
+   "result": {
+    "text": "The body text follows.",
+    "ignored_lines": [
+     0
+    ],
+    "parts": [
+     "The body text follows."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Jane, Joe:\n\nThe body text follows.",
+    "addressee_names": [
+     "Jane Doe",
+     "Joseph Other"
+    ]
+   },
+   "result": {
+    "text": "The body text follows.",
+    "ignored_lines": [
+     0
+    ],
+    "parts": [
+     "The body text follows."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Jane, Joe:\n\nThe body text follows.",
+    "addressee_names": null
+   },
+   "result": {
+    "text": "The body text follows.",
+    "ignored_lines": [
+     0
+    ],
+    "parts": [
+     "The body text follows."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Jane,\n\nFirst answer here.\n\nSecond answer here.\n\nCheers,\nBob\nExample University",
+    "part_starts": [
+     4
+    ],
+    "author_name": "Bob Sender",
+    "addressee_names": [
+     "Jane Doe"
+    ],
+    "signature_lines": [
+     "Example University"
+    ]
+   },
+   "result": {
+    "text": "First answer here.\n\nSecond answer here.",
+    "ignored_lines": [
+     0,
+     6,
+     7,
+     8
+    ],
+    "parts": [
+     "First answer here.",
+     "Second answer here."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Jane,\n\nHi!\n\nThe body text follows.",
+    "addressee_names": [
+     "Jane Doe",
+     "Joseph Other"
+    ]
+   },
+   "result": {
+    "text": "The body text follows.",
+    "ignored_lines": [
+     0,
+     2
+    ],
+    "parts": [
+     "The body text follows."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Jane,\n\nText.\n\nCheers,\nBob\nExample University",
+    "author_name": "",
+    "addressee_names": [],
+    "signature_lines": []
+   },
+   "result": {
+    "text": "Text.\n\nCheers,\nBob\nExample University",
+    "ignored_lines": [
+     0
+    ],
+    "parts": [
+     "Text.\n\nCheers,\nBob\nExample University"
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Jane,\n\nText.\n\nCheers,\nBob\nExample University",
+    "author_name": null,
+    "addressee_names": null,
+    "signature_lines": null
+   },
+   "result": {
+    "text": "Text.\n\nCheers,\nBob\nExample University",
+    "ignored_lines": [
+     0
+    ],
+    "parts": [
+     "Text.\n\nCheers,\nBob\nExample University"
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Jane,\n\nText.\n\nCheers,\nBob\nExample University"
+   },
+   "result": {
+    "text": "Text.\n\nCheers,\nBob\nExample University",
+    "ignored_lines": [
+     0
+    ],
+    "parts": [
+     "Text.\n\nCheers,\nBob\nExample University"
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Jane,\n\nThe body text follows.",
+    "addressee_names": [
+     "Jane Doe",
+     "Joseph Other"
+    ]
+   },
+   "result": {
+    "text": "The body text follows.",
+    "ignored_lines": [
+     0
+    ],
+    "parts": [
+     "The body text follows."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Jane\n\nThe body text follows.",
+    "addressee_names": [
+     "Jane Doe",
+     "Joseph Other"
+    ]
+   },
+   "result": {
+    "text": "The body text follows.",
+    "ignored_lines": [
+     0
+    ],
+    "parts": [
+     "The body text follows."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Jane\n\nThe body text follows.",
+    "addressee_names": null
+   },
+   "result": {
+    "text": "Jane\n\nThe body text follows.",
+    "ignored_lines": [],
+    "parts": [
+     "Jane\n\nThe body text follows."
     ]
    }
   },
@@ -1176,6 +1823,87 @@
   },
   {
    "args": {
+    "extracted_text": "Michael,\n\nI agree with your proposal.",
+    "author_name": "Michael Example",
+    "addressee_names": [
+     "Michael Other"
+    ]
+   },
+   "result": {
+    "text": "I agree with your proposal.",
+    "ignored_lines": [
+     0
+    ],
+    "parts": [
+     "I agree with your proposal."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Michael.\n\nThe body text follows.",
+    "author_name": "Bob Smith",
+    "addressee_names": [
+     "Michael Example"
+    ]
+   },
+   "result": {
+    "text": "The body text follows.",
+    "ignored_lines": [
+     0
+    ],
+    "parts": [
+     "The body text follows."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Michael.\n\nThe body text follows.",
+    "author_name": "Michael Example",
+    "addressee_names": [
+     "Michael Example",
+     "Bob Smith"
+    ]
+   },
+   "result": {
+    "text": "Michael.\n\nThe body text follows.",
+    "ignored_lines": [],
+    "parts": [
+     "Michael.\n\nThe body text follows."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Moin,\n\nThe body text follows.",
+    "addressee_names": null
+   },
+   "result": {
+    "text": "The body text follows.",
+    "ignored_lines": [
+     0
+    ],
+    "parts": [
+     "The body text follows."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Notes.\nReviewer: Jane Example\nThe review text follows here.",
+    "author_name": "Jane Example"
+   },
+   "result": {
+    "text": "Notes.\nReviewer: Jane Example\nThe review text follows here.",
+    "ignored_lines": [],
+    "parts": [
+     "Notes.\nReviewer: Jane Example\nThe review text follows here."
+    ]
+   }
+  },
+  {
+   "args": {
     "extracted_text": "Part one.\n\n====\n\nThe second part continues the argument here."
    },
    "result": {
@@ -1183,6 +1911,19 @@
     "ignored_lines": [],
     "parts": [
      "Part one.\n\n====\n\nThe second part continues the argument here."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "People:\n\nThe body text follows.",
+    "addressee_names": null
+   },
+   "result": {
+    "text": "People:\n\nThe body text follows.",
+    "ignored_lines": [],
+    "parts": [
+     "People:\n\nThe body text follows."
     ]
    }
   },
@@ -1262,6 +2003,35 @@
   },
   {
    "args": {
+    "extracted_text": "STRAßE, IETF,\nthe body text follows."
+   },
+   "result": {
+    "text": "STRAßE, IETF,\nthe body text follows.",
+    "ignored_lines": [],
+    "parts": [
+     "STRAßE, IETF,\nthe body text follows."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Søren,\n\nThe body text follows.",
+    "addressee_names": [
+     "Soren Example"
+    ]
+   },
+   "result": {
+    "text": "The body text follows.",
+    "ignored_lines": [
+     0
+    ],
+    "parts": [
+     "The body text follows."
+    ]
+   }
+  },
+  {
+   "args": {
     "extracted_text": "See the draft:\nhttps://datatracker.example.org/doc/html/draft-foo-01\n\nOlivier"
    },
    "result": {
@@ -1286,7 +2056,20 @@
   },
   {
    "args": {
-    "extracted_text": "Some quick replies.\n\nThanks.\n\nThese would be different domains that don't connect to each other. You can run separate instances, especially when there are multicast group boundaries so the well-known groups stay disjoint.\n\nIf there are no group boundaries, then the packets go to all members of the well-known group but are dropped by the ones without common encryption keys.\n\nRight, a tradeoff between plug-and-play and secure communication.\n\nI thought we had something like that. I'll leave this for Mike and Stig to comment about.\n\nDino"
+    "extracted_text": "Some context first.\n\nMichael,\n\nI agree with your proposal.",
+    "author_name": "Michael Example"
+   },
+   "result": {
+    "text": "Some context first.\n\nMichael,\n\nI agree with your proposal.",
+    "ignored_lines": [],
+    "parts": [
+     "Some context first.\n\nMichael,\n\nI agree with your proposal."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Some quick replies.\n\n\nThanks.\n\n\nThese would be different domains that don't connect to each other. You can run separate instances, especially when there are multicast group boundaries so the well-known groups stay disjoint.\n\n\nIf there are no group boundaries, then the packets go to all members of the well-known group but are dropped by the ones without common encryption keys.\n\n\nRight, a tradeoff between plug-and-play and secure communication.\n\n\nI thought we had something like that. I'll leave this for Mike and Stig to comment about.\n\nDino"
    },
    "result": {
     "text": "Some quick replies.\n\nThanks.\n\nThese would be different domains that don't connect to each other. You can run separate instances, especially when there are multicast group boundaries so the well-known groups stay disjoint.\n\nIf there are no group boundaries, then the packets go to all members of the well-known group but are dropped by the ones without common encryption keys.\n\nRight, a tradeoff between plug-and-play and secure communication.\n\nI thought we had something like that. I'll leave this for Mike and Stig to comment about.\n\nDino",
@@ -1298,13 +2081,59 @@
   },
   {
    "args": {
-    "extracted_text": "Stefano,\n\n\nThe best approach is to standardize a QUIC extension that indicates\nthat the server has several IP addresses. This would be an excellent\nuse case for\nhttps://datatracker.ietf.org/doc/html/draft-piraux-quic-additional-addresses-04\n\n\nOlivier"
+    "extracted_text": "Soren,\n\nThe body text follows.",
+    "addressee_names": [
+     "Søren Example"
+    ]
    },
    "result": {
-    "text": "Stefano,\n\nThe best approach is to standardize a QUIC extension that indicates\nthat the server has several IP addresses. This would be an excellent\nuse case for\nhttps://datatracker.ietf.org/doc/html/draft-piraux-quic-additional-addresses-04\n\nOlivier",
+    "text": "The body text follows.",
+    "ignored_lines": [
+     0
+    ],
+    "parts": [
+     "The body text follows."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Stefano,\n\nThe body text follows.",
+    "addressee_names": null
+   },
+   "result": {
+    "text": "The body text follows.",
+    "ignored_lines": [
+     0
+    ],
+    "parts": [
+     "The body text follows."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Stefano,\n\n\n\n\nThe best approach is to standardize a QUIC extension that indicates\nthat the server has several IP addresses. This would be an excellent\nuse case for\nhttps://datatracker.ietf.org/doc/html/draft-piraux-quic-additional-addresses-04\n\n\nOlivier"
+   },
+   "result": {
+    "text": "The best approach is to standardize a QUIC extension that indicates\nthat the server has several IP addresses. This would be an excellent\nuse case for\nhttps://datatracker.ietf.org/doc/html/draft-piraux-quic-additional-addresses-04\n\nOlivier",
+    "ignored_lines": [
+     0
+    ],
+    "parts": [
+     "The best approach is to standardize a QUIC extension that indicates\nthat the server has several IP addresses. This would be an excellent\nuse case for\nhttps://datatracker.ietf.org/doc/html/draft-piraux-quic-additional-addresses-04\n\nOlivier"
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Stefano,\nthe body text follows."
+   },
+   "result": {
+    "text": "Stefano,\nthe body text follows.",
     "ignored_lines": [],
     "parts": [
-     "Stefano,\n\nThe best approach is to standardize a QUIC extension that indicates\nthat the server has several IP addresses. This would be an excellent\nuse case for\nhttps://datatracker.ietf.org/doc/html/draft-piraux-quic-additional-addresses-04\n\nOlivier"
+     "Stefano,\nthe body text follows."
     ]
    }
   },
@@ -1344,25 +2173,1070 @@
   },
   {
    "args": {
-    "extracted_text": "Text.\n\nRegards,\nJohn²"
+    "extracted_text": "Text that is long enough.\n\nJane Example\nExample University",
+    "signature_lines": [
+     "Jane Example",
+     "Example University"
+    ]
    },
    "result": {
-    "text": "Text.\n\nRegards,\nJohn²",
-    "ignored_lines": [],
+    "text": "Text that is long enough.",
+    "ignored_lines": [
+     2,
+     3
+    ],
     "parts": [
-     "Text.\n\nRegards,\nJohn²"
+     "Text that is long enough."
     ]
    }
   },
   {
    "args": {
-    "extracted_text": "Text.\n\nRegards,\nǅohn"
+    "extracted_text": "Text that is long enough.\n\nJane Example\nExample University"
    },
    "result": {
-    "text": "Text.\n\nRegards,\nǅohn",
+    "text": "Text that is long enough.\n\nJane Example\nExample University",
     "ignored_lines": [],
     "parts": [
-     "Text.\n\nRegards,\nǅohn"
+     "Text that is long enough.\n\nJane Example\nExample University"
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text with a reference [1].\n\nRegards,\nJane\n\n[1] https://example.org/a\nhttps://example.org/b",
+    "author_name": "Jane Example"
+   },
+   "result": {
+    "text": "Text with a reference [1].\n\n[1] https://example.org/a\nhttps://example.org/b",
+    "ignored_lines": [
+     2,
+     3
+    ],
+    "parts": [
+     "Text with a reference [1].\n\n[1] https://example.org/a\nhttps://example.org/b"
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\n---\nJane Example",
+    "author_name": "Jane Example"
+   },
+   "result": {
+    "text": "Text.",
+    "ignored_lines": [
+     2,
+     3
+    ],
+    "parts": [
+     "Text."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\n-J.",
+    "author_name": "Jane Example"
+   },
+   "result": {
+    "text": "Text.",
+    "ignored_lines": [
+     2
+    ],
+    "parts": [
+     "Text."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\n-jane",
+    "author_name": "Bob Other"
+   },
+   "result": {
+    "text": "Text.\n\n-jane",
+    "ignored_lines": [],
+    "parts": [
+     "Text.\n\n-jane"
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\n-jane",
+    "author_name": "Jane Example"
+   },
+   "result": {
+    "text": "Text.",
+    "ignored_lines": [
+     2
+    ],
+    "parts": [
+     "Text."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\n-jane"
+   },
+   "result": {
+    "text": "Text.\n\n-jane",
+    "ignored_lines": [],
+    "parts": [
+     "Text.\n\n-jane"
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\n/j",
+    "author_name": "Bob Other"
+   },
+   "result": {
+    "text": "Text.\n\n/j",
+    "ignored_lines": [],
+    "parts": [
+     "Text.\n\n/j"
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\n/j",
+    "author_name": "Jane Example"
+   },
+   "result": {
+    "text": "Text.",
+    "ignored_lines": [
+     2
+    ],
+    "parts": [
+     "Text."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\n/j"
+   },
+   "result": {
+    "text": "Text.\n\n/j",
+    "ignored_lines": [],
+    "parts": [
+     "Text.\n\n/j"
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\n/je",
+    "author_name": "Jane Example"
+   },
+   "result": {
+    "text": "Text.",
+    "ignored_lines": [
+     2
+    ],
+    "parts": [
+     "Text."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\n/x",
+    "author_name": "Jane Example"
+   },
+   "result": {
+    "text": "Text.\n\n/x",
+    "ignored_lines": [],
+    "parts": [
+     "Text.\n\n/x"
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nAesir",
+    "author_name": "Bjørn Æsir"
+   },
+   "result": {
+    "text": "Text.",
+    "ignored_lines": [
+     2
+    ],
+    "parts": [
+     "Text."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nBjorn",
+    "author_name": "Bjørn Æsir"
+   },
+   "result": {
+    "text": "Text.",
+    "ignored_lines": [
+     2
+    ],
+    "parts": [
+     "Text."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nBob",
+    "author_name": "Robert Example"
+   },
+   "result": {
+    "text": "Text.",
+    "ignored_lines": [
+     2
+    ],
+    "parts": [
+     "Text."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nCheers, Jane",
+    "author_name": "Jane Example",
+    "addressee_names": [
+     "Peter Other"
+    ]
+   },
+   "result": {
+    "text": "Text.",
+    "ignored_lines": [
+     2
+    ],
+    "parts": [
+     "Text."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nCheers,\nJane Example\nExample University\nhttps://example.org/jane",
+    "author_name": "Jane Example"
+   },
+   "result": {
+    "text": "Text.",
+    "ignored_lines": [
+     2,
+     3,
+     4,
+     5
+    ],
+    "parts": [
+     "Text."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nDzoe",
+    "author_name": "Ǆoe Example"
+   },
+   "result": {
+    "text": "Text.",
+    "ignored_lines": [
+     2
+    ],
+    "parts": [
+     "Text."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nGESCHÄFTSFÜHRER: STRASSE 1",
+    "signature_lines": [
+     "Geschäftsführer: Straße 1"
+    ]
+   },
+   "result": {
+    "text": "Text.",
+    "ignored_lines": [
+     2
+    ],
+    "parts": [
+     "Text."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nIsmail",
+    "author_name": "İsmail Example"
+   },
+   "result": {
+    "text": "Text.",
+    "ignored_lines": [
+     2
+    ],
+    "parts": [
+     "Text."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nJ",
+    "author_name": "Jane Example"
+   },
+   "result": {
+    "text": "Text.\n\nJ",
+    "ignored_lines": [],
+    "parts": [
+     "Text.\n\nJ"
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nJE",
+    "author_name": "Example, Jane"
+   },
+   "result": {
+    "text": "Text.",
+    "ignored_lines": [
+     2
+    ],
+    "parts": [
+     "Text."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nJE",
+    "author_name": "Jane Example"
+   },
+   "result": {
+    "text": "Text.",
+    "ignored_lines": [
+     2
+    ],
+    "parts": [
+     "Text."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nJJ",
+    "author_name": "\"Jane (JJ) Example\""
+   },
+   "result": {
+    "text": "Text.",
+    "ignored_lines": [
+     2
+    ],
+    "parts": [
+     "Text."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nJane (as chair)",
+    "author_name": "Jane Example"
+   },
+   "result": {
+    "text": "Text.",
+    "ignored_lines": [
+     2
+    ],
+    "parts": [
+     "Text."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nJane Example",
+    "author_name": "Jane Example"
+   },
+   "result": {
+    "text": "Text.",
+    "ignored_lines": [
+     2
+    ],
+    "parts": [
+     "Text."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nJane Example",
+    "author_name": "mail@janeexample.org"
+   },
+   "result": {
+    "text": "Text.",
+    "ignored_lines": [
+     2
+    ],
+    "parts": [
+     "Text."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nJane",
+    "author_name": "Bob Other"
+   },
+   "result": {
+    "text": "Text.\n\nJane",
+    "ignored_lines": [],
+    "parts": [
+     "Text.\n\nJane"
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nJane",
+    "author_name": "Jane Example via Example-List"
+   },
+   "result": {
+    "text": "Text.",
+    "ignored_lines": [
+     2
+    ],
+    "parts": [
+     "Text."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nJane",
+    "author_name": "Jane Example"
+   },
+   "result": {
+    "text": "Text.",
+    "ignored_lines": [
+     2
+    ],
+    "parts": [
+     "Text."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nJane",
+    "author_name": "jane.example@example.org"
+   },
+   "result": {
+    "text": "Text.",
+    "ignored_lines": [
+     2
+    ],
+    "parts": [
+     "Text."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nJane"
+   },
+   "result": {
+    "text": "Text.\n\nJane",
+    "ignored_lines": [],
+    "parts": [
+     "Text.\n\nJane"
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nJane\nExample University\nThis is a longer sentence that continues the text.",
+    "author_name": "Jane Example"
+   },
+   "result": {
+    "text": "Text.\n\nJane\nExample University\nThis is a longer sentence that continues the text.",
+    "ignored_lines": [],
+    "parts": [
+     "Text.\n\nJane\nExample University\nThis is a longer sentence that continues the text."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nJosé",
+    "author_name": "José Example"
+   },
+   "result": {
+    "text": "Text.",
+    "ignored_lines": [
+     2
+    ],
+    "parts": [
+     "Text."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nJosé",
+    "author_name": "José Example"
+   },
+   "result": {
+    "text": "Text.",
+    "ignored_lines": [
+     2
+    ],
+    "parts": [
+     "Text."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nPREUß",
+    "author_name": "John Preuss"
+   },
+   "result": {
+    "text": "Text.",
+    "ignored_lines": [
+     2
+    ],
+    "parts": [
+     "Text."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nPreuss",
+    "author_name": "John Preuß"
+   },
+   "result": {
+    "text": "Text.",
+    "ignored_lines": [
+     2
+    ],
+    "parts": [
+     "Text."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nRegards, John²"
+   },
+   "result": {
+    "text": "Text.\n\nRegards, John²",
+    "ignored_lines": [],
+    "parts": [
+     "Text.\n\nRegards, John²"
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nRegards, Pete",
+    "author_name": "Jane Example",
+    "addressee_names": [
+     "Peter Other"
+    ]
+   },
+   "result": {
+    "text": "Text.",
+    "ignored_lines": [
+     2
+    ],
+    "parts": [
+     "Text."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nRegards, Ǆohn"
+   },
+   "result": {
+    "text": "Text.",
+    "ignored_lines": [
+     2
+    ],
+    "parts": [
+     "Text."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nRegards, ǅohn"
+   },
+   "result": {
+    "text": "Text.\n\nRegards, ǅohn",
+    "ignored_lines": [],
+    "parts": [
+     "Text.\n\nRegards, ǅohn"
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nRegards,\nJane\n\nP.S. The agenda is attached.\nMore words for the note.",
+    "author_name": "Jane Example"
+   },
+   "result": {
+    "text": "Text.\n\nP.S. The agenda is attached.\nMore words for the note.",
+    "ignored_lines": [
+     2,
+     3
+    ],
+    "parts": [
+     "Text.\n\nP.S. The agenda is attached.\nMore words for the note."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nRegards,\nJane\nhttps://example.org/b\nSent from my iPhone",
+    "author_name": "Jane Example"
+   },
+   "result": {
+    "text": "Text.",
+    "ignored_lines": [
+     2,
+     3,
+     4,
+     5
+    ],
+    "parts": [
+     "Text."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nRegards,\nJohn²"
+   },
+   "result": {
+    "text": "Text.",
+    "ignored_lines": [
+     2,
+     3
+    ],
+    "parts": [
+     "Text."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nRjE",
+    "author_name": "Robert Example"
+   },
+   "result": {
+    "text": "Text.",
+    "ignored_lines": [
+     2
+    ],
+    "parts": [
+     "Text."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nRoſſ",
+    "author_name": "Ross Example"
+   },
+   "result": {
+    "text": "Text.",
+    "ignored_lines": [
+     2
+    ],
+    "parts": [
+     "Text."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nRob E.",
+    "author_name": "Robert Example"
+   },
+   "result": {
+    "text": "Text.",
+    "ignored_lines": [
+     2
+    ],
+    "parts": [
+     "Text."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nSecretariat",
+    "author_name": ""
+   },
+   "result": {
+    "text": "Text.\n\nSecretariat",
+    "ignored_lines": [],
+    "parts": [
+     "Text.\n\nSecretariat"
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nSecretariat",
+    "author_name": "IETF Secretariat"
+   },
+   "result": {
+    "text": "Text.\n\nSecretariat",
+    "ignored_lines": [],
+    "parts": [
+     "Text.\n\nSecretariat"
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nSoren",
+    "author_name": "Søren Ångström"
+   },
+   "result": {
+    "text": "Text.",
+    "ignored_lines": [
+     2
+    ],
+    "parts": [
+     "Text."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nThank you, Peter",
+    "addressee_names": [
+     "Peter Other"
+    ]
+   },
+   "result": {
+    "text": "Text.",
+    "ignored_lines": [
+     2
+    ],
+    "parts": [
+     "Text."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nThank you, Peter",
+    "author_name": "Jane Example",
+    "addressee_names": [
+     "Peter Other"
+    ]
+   },
+   "result": {
+    "text": "Text.\n\nThank you, Peter",
+    "ignored_lines": [],
+    "parts": [
+     "Text.\n\nThank you, Peter"
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nThanks, Joe. That works.",
+    "author_name": "Jane Example"
+   },
+   "result": {
+    "text": "Text.\n\nThanks, Joe. That works.",
+    "ignored_lines": [],
+    "parts": [
+     "Text.\n\nThanks, Joe. That works."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nThanks, Pete, these are good suggestions.",
+    "addressee_names": [
+     "Peter Other"
+    ]
+   },
+   "result": {
+    "text": "Text.",
+    "ignored_lines": [
+     2
+    ],
+    "parts": [
+     "Text."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nThanks, Pete, these are good suggestions.",
+    "author_name": "Jane Example",
+    "addressee_names": [
+     "Peter Other"
+    ]
+   },
+   "result": {
+    "text": "Text.\n\nThanks, Pete, these are good suggestions.",
+    "ignored_lines": [],
+    "parts": [
+     "Text.\n\nThanks, Pete, these are good suggestions."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nThanks, Pete.",
+    "addressee_names": [
+     "Peter Other"
+    ]
+   },
+   "result": {
+    "text": "Text.",
+    "ignored_lines": [
+     2
+    ],
+    "parts": [
+     "Text."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nThanks, Pete.",
+    "author_name": "Jane Example",
+    "addressee_names": [
+     "Peter Other"
+    ]
+   },
+   "result": {
+    "text": "Text.\n\nThanks, Pete.",
+    "ignored_lines": [],
+    "parts": [
+     "Text.\n\nThanks, Pete."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nThanks, Sandy. I approve the change.\nJane",
+    "author_name": "Jane Example"
+   },
+   "result": {
+    "text": "Text.\n\nThanks, Sandy. I approve the change.",
+    "ignored_lines": [
+     3
+    ],
+    "parts": [
+     "Text.\n\nThanks, Sandy. I approve the change."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nThanks, Sandy\nJane",
+    "author_name": "Jane Example"
+   },
+   "result": {
+    "text": "Text.",
+    "ignored_lines": [
+     2,
+     3
+    ],
+    "parts": [
+     "Text."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nThanks,Pete",
+    "author_name": "Jane Example",
+    "addressee_names": [
+     "Peter Other"
+    ]
+   },
+   "result": {
+    "text": "Text.",
+    "ignored_lines": [
+     2
+    ],
+    "parts": [
+     "Text."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nYildiz",
+    "author_name": "Ayşe Yıldız"
+   },
+   "result": {
+    "text": "Text.",
+    "ignored_lines": [
+     2
+    ],
+    "parts": [
+     "Text."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nǆoe",
+    "author_name": "Ǆoe Example"
+   },
+   "result": {
+    "text": "Text.",
+    "ignored_lines": [
+     2
+    ],
+    "parts": [
+     "Text."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nΑλέξης",
+    "author_name": "Αλέξης Example"
+   },
+   "result": {
+    "text": "Text.",
+    "ignored_lines": [
+     2
+    ],
+    "parts": [
+     "Text."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nΑλέξησ",
+    "author_name": "Αλέξης Example"
+   },
+   "result": {
+    "text": "Text.\n\nΑλέξησ",
+    "ignored_lines": [],
+    "parts": [
+     "Text.\n\nΑλέξησ"
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nΑλεξης",
+    "author_name": "Αλέξης Example"
+   },
+   "result": {
+    "text": "Text.\n\nΑλεξης",
+    "ignored_lines": [],
+    "parts": [
+     "Text.\n\nΑλεξης"
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nराम",
+    "author_name": "राम"
+   },
+   "result": {
+    "text": "Text.\n\nराम",
+    "ignored_lines": [],
+    "parts": [
+     "Text.\n\nराम"
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\n— Jane",
+    "author_name": "Jane Example"
+   },
+   "result": {
+    "text": "Text.",
+    "ignored_lines": [
+     2
+    ],
+    "parts": [
+     "Text."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\n…Roy",
+    "author_name": "Roy Example"
+   },
+   "result": {
+    "text": "Text.",
+    "ignored_lines": [
+     2
+    ],
+    "parts": [
+     "Text."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\n山田太郎",
+    "author_name": "山田太郎"
+   },
+   "result": {
+    "text": "Text.",
+    "ignored_lines": [
+     2
+    ],
+    "parts": [
+     "Text."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\nＪａｎｅ",
+    "author_name": "Jane Example"
+   },
+   "result": {
+    "text": "Text.\n\nＪａｎｅ",
+    "ignored_lines": [],
+    "parts": [
+     "Text.\n\nＪａｎｅ"
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Text.\n\njane",
+    "author_name": "Jane Example"
+   },
+   "result": {
+    "text": "Text.",
+    "ignored_lines": [
+     2
+    ],
+    "parts": [
+     "Text."
     ]
    }
   },
@@ -1398,6 +3272,40 @@
     ],
     "parts": [
      "Thanks Iman, I see. Possession proven live; authorization carried as evidence bound to the action. And \"keys pinned out of band\" is the case — raw keys registered directly with the relying party, no CA. We reached the same no-stranger model from the user side.\n\nI agree on your recommendation: signalling first, token second. A combined token can stay combined as long as the event names the row it revokes. That is deployable now, without reissuing anyone.\nBtw, your \"possession no longer proven\" event is the endpoint-presence signal I have proposed in the Shared Signals WG. So we are converging. The row-scoped signal I want is the possession row of your model.\n\nAnd, a row-scoped signal lets the relying party remove trust on the possession row. It cannot prove it. A copied bearer token still presents as valid possession, because the token cannot show it is live. So the signal handles the deployed token world — it removes the wrong. Proving the possession row right, at the moment of use, needs a key that is live and exists in only one place.\n\nNow to the idea the possession row can carry users and agents, not just workloads.\nBecause the row is not about who the actor is. It is about where the key lives. If the key is live and nowhere else, then whoever is bound to it is provably present. The actor slot is pluggable:\nWorkload: the key is the platform's. Possession means the workload is live. This is mTLS today.\n\nHuman: the human is verified into the platform. The platform's live key then stands for \"this verified human is present.\" Same row.\nAgent: the agent runs on the platform and acts for a human verified into it. Possession means the agent is live and the human it acts for is present. Two actors, one platform, one key.\n\nThere is also a place where this row meets your gravest risk directly. You name rendering faithfulness as the thing cryptography cannot prove — the human signs a hash believing it is action X when it is Y — and your mitigation is a second surface on hardware the operator does not author. That surface is the endpoint. So the possession row does not only sit beside EP; the platform that proves live possession can also be the trusted display your receipt needs. The signature proves a key signed; the endpoint can help prove the human saw the true action.\n\nWe call this LIT — Live Identity in Transaction. The key is live: it exists only while its conditions hold — the right user present, the device sound — and is gone the moment any condition fails. So its presence is its validity. If the handshake completes, the conditions are met; nothing separate to check. And the key exists in one place only, so no copy is off somewhere staying alive when the user is not.\nUnderneath is a fuller definition of identity: not one thing, proven once, but three things, proven live — who is acting, on which platform, under which conditions. The industry proves the first, at one moment. LIT proves all three, in the channel, continuously.\n\nIn WIMSE this appears as a profile, under the precise term — condition-bounded credential. LIT is the general name for the same idea.\n\nYour EP receipt sits on the authorization row; LIT sits on the possession row. Together they are your two rows, each proven on its own terms.\nYou asked why the human binds into the platform. The core is in the possession row above — the human is verified into the platform, and the platform's live key then stands for that verified human being present. The rest — how the agent case composes two actors on one platform, and how the trusted-rendering piece works — needs more room than a mail. Happy to walk the group through it. Vienna would be ideal — I may not make it in person, but I can do it remotely, or on a call whenever it suits the WG."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Thanks Jane!\n\nThe body text follows.",
+    "addressee_names": [
+     "Jane Doe",
+     "Joseph Other"
+    ]
+   },
+   "result": {
+    "text": "Thanks Jane!\n\nThe body text follows.",
+    "ignored_lines": [],
+    "parts": [
+     "Thanks Jane!\n\nThe body text follows."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "Thanks Jane,\n\nThe body text follows.",
+    "addressee_names": [
+     "Jane Doe",
+     "Joseph Other"
+    ]
+   },
+   "result": {
+    "text": "The body text follows.",
+    "ignored_lines": [
+     0
+    ],
+    "parts": [
+     "The body text follows."
     ]
    }
   },
@@ -1459,7 +3367,37 @@
   },
   {
    "args": {
+    "extracted_text": "The actual content.\n\nBest Regards,\n-xyz"
+   },
+   "result": {
+    "text": "The actual content.",
+    "ignored_lines": [
+     2,
+     3
+    ],
+    "parts": [
+     "The actual content."
+    ]
+   }
+  },
+  {
+   "args": {
     "extracted_text": "The actual content.\n\nBest regards,\nLouis Navarre, UCLouvain"
+   },
+   "result": {
+    "text": "The actual content.",
+    "ignored_lines": [
+     2,
+     3
+    ],
+    "parts": [
+     "The actual content."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "The actual content.\n\nBest,\n-jane"
    },
    "result": {
     "text": "The actual content.",
@@ -1517,6 +3455,35 @@
   },
   {
    "args": {
+    "extracted_text": "The actual content.\n\nCheers,\n/xyz"
+   },
+   "result": {
+    "text": "The actual content.",
+    "ignored_lines": [
+     2,
+     3
+    ],
+    "parts": [
+     "The actual content."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "The actual content.\n\nCheers..."
+   },
+   "result": {
+    "text": "The actual content.",
+    "ignored_lines": [
+     2
+    ],
+    "parts": [
+     "The actual content."
+    ]
+   }
+  },
+  {
+   "args": {
     "extracted_text": "The actual content.\n\nCheers\n\nThi Nguyen-Huu | CEO"
    },
    "result": {
@@ -1539,6 +3506,34 @@
     "ignored_lines": [
      2,
      3
+    ],
+    "parts": [
+     "The actual content."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "The actual content.\n\nLater, Jane"
+   },
+   "result": {
+    "text": "The actual content.",
+    "ignored_lines": [
+     2
+    ],
+    "parts": [
+     "The actual content."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "The actual content.\n\nMany thanks!!"
+   },
+   "result": {
+    "text": "The actual content.",
+    "ignored_lines": [
+     2
     ],
     "parts": [
      "The actual content."
@@ -1592,6 +3587,30 @@
   },
   {
    "args": {
+    "extracted_text": "The actual content.\n\nRegards, John Example. I approve the change."
+   },
+   "result": {
+    "text": "The actual content.\n\nRegards, John Example. I approve the change.",
+    "ignored_lines": [],
+    "parts": [
+     "The actual content.\n\nRegards, John Example. I approve the change."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "The actual content.\n\nRegards,\nJane\n\nPS: see the agenda."
+   },
+   "result": {
+    "text": "The actual content.\n\nRegards,\nJane\n\nPS: see the agenda.",
+    "ignored_lines": [],
+    "parts": [
+     "The actual content.\n\nRegards,\nJane\n\nPS: see the agenda."
+    ]
+   }
+  },
+  {
+   "args": {
     "extracted_text": "The actual content.\n\nRegards,\n\nTimo Gerke"
    },
    "result": {
@@ -1599,6 +3618,79 @@
     "ignored_lines": [
      2,
      4
+    ],
+    "parts": [
+     "The actual content."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "The actual content.\n\nRegards,\n— Jane Example"
+   },
+   "result": {
+    "text": "The actual content.",
+    "ignored_lines": [
+     2,
+     3
+    ],
+    "parts": [
+     "The actual content."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "The actual content.\n\nRegards.\n--xyz."
+   },
+   "result": {
+    "text": "The actual content.",
+    "ignored_lines": [
+     2,
+     3
+    ],
+    "parts": [
+     "The actual content."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "The actual content.\n\nRegards/Ngā mihi\nJane Example"
+   },
+   "result": {
+    "text": "The actual content.",
+    "ignored_lines": [
+     2,
+     3
+    ],
+    "parts": [
+     "The actual content."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "The actual content.\n\nRegards、Jane"
+   },
+   "result": {
+    "text": "The actual content.",
+    "ignored_lines": [
+     2
+    ],
+    "parts": [
+     "The actual content."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "The actual content.\n\nRegards，Jane"
+   },
+   "result": {
+    "text": "The actual content.",
+    "ignored_lines": [
+     2
     ],
     "parts": [
      "The actual content."
@@ -1622,6 +3714,76 @@
   },
   {
    "args": {
+    "extracted_text": "The actual content.\n\nTake care"
+   },
+   "result": {
+    "text": "The actual content.",
+    "ignored_lines": [
+     2
+    ],
+    "parts": [
+     "The actual content."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "The actual content.\n\nThanks -Jane"
+   },
+   "result": {
+    "text": "The actual content.",
+    "ignored_lines": [
+     2
+    ],
+    "parts": [
+     "The actual content."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "The actual content.\n\nThanks and regards,\nJane"
+   },
+   "result": {
+    "text": "The actual content.",
+    "ignored_lines": [
+     2,
+     3
+    ],
+    "parts": [
+     "The actual content."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "The actual content.\n\nThanks,\n    xyz"
+   },
+   "result": {
+    "text": "The actual content.",
+    "ignored_lines": [
+     2,
+     3
+    ],
+    "parts": [
+     "The actual content."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "The actual content.\n\nThanks,\nthe draft is fine as it stands now and can move on."
+   },
+   "result": {
+    "text": "The actual content.\n\nThanks,\nthe draft is fine as it stands now and can move on.",
+    "ignored_lines": [],
+    "parts": [
+     "The actual content.\n\nThanks,\nthe draft is fine as it stands now and can move on."
+    ]
+   }
+  },
+  {
+   "args": {
     "extracted_text": "The actual content.\n\nViele Grüße\nTimo"
    },
    "result": {
@@ -1632,6 +3794,87 @@
     ],
     "parts": [
      "The actual content."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "The actual content.\n\nWith best regards,\nJane"
+   },
+   "result": {
+    "text": "The actual content.",
+    "ignored_lines": [
+     2,
+     3
+    ],
+    "parts": [
+     "The actual content."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "The answer is yes.\n\n* Jane Example\n\nThe pasted material continues here.",
+    "author_name": "Jane Example"
+   },
+   "result": {
+    "text": "The answer is yes.\n\n* Jane Example\n\nThe pasted material continues here.",
+    "ignored_lines": [],
+    "parts": [
+     "The answer is yes.\n\n* Jane Example\n\nThe pasted material continues here."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "The answer is yes.\n\nJane:\nThe pasted material continues here with more words.",
+    "author_name": "Jane Example"
+   },
+   "result": {
+    "text": "The answer is yes.\n\nJane:\nThe pasted material continues here with more words.",
+    "ignored_lines": [],
+    "parts": [
+     "The answer is yes.\n\nJane:\nThe pasted material continues here with more words."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "The answer is yes.\n\nJane\n\nThe pasted material continues here with more words.",
+    "author_name": "Jane Example"
+   },
+   "result": {
+    "text": "The answer is yes.\n\nThe pasted material continues here with more words.",
+    "ignored_lines": [
+     2
+    ],
+    "parts": [
+     "The answer is yes.\n\nThe pasted material continues here with more words."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "The answer is yes.\n\nJane\n\nThe pasted material continues here with more words."
+   },
+   "result": {
+    "text": "The answer is yes.\n\nJane\n\nThe pasted material continues here with more words.",
+    "ignored_lines": [],
+    "parts": [
+     "The answer is yes.\n\nJane\n\nThe pasted material continues here with more words."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "The notes.\nPresenter:\nJane Example\nThe slides follow here.",
+    "author_name": "Jane Example"
+   },
+   "result": {
+    "text": "The notes.\nPresenter:\nJane Example\nThe slides follow here.",
+    "ignored_lines": [],
+    "parts": [
+     "The notes.\nPresenter:\nJane Example\nThe slides follow here."
     ]
    }
   },
@@ -1681,7 +3924,7 @@
   },
   {
    "args": {
-    "extracted_text": "The risk mitigation taken relies on the common sense (I know, in short supply now), and adherence to the standards. I.e., if it says “use NIST-blessed DRBG”, the implementation SHALL use it.\n\n\nOtherwise, if you assume that part of the standard will be ignored — why would other parts of that standard or your RFC be followed correctly?\n\n\nIt merely requires the implementation to abide by the letter of the standards it claims to implement. Not a rocket science/\n\nThank you (and others who’d hopefully follow your example) kindly!"
+    "extracted_text": "The risk mitigation taken relies on the common sense (I know, in short supply now), and adherence to the standards. I.e., if it says “use NIST-blessed DRBG”, the implementation SHALL use it.\n\n\nOtherwise, if you assume that part of the standard will be ignored — why would other parts of that standard or your RFC be followed correctly?\n\n\n\nIt merely requires the implementation to abide by the letter of the standards it claims to implement. Not a rocket science/\n\n\nThank you (and others who’d hopefully follow your example) kindly!"
    },
    "result": {
     "text": "The risk mitigation taken relies on the common sense (I know, in short supply now), and adherence to the standards. I.e., if it says “use NIST-blessed DRBG”, the implementation SHALL use it.\n\nOtherwise, if you assume that part of the standard will be ignored — why would other parts of that standard or your RFC be followed correctly?\n\nIt merely requires the implementation to abide by the letter of the standards it claims to implement. Not a rocket science/\n\nThank you (and others who’d hopefully follow your example) kindly!",
@@ -1712,6 +3955,61 @@
     "ignored_lines": [],
     "parts": [
      "This message is intended only for the design team, so please do not\nforward it beyond the WG.\n\nHere is the actual technical question about the draft."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "V/R,\n\nThe body text follows.",
+    "addressee_names": null
+   },
+   "result": {
+    "text": "V/R,\n\nThe body text follows.",
+    "ignored_lines": [],
+    "parts": [
+     "V/R,\n\nThe body text follows."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "WG chairs,\n\nThe body text follows.",
+    "addressee_names": null
+   },
+   "result": {
+    "text": "The body text follows.",
+    "ignored_lines": [
+     0
+    ],
+    "parts": [
+     "The body text follows."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "WG, IETF,\nthe body text follows."
+   },
+   "result": {
+    "text": "the body text follows.",
+    "ignored_lines": [
+     0
+    ],
+    "parts": [
+     "the body text follows."
+    ]
+   }
+  },
+  {
+   "args": {
+    "extracted_text": "We met today.\nJane Example (Example Corp)\nJohn Doe (Other Corp)\nwere present.",
+    "author_name": "Jane Example"
+   },
+   "result": {
+    "text": "We met today.\nJane Example (Example Corp)\nJohn Doe (Other Corp)\nwere present.",
+    "ignored_lines": [],
+    "parts": [
+     "We met today.\nJane Example (Example Corp)\nJohn Doe (Other Corp)\nwere present."
     ]
    }
   },

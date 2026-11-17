@@ -8,14 +8,15 @@ A two-stage, pure-stdlib pipeline for mailing-list mail:
   included.
 - **Stage 2** (:func:`clean_for_scoring`) strips that formulaic furniture from
   the stage-1 text, leaving only the author's substantive prose, and reports
-  which lines it removed.
+  which lines it removed. :func:`learn_signature_lines` learns the signature
+  lines one sender repeats, which stage 2 accepts as evidence.
 
 :data:`EXTRACTION_VERSION` identifies the generation of the routine that
 derives the text; it is independent of the package version and only ever
 increases. See ``CONTRIBUTING.md`` for the contract.
 """
 
-from .cleaning import CleanResult, clean_for_scoring
+from .cleaning import CleanResult, clean_for_scoring, learn_signature_lines
 from .equivalence import texts_equivalent, tolerant_lines
 from .extraction import (
     EXTRACTION_VERSION,
@@ -28,7 +29,7 @@ from .extraction import (
 )
 from .html_text import HtmlParts, html_to_text, split_html_parts
 
-__version__ = "1.5.0"
+__version__ = "1.6.0"
 
 __all__ = [
     "EXTRACTION_VERSION",
@@ -42,6 +43,7 @@ __all__ = [
     "clean_for_scoring",
     "extract_new_text",
     "html_to_text",
+    "learn_signature_lines",
     "split_html_parts",
     "strip_parent_content",
     "texts_equivalent",

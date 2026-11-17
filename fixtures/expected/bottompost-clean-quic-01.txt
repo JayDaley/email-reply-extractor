@@ -1,5 +1,3 @@
-Stefano,
-
 The best approach is to standardize a QUIC extension that indicates
 that the server has several IP addresses. This would be an excellent
 use case for

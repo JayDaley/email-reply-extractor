@@ -21,8 +21,14 @@ const NOVEL = "novel";
 const QUOTED = "quoted";
 /** Text inside a signature container that is not itself inside a quoted one. */
 const SIGNATURE = "signature";
+/**
+ * Text inside a composed-signature container (see
+ * {@link COMPOSED_SIGNATURE_CLASSES}) that is not inside a quoted or a signature
+ * container. {@link splitHtmlParts} renders it as novel or as signature text.
+ */
+const COMPOSED = "composed-signature";
 
-type Category = typeof NOVEL | typeof QUOTED | typeof SIGNATURE;
+type Category = typeof NOVEL | typeof QUOTED | typeof SIGNATURE | typeof COMPOSED;
 
 // --- tag sets -----------------------------------------------------------------
 
@@ -78,6 +84,15 @@ const QUOTED_IDS: ReadonlySet<string> = new Set(["divRplyFwdMsg", "appendonsend"
 const SIGNATURE_CLASSES: ReadonlySet<string> = new Set(["gmail_signature", "moz-signature", "Signature"]);
 /** `id` value Outlook uses for its signature `<div>`. */
 const SIGNATURE_ID = "Signature";
+/**
+ * `class` tokens and `id` values of signature containers the author can type
+ * into: Proton Mail's `protonmail_signature_block`, Outlook mobile's
+ * `ms-outlook-mobile-signature` and the `composer_signature` of Samsung and
+ * other Android clients. A reply typed into one lands inside it, so its category
+ * is decided per document (see {@link splitHtmlParts}).
+ */
+const COMPOSED_SIGNATURE_CLASSES: ReadonlySet<string> = new Set(["protonmail_signature_block"]);
+const COMPOSED_SIGNATURE_IDS: ReadonlySet<string> = new Set(["ms-outlook-mobile-signature", "composer_signature"]);
 /**
  * `class` tokens of Apple Mail's Share-sheet wrapper. A `<blockquote>` whose
  * parent element (the innermost open element when its start tag is read)
@@ -158,6 +173,7 @@ class Segmenter extends HtmlParser {
   private readonly openCounts = new Map<string, number>();
   private quotedDepth = 0;
   private signatureDepth = 0;
+  private composedDepth = 0;
   private skipDepth = 0;
   private wrapperCount = 0;
   /** Set when a share container opens outside any quoted container and skipped region. */
@@ -171,6 +187,7 @@ class Segmenter extends HtmlParser {
   private activeCategory(): Category {
     if (this.quotedDepth > 0) return QUOTED;
     if (this.signatureDepth > 0) return SIGNATURE;
+    if (this.composedDepth > 0) return COMPOSED;
     return NOVEL;
   }
 
@@ -191,6 +208,7 @@ class Segmenter extends HtmlParser {
       return this.interleavedWrappers.has(index) ? null : QUOTED;
     }
     if (classes.some((c) => SIGNATURE_CLASSES.has(c)) || elId === SIGNATURE_ID) return SIGNATURE;
+    if (classes.some((c) => COMPOSED_SIGNATURE_CLASSES.has(c)) || COMPOSED_SIGNATURE_IDS.has(elId)) return COMPOSED;
     return null;
   }
 
@@ -213,6 +231,7 @@ class Segmenter extends HtmlParser {
     countOpen(this.openCounts, tag, 1);
     if (category === QUOTED) this.quotedDepth++;
     else if (category === SIGNATURE) this.signatureDepth++;
+    else if (category === COMPOSED) this.composedDepth++;
     if (BLOCK_TAGS.has(tag) && this.skipDepth === 0) this.segments.push(NL);
   }
 
@@ -229,6 +248,7 @@ class Segmenter extends HtmlParser {
       if (isSkip) this.skipDepth--;
       else if (category === QUOTED) this.quotedDepth--;
       else if (category === SIGNATURE) this.signatureDepth--;
+      else if (category === COMPOSED) this.composedDepth--;
     }
     this.stack.length = idx;
     if (BLOCK_TAGS.has(tag) && this.skipDepth === 0) this.segments.push(NL);
@@ -242,15 +262,15 @@ class Segmenter extends HtmlParser {
 
 // --- rendering ----------------------------------------------------------------
 
-/** Render `segments` to text, keeping only `wanted`-category runs (`null` keeps all). */
-function render(segments: readonly Segment[], wanted: Category | null): string {
+/** Render `segments` to text, keeping only runs whose category is in `wanted` (`null` keeps all). */
+function render(segments: readonly Segment[], wanted: readonly Category[] | null): string {
   const lines: string[] = [];
   let buf = "";
   for (const seg of segments) {
     if (seg.kind === "nl") {
       lines.push(buf);
       buf = "";
-    } else if (wanted === null || seg.category === wanted) {
+    } else if (wanted === null || wanted.includes(seg.category)) {
       buf += seg.text;
     }
   }
@@ -267,6 +287,12 @@ function render(segments: readonly Segment[], wanted: Category | null): string {
   while (start < end && !collapsed[start]) start++;
   while (end > start && !collapsed[end - 1]) end--;
   return collapsed.slice(start, end).join("\n");
+}
+
+function nonblankLineCount(text: string): number {
+  let count = 0;
+  for (const line of text.split("\n")) if (!isBlank(line)) count++;
+  return count;
 }
 
 /** First pass: which Gmail wrapper instances hold a `<blockquote>`. */
@@ -384,10 +410,21 @@ export function splitHtmlParts(html: string): HtmlParts {
   }
   const parser = segment(html);
   const segments = parser.segments;
+  let novel: readonly Category[] = [NOVEL];
+  let signature: readonly Category[] = [SIGNATURE];
+  const first = segments.findIndex((seg) => seg.kind === "text" && seg.category === COMPOSED);
+  if (first >= 0) {
+    // The composed-signature text is novel when it has more non-blank lines
+    // than the novel text above the first composed-signature run.
+    const composed = nonblankLineCount(render(segments, [COMPOSED]));
+    const above = nonblankLineCount(render(segments.slice(0, first), [NOVEL]));
+    if (composed > above) novel = [NOVEL, COMPOSED];
+    else signature = [SIGNATURE, COMPOSED];
+  }
   return Object.freeze({
-    novelText: render(segments, NOVEL),
-    quotedText: render(segments, QUOTED),
-    signatureText: render(segments, SIGNATURE),
+    novelText: render(segments, novel),
+    quotedText: render(segments, [QUOTED]),
+    signatureText: render(segments, signature),
     hasShareContainer: parser.hasShareContainer,
   });
 }

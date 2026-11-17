@@ -65,3 +65,12 @@ This needs corpus work first: fixtures for the collapse's distinctive shapes
 (including the glued `…example.comwrote:` and `On Behalf Of` renderings)
 recorded before the change. It is the natural core of a future
 generation, together with the pre-truncation removal it unblocks.
+
+## Later: both deferred items done in generation 10
+
+Generation 10 (v1.6.0) removed the vendored scanner, and with it the
+wrapped-attribution collapse, the quote-header pre-truncation and the
+over-strip guard. The extractor's own wrapped-attribution rule was extended to
+cover the forms the collapse caught (a terminator up to 4 lines below the start
+line, a start line after `>` markers or `--`). See
+[generation-10.md](generation-10.md).

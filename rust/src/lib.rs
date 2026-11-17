@@ -10,7 +10,12 @@
 //!   signatures included.
 //! - **Stage 2**, [`clean_for_scoring`], strips that formulaic furniture
 //!   from the stage-1 text, leaving the author's substantive prose, and
-//!   reports which lines it removed.
+//!   reports which lines it removed. With the sender's display name, the
+//!   addressees' display names and the sender's learned signature lines
+//!   ([`CleanOptions`], [`clean_for_scoring_with_options`]), it also removes
+//!   sign-offs, name lines, greetings and signature lines that no fixed list
+//!   identifies. [`learn_signature_lines`] learns those lines from the
+//!   stage-1 texts of the sender's earlier messages.
 //!
 //! The HTML helpers [`html_to_text`] and [`split_html_parts`] render the
 //! visible text of a `text/html` part; [`strip_parent_content`] removes
@@ -27,9 +32,19 @@
 //! Functions take decoded strings; the crate does no MIME parsing. The
 //! reference's optional arguments (Python default `None`) are `Option<&str>`
 //! parameters in the reference's order, and its keyword-only flag
-//! `continuation` is a `bool`. The keyword-only argument `part_starts` of
-//! `clean_for_scoring` is taken by [`clean_for_scoring_with_parts`], so that
-//! [`clean_for_scoring`] keeps its two-argument signature.
+//! `continuation` is a `bool`. [`clean_for_scoring_with_options`] takes every
+//! optional argument of the reference's `clean_for_scoring` in one
+//! [`CleanOptions`] struct (`html_signature_text`, `part_starts`,
+//! `author_name`, `addressee_names`, `signature_lines`);
+//! [`clean_for_scoring`] (the HTML signature hint only) and
+//! [`clean_for_scoring_with_parts`] (with the part boundaries) are shorter
+//! forms of it. [`learn_signature_lines`] takes the reference's keyword-only
+//! `subjects` as an `Option<&[&str]>`.
+//!
+//! [`ExtractionResult::method`] is `none`, `custom` or `failed`, with an
+//! `html-` prefix when the text came from the HTML part and a `+parent-diff`
+//! or `+html-quote` suffix when those assists removed content (for example
+//! `custom+parent-diff`).
 //!
 //! ```
 //! use email_reply_extractor::{clean_for_scoring, extract_new_text, Status};
@@ -55,15 +70,19 @@
 mod cleaning;
 mod equivalence;
 mod extraction;
-mod fragments;
+mod greetings;
 mod html_entities;
 mod html_parser;
 mod html_text;
+mod names;
 mod pyre;
 mod pystr;
 mod unicode_tables;
 
-pub use cleaning::{clean_for_scoring, clean_for_scoring_with_parts, CleanResult};
+pub use cleaning::{
+    clean_for_scoring, clean_for_scoring_with_options, clean_for_scoring_with_parts,
+    learn_signature_lines, CleanOptions, CleanResult,
+};
 pub use equivalence::{texts_equivalent, tolerant_lines};
 pub use extraction::{
     extract_new_text, strip_parent_content, strip_parent_content_with_quotation, ExtractionResult,
@@ -80,12 +99,11 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub mod internal {
     pub use crate::cleaning::{is_mobile_tagline, is_signature_delimiter};
     pub use crate::extraction::{
-        aligned_run_marks, any_author_tag, count_unquoted_content_lines, custom_clean,
-        find_quote_header_block, find_signoff_boundary, is_attribution_line, is_quote_line,
-        is_signoff_name_line, normalize_body, parent_stream_contains,
-        strip_after_original_message_divider, strip_attribution_lines,
+        aligned_run_marks, any_author_tag, custom_clean, find_quote_header_block,
+        find_signoff_boundary, is_attribution_line, is_quote_line, is_signoff_name_line,
+        normalize_body, parent_stream_contains, strip_after_original_message_divider,
+        strip_attribution_lines,
     };
-    pub use crate::fragments::{read_fragments, Fragment};
 }
 
 /// The README's examples, compiled and run as doctests.

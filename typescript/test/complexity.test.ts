@@ -20,7 +20,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { cleanForScoring } from "../src/cleaning.js";
+import { cleanForScoring, learnSignatureLines } from "../src/cleaning.js";
 import {
   customClean,
   extractNewText,
@@ -30,11 +30,39 @@ import {
   stripAttributionLines,
   stripParentContent,
 } from "../src/extraction.js";
-import { readFragments } from "../src/fragments.js";
 import { splitHtmlParts } from "../src/htmlText.js";
 
 /** Milliseconds each call may take. */
 const BOUND_MS = 5000;
+
+/** The sender display name of the stage-2 cases. */
+const AUTHOR = "Jane Example";
+
+/** A distinct five-letter word for each `k` below 26**5. */
+function letterWord(k: number): string {
+  let out = "";
+  for (let i = 0; i < 5; i++) out += String.fromCharCode(97 + (Math.floor(k / 26 ** i) % 26));
+  return out;
+}
+
+/**
+ * A parent of `n` three-line paragraphs, and a child in marking mode that
+ * copies each paragraph unmarked and answers it, then quotes every
+ * paragraph's first line after an attribution: `n` protected blocks, `n` runs,
+ * and `n` attributions above quote lines for the stop-line search.
+ */
+function markingRuns(n: number): [string, string] {
+  const paras = Array.from({ length: n }, (_, k) =>
+    Array.from(
+      { length: 3 },
+      (_, j) => `p${k} l${j} ${Array.from({ length: 8 }, (_, i) => `w${k}x${j}x${i}`).join(" ")}`,
+    ),
+  );
+  const parent = paras.map((p) => p.join("\n")).join("\n\n");
+  let child = paras.map((p, k) => `${p.join("\n")}\n\nAnswer ${k}.`).join("\n\n");
+  child += `\n\n${paras.map((p) => `Bob Jones said:\n> ${p[0]}\n`).join("")}`;
+  return [child, parent];
+}
 
 /**
  * A child whose `n` short lines chain backward, one at a time, off three
@@ -101,11 +129,9 @@ function inlineReplyLines(n: number): string[] {
 // [finding id, call]. Comments give the earlier implementation's cost on V8.
 const CASES: [string, () => unknown][] = [
   // MULTI_QUOTE_HDR lookahead (1,600 repeats took 0.12 s, growing quadratically or worse).
-  ["A1-readFragments", () => readFragments("On ".repeat(40000))],
   ["A1-extract", () => extractNewText(`hello\n${"On ".repeat(40000)}`)],
   // Attribution collapse as a replacement template: every "\1" expanded to the
   // whole match, so the output was quadratic in size (4,000 repeats built 32 MB).
-  ["A8-readFragments", () => readFragments(`On ${"\\1".repeat(60000)} wrote:`)],
   ["A8-extract", () => extractNewText(`hello\nOn ${"\\1".repeat(60000)} wrote:\n> q`)],
   // "<who> <a@b> wrote:": cubic (1,600 repeats took 3.5 s).
   ["A2-isAttributionLine", () => isAttributionLine(`x${"<a@".repeat(6400)}`)],
@@ -161,10 +187,91 @@ const CASES: [string, () => unknown][] = [
   // Part boundaries: an inline reply of many short answers between quoted
   // lines; the alignment must not rescan the source per line.
   ["parts-extract", () => extractNewText("a\n> q\n".repeat(100000))],
+  // Generation 10 (added with the rules; no earlier cost). Wrapped
+  // attributions: every line a start line, each scanning the lines below.
+  ["G10-wrapped-starts", () => extractNewText(`hello\n${"On a\n".repeat(100000)}`)],
+  ["G10-wrapped-starts-quoted", () => extractNewText(`hello\n${">> On a\n".repeat(100000)}`)],
+  // Generic attribution units: every colon line above a quote is tested, and
+  // each test reads the long start lines above it.
+  ["G10-generic-long-starts", () => extractNewText(`hello\n${`On ${"a ".repeat(20000)}\nb:\n> q\n`.repeat(100)}`)],
+  ["G10-generic-units", () => extractNewText(`hello\n${`${"from x".repeat(66)}\nend:\n> q\n`.repeat(20000)}`)],
+  // The e-mail cue over a run of word characters with no "@" (quadratic in the
+  // unit's 400 characters as one regex search in the reference).
+  ["G10-generic-email", () => extractNewText(`hello\n${`${"x".repeat(398)}:\n> q\n`.repeat(10000)}`)],
+  ["G10-generic-at", () => extractNewText(`hello\n${`${"a@".repeat(199)}:\n> q\n`.repeat(6000)}`)],
+  // An attribution opener over a long dash run, above a unit's last line.
+  ["G10-generic-opener", () => extractNewText(`hello\n${"-".repeat(400000)}x\nAna <a@b.co>:\n> q`)],
+  ["G10-quote-marker-run", () => extractNewText(`hello\n${">".repeat(400000)}x\nb:\n> q`)],
+  // Sign-off boundaries, each followed by a generic unit above a quote.
+  [
+    "G10-signoffs",
+    () => extractNewText(`hello\n${"Best,\nAna\nBob <bob@example.org> said on Monday:\n> q\n".repeat(30000)}`),
+  ],
+  // Wrap remainders between long quote lines.
+  ["G10-remainders", () => extractNewText(`hello\n${`> ${"a".repeat(70)}\nbc\n`.repeat(100000)}`)],
+  // Candidate dividers: quoted dividers, bare "Original" lines, a long
+  // "&nbsp;" run, and the inline note.
+  ["G10-dividers-quoted", () => extractNewText(`inline\n${"> --- Original ---\n".repeat(100000)}x`)],
+  ["G10-bare-original", () => extractNewText(`hello\n${"Original\n\n\n\nx\n".repeat(50000)}`)],
+  ["G10-divider-nbsp", () => extractNewText(`hello\n--${"&nbsp;".repeat(100000)}Original${" ".repeat(100000)}x`)],
+  ["G10-divider-dashes", () => extractNewText(`hello\n${"-- Original ".repeat(100000)}`)],
+  // Outlook boundary lines.
+  ["G10-outlook-boundaries", () => customClean("a\n_______\n".repeat(100000))],
   // Part grouping in stage 2 over many boundaries.
   [
     "parts-clean",
     () => cleanForScoring("a\n".repeat(200000), { partStarts: Array.from({ length: 199999 }, (_, k) => k + 1) }),
+  ],
+  // Stage-2 evidence rules. A sender display name of many tokens: every
+  // name-like line was compared with every token (over 30 s in the reference).
+  [
+    "S1-author-tokens",
+    () =>
+      cleanForScoring(`hello\n${"Zzzq\n".repeat(20000)}`, {
+        authorName: Array.from({ length: 20000 }, (_, k) => letterWord(k)).join(" "),
+      }),
+  ],
+  // A role-tail search restarted inside a long blank run of a name line.
+  ["S2-name-tail-blanks", () => cleanForScoring(`hello\nJane${" ".repeat(200000)}x\nmore`, { authorName: AUTHOR })],
+  // The trailing-parenthesis search over a long blank run above a name line.
+  ["S3-paren-blanks", () => cleanForScoring(`x${" ".repeat(200000)}y\nJane\nmore text here.`, { authorName: AUTHOR })],
+  // A salutation followed by a long blank run.
+  ["S4-salutation-blanks", () => cleanForScoring(`hello\nThanks${" ".repeat(200000)}x`, { authorName: AUTHOR })],
+  // Subject prefixes: repeated prefixes, and two adjacent blank runs around an
+  // optional "[n]" (both quadratic in the reference's earlier version).
+  [
+    "S5-subject-prefixes",
+    () =>
+      learnSignatureLines(new Array<string>(5).fill("a\nJane"), {
+        subjects: new Array<string>(5).fill(`${"Re: ".repeat(200000)}x`),
+      }),
+  ],
+  [
+    "S5-subject-blanks",
+    () =>
+      learnSignatureLines(new Array<string>(5).fill("a\nJane"), {
+        subjects: new Array<string>(5).fill(`Re${" ".repeat(200000)}x`),
+      }),
+  ],
+  // Many name-like, salutation, learned and greeting lines, and a long
+  // non-blocking tail below a sender name: linear passes.
+  ["S6-name-lines", () => cleanForScoring(`hello\n${"Jane\n".repeat(30000)}prose here.`, { authorName: AUTHOR })],
+  ["S6-salutation-lines", () => cleanForScoring(`hello\n${"Thanks,\n".repeat(20000)}`, { authorName: AUTHOR })],
+  [
+    "S6-learned-lines",
+    () => cleanForScoring(`hello\n${"Jane Example\n".repeat(100000)}`, { signatureLines: ["Jane Example"] }),
+  ],
+  ["S6-greeting-lines", () => cleanForScoring(`${"Hi,\n".repeat(100000)}body`, { addresseeNames: ["Jane Doe"] })],
+  [
+    "S6-footnote-tail",
+    () => cleanForScoring(`hello\nJane\n${"[1] https://example.org/a\n".repeat(50000)}`, { authorName: AUTHOR }),
+  ],
+  [
+    "S6-learn-many-texts",
+    () =>
+      learnSignatureLines(
+        new Array<string>(20000).fill(`body\n${Array.from({ length: 10 }, (_, k) => `Contact ${k}:`).join("\n")}`),
+      ),
   ],
 ];
 
@@ -230,6 +337,9 @@ const PREPARED_CASES: [string, () => [string, string], (child: string, parent: s
   // above the quote header (2.2 s in this port, whose name search was already
   // an indexOf scan; 99 s in the reference; kept for parity).
   ["G7tag-extract", () => localizedTags(25000), (body, parent) => extractNewText(body, { parentBody: parent })],
+  // Parent-diff marking mode over many blocks and runs (generation 10; no
+  // earlier cost).
+  ["G10-marking-mode", () => markingRuns(10000), (child, parent) => extractNewText(child, { parentBody: parent })],
 ];
 
 for (const [name, call] of CASES) {
@@ -277,6 +387,14 @@ test("the own-quotation automaton input reaches the quotation query", () => {
   const plain = stripParentContent(child, parent, { continuation: true });
   assert.ok(!plain.includes("a a a a a a a c"));
   assert.equal(stripParentContent(child, parent, { continuation: true, quotedText: parent.slice(0, -4) }), plain);
+});
+
+test("the marking-runs input reaches the many-runs guard", () => {
+  // Marking mode is on and the runs lose their protection: only the answers
+  // are left.
+  const [child, parent] = markingRuns(20);
+  const result = extractNewText(child, { parentBody: parent });
+  assert.equal(result.text, Array.from({ length: 20 }, (_, k) => `Answer ${k}.`).join("\n\n"));
 });
 
 test("the G7tag input reaches every tag", () => {

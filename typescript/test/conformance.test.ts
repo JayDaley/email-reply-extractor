@@ -10,11 +10,10 @@ import { dirname, join } from "node:path";
 import { describe, test } from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { cleanForScoring, isMobileTagline, isSignatureDelimiter } from "../src/cleaning.js";
+import { cleanForScoring, isMobileTagline, isSignatureDelimiter, learnSignatureLines } from "../src/cleaning.js";
 import { textsEquivalent, tolerantLines } from "../src/equivalence.js";
 import {
   alignedRunMarks,
-  countUnquotedContentLines,
   customClean,
   EXTRACTION_VERSION,
   extractNewText,
@@ -28,7 +27,6 @@ import {
   stripAttributionLines,
   stripParentContent,
 } from "../src/extraction.js";
-import { readFragments } from "../src/fragments.js";
 import { htmlToText, splitHtmlParts } from "../src/htmlText.js";
 
 /** The repository's conformance/ directory, found by walking up from this file. */
@@ -74,7 +72,6 @@ function encode(value: unknown): unknown {
     if ("status" in o) {
       return { text: o.text, method: o.method, status: o.status, part_starts: [...(o.partStarts as number[])] };
     }
-    if ("quoted" in o) return { content: o.content, quoted: o.quoted };
   }
   return value;
 }
@@ -89,7 +86,11 @@ const PUBLIC: Record<string, Call> = {
     cleanForScoring(a.extracted_text, {
       htmlSignatureText: a.html_signature_text ?? null,
       partStarts: a.part_starts ?? [],
+      authorName: a.author_name ?? null,
+      addresseeNames: a.addressee_names ?? null,
+      signatureLines: a.signature_lines ?? null,
     }),
+  learn_signature_lines: (a) => learnSignatureLines(a.texts, { subjects: a.subjects ?? null }),
   strip_parent_content: (a) =>
     stripParentContent(a.text, a.parent_body, {
       continuation: a.continuation ?? false,
@@ -105,8 +106,6 @@ const INTERNAL: Record<string, Call> = {
   "cleaning.is_mobile_tagline": (a) => isMobileTagline(a.line),
   "cleaning.is_signature_delimiter": (a) => isSignatureDelimiter(a.line),
   "extraction._aligned_run_marks": (a) => alignedRunMarks(a.child_seq, a.parent_seq),
-  "extraction.count_unquoted_content_lines": (a) =>
-    countUnquotedContentLines(a.body, { localized: a.localized ?? true }),
   "extraction.custom_clean": (a) => customClean(a.text, { localized: a.localized ?? true }),
   "extraction.find_quote_header_block": (a) => findQuoteHeaderBlock(a.lines, { localized: a.localized ?? true }),
   "extraction.find_signoff_boundary": (a) => findSignoffBoundary(a.lines),
@@ -117,7 +116,6 @@ const INTERNAL: Record<string, Call> = {
   "extraction.strip_after_original_message_divider": (a) =>
     stripAfterOriginalMessageDivider(a.lines, { localized: a.localized ?? true }),
   "extraction.strip_attribution_lines": (a) => stripAttributionLines(a.lines),
-  "fragments.read_fragments": (a) => readFragments(a.text),
 };
 
 function withDefaults(file: Json, args: Record<string, Json>): Record<string, Json> {

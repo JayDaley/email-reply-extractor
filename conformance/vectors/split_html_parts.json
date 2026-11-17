@@ -101,6 +101,17 @@
   },
   {
    "args": {
+    "html": "<blockquote><div id=\"composer_signature\">Quoted sig</div></blockquote><p>Hi</p>"
+   },
+   "result": {
+    "novel_text": "Hi",
+    "quoted_text": "Quoted sig",
+    "signature_text": "",
+    "has_share_container": false
+   }
+  },
+  {
+   "args": {
     "html": "<blockquote>outer<blockquote>inner</blockquote>more outer</blockquote>"
    },
    "result": {
@@ -327,6 +338,50 @@
     "novel_text": "Hi Job,\n\nThis is definitely a bug.\n\nPlease create an issue on https://github.com/ietf-tools/red/issues and include the list of RFCs that have problems.\n\nFeel free to submit UI improvement suggestions there as well.\n\nNick",
     "quoted_text": "On Fri, Jul 17, 2026 at 3:55 AM Job Snijders <job=40bsd.nl@dmarc.ietf.org> wrote:\n\nHi,\n\nIf I’m not mistaken, it used to be the case that RFC document HTML content properly flowed, as in, you could always read specifications on narrow screens (like your phone) without constantly scrolling right to left and back.\n\nNowadays for _some_ RFCs it’s harder to quickly read the spec on your phone, text disappears beyond the right border, see attached screenshot. Tried 2 browsers on iPhone: Safari and DuckDuckGo. Some tables also render poorly with sideways scrolling inside sideways scrolling. Also, IMHO having the title persist at the bottom wastes valuable screen real estate.\n\nThe current content presentation puts me at a disadvantage when trying to settle arguments in the hallway track ;-)\n\nWhat’s the process to improve the presentation?\n\nKind regards,\n\nJob\n\nPs. Only seems an issue with some RFCs",
     "signature_text": "",
+    "has_share_container": false
+   }
+  },
+  {
+   "args": {
+    "html": "<div id=\"composer_signature\"><div>Line one of the reply.</div><div>Line two of the reply.</div><div>Sent from my phone</div></div>"
+   },
+   "result": {
+    "novel_text": "Line one of the reply.\n\nLine two of the reply.\n\nSent from my phone",
+    "quoted_text": "",
+    "signature_text": "",
+    "has_share_container": false
+   }
+  },
+  {
+   "args": {
+    "html": "<div>Reply line 0.</div><div class=\"protonmail_signature_block\"><div>Ana Lima</div><div>Sent with Proton Mail</div></div><div>Text after.</div><div>More after.</div>"
+   },
+   "result": {
+    "novel_text": "Reply line 0.\n\nAna Lima\n\nSent with Proton Mail\n\nText after.\n\nMore after.",
+    "quoted_text": "",
+    "signature_text": "",
+    "has_share_container": false
+   }
+  },
+  {
+   "args": {
+    "html": "<div>Reply line 0.</div><div>Reply line 1.</div><div class=\"protonmail_signature_block\"><div>Ana Lima</div><div>Sent with Proton Mail</div></div><div>Text after.</div><div>More after.</div>"
+   },
+   "result": {
+    "novel_text": "Reply line 0.\n\nReply line 1.\n\nText after.\n\nMore after.",
+    "quoted_text": "",
+    "signature_text": "Ana Lima\n\nSent with Proton Mail",
+    "has_share_container": false
+   }
+  },
+  {
+   "args": {
+    "html": "<div>Thanks, see below.</div><div id=\"ms-outlook-mobile-signature\">Sent from Outlook for iOS</div>"
+   },
+   "result": {
+    "novel_text": "Thanks, see below.",
+    "quoted_text": "",
+    "signature_text": "Sent from Outlook for iOS",
     "has_share_container": false
    }
   },
@@ -635,6 +690,17 @@
     "novel_text": "Thanks Joe,\n\nAs with most industry, I would like to see this standardized and supported by libraries so that I can potentially enable it in the future. European cybersecurity agencies such as ANSSI has a high confidence in ML-KEM [1].\n\nThe value of hybridization with quantum-vulnerable cryptography is clearly temporary, especially if one believes that nation-state attackers will have CRQCs in 2029 [2].\n\nThe campaign by Bernstein et al. against the IETF and ML-KEM is a waste of everybody's time and resources and is likely to have a significant negative impact on cybersecurity. Can the IETF please take action before we lose more brilliant researchers, such as Nadim Kobeissi, from the community? [3]\n\nCheers,\n\nJohn Preuß Mattsson\n\n[1] https://na.eventscloud.com/file_uploads/b635298de1c10be6d3732863e8b1beca_Day2-1600-ANSSI.pdf\n\n[2] https://cr.yp.to/talks/2023.06.15/slides-djb-20230615-pqrisk-4x3.pdf\n\n[3] https://mailarchive.ietf.org/arch/msg/tls/7HNihlgf0I8Mpe-0nqGb56dnON8/",
     "quoted_text": "",
     "signature_text": "",
+    "has_share_container": false
+   }
+  },
+  {
+   "args": {
+    "html": "<p>Hi</p><div class=\"gmail_signature\"><div id=\"composer_signature\">S1</div></div>"
+   },
+   "result": {
+    "novel_text": "Hi",
+    "quoted_text": "",
+    "signature_text": "S1",
     "has_share_container": false
    }
   },

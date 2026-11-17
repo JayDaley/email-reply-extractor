@@ -13,6 +13,24 @@
  "vectors": [
   {
    "args": {
+    "line": "---On Mon, 2 Mar 2026, Bob Smith wrote:"
+   },
+   "result": false
+  },
+  {
+   "args": {
+    "line": "--On Mon, 2 Mar 2026, Bob Smith wrote:"
+   },
+   "result": true
+  },
+  {
+   "args": {
+    "line": "-On Mon, 2 Mar 2026, Bob Smith wrote:"
+   },
+   "result": false
+  },
+  {
+   "args": {
     "line": "2026/07/22 18:12、Alex Konviser <ietf@gravit.space>のメール:"
    },
    "result": true

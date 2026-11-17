@@ -63,10 +63,13 @@ def test_every_public_function_has_vectors():
 
 
 def _function(spec: dict) -> object:
+    # A private module ("_names") is recorded without its leading underscore.
     module = spec["module"]
-    if module == "fragments":
-        module = "_fragments"
-    return getattr(importlib.import_module(f"email_reply_extractor.{module}"), spec["function"])
+    try:
+        found = importlib.import_module(f"email_reply_extractor.{module}")
+    except ModuleNotFoundError:
+        found = importlib.import_module(f"email_reply_extractor._{module}")
+    return getattr(found, spec["function"])
 
 
 @pytest.mark.parametrize(

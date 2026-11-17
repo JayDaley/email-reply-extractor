@@ -59,7 +59,3 @@ at this point acceptable DRBGs are listed in the ACM (they all have
 cryptographically secure post-processing). It has been of course proposed
 that, e.g., Linux Random would be considered ok as an entropy source for
 consumer products, for obvious practical reasons.
-
-
-Best Regards,
--markku

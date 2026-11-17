@@ -67,12 +67,32 @@ fn call(name: &str, a: &Value) -> Value {
             })
         }
         "clean_for_scoring" => {
-            let r = clean_for_scoring_with_parts(
+            let addressee_names = strs(a, "addressee_names");
+            let signature_lines = strs(a, "signature_lines");
+            let r = clean_for_scoring_with_options(
                 s(a, "extracted_text"),
-                opt(a, "html_signature_text"),
-                &indices(a, "part_starts"),
+                &CleanOptions {
+                    html_signature_text: opt(a, "html_signature_text"),
+                    part_starts: &indices(a, "part_starts"),
+                    author_name: opt(a, "author_name"),
+                    addressee_names: &addressee_names,
+                    signature_lines: &signature_lines,
+                },
             );
             json!({"text": r.text, "ignored_lines": r.ignored_lines, "parts": r.parts})
+        }
+        "learn_signature_lines" => {
+            let texts = strs(a, "texts");
+            let subjects = a
+                .get("subjects")
+                .filter(|v| !v.is_null())
+                .and_then(Value::as_array)
+                .map(|v| {
+                    v.iter()
+                        .map(|s| s.as_str().unwrap_or(""))
+                        .collect::<Vec<&str>>()
+                });
+            json!(learn_signature_lines(&texts, subjects.as_deref()))
         }
         "strip_parent_content" => json!(strip_parent_content(
             s(a, "text"),
@@ -91,12 +111,6 @@ fn call(name: &str, a: &Value) -> Value {
         }
         "tolerant_lines" => json!(tolerant_lines(s(a, "text"))),
         "texts_equivalent" => json!(texts_equivalent(s(a, "a"), s(a, "b"))),
-        "read_fragments" => Value::Array(
-            internal::read_fragments(s(a, "text"))
-                .iter()
-                .map(|f| json!({"content": f.content, "quoted": f.quoted}))
-                .collect(),
-        ),
         "is_attribution_line" => json!(internal::is_attribution_line(s(a, "line"))),
         "is_quote_line" => json!(internal::is_quote_line(s(a, "line"))),
         "is_signoff_name_line" => json!(internal::is_signoff_name_line(s(a, "text"))),
@@ -105,10 +119,6 @@ fn call(name: &str, a: &Value) -> Value {
         "normalize_body" => json!(internal::normalize_body(s(a, "body"))),
         "custom_clean" => json!(internal::custom_clean(
             s(a, "text"),
-            flag(a, "localized", true)
-        )),
-        "count_unquoted_content_lines" => json!(internal::count_unquoted_content_lines(
-            s(a, "body"),
             flag(a, "localized", true)
         )),
         "find_quote_header_block" => json!(internal::find_quote_header_block(

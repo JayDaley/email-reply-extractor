@@ -21,7 +21,6 @@ import { fileURLToPath } from "node:url";
 import * as cleaning from "../dist/cleaning.js";
 import * as equivalence from "../dist/equivalence.js";
 import * as extraction from "../dist/extraction.js";
-import * as fragments from "../dist/fragments.js";
 import * as htmlText from "../dist/htmlText.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -849,7 +848,247 @@ function inlineReplyCase() {
   return args;
 }
 
+/**
+ * extract_new_text inputs that reach the parent-diff marking mode: a parent with
+ * its own quote lines, a child that deepens them by one level and may paste
+ * unmarked parent lines into its own blocks, above or below an attribution.
+ */
+function markingCase() {
+  const words = ["alpha", "bravo", "charlie", "delta", "echo", "fox", "golf", "hotel", "india", "juliet"];
+  const sentence = () => Array.from({ length: 2 + randint(8) }, () => pick(words)).join(" ");
+  const parentOwn = Array.from({ length: 2 + randint(14) }, sentence);
+  const parentQuoted = Array.from({ length: randint(6) }, sentence);
+  const parent = [...parentOwn, "", ...parentQuoted.map((l) => `${pick([">", "> >", ">>"])} ${l}`)];
+  const child = [];
+  if (rand() < 0.3) {
+    // Point by point: unmarked pieces of the parent, each answered (the many-runs guard).
+    child.push(...parentOwn.slice(0, 3 + randint(3)).map((l) => `> ${l}`), "");
+    for (let r = 7 + randint(6); r > 0; r--) {
+      const at = randint(parentOwn.length);
+      child.push(...parentOwn.slice(at, at + 3 + randint(3)), sentence());
+      if (rand() < 0.5) child.push("");
+    }
+    return { body: child.join("\n"), parent_body: parent.join("\n") };
+  }
+  const reply = () => {
+    const block = Array.from({ length: 1 + randint(3) }, () => (rand() < 0.5 ? sentence() : pick(parentOwn)));
+    if (rand() < 0.2) block.push(`> ${pick(parentOwn)}`);
+    return block;
+  };
+  for (let b = randint(12); b >= 0; b--) {
+    child.push(...reply(), "");
+    if (rand() < 0.3) child.push(`${pick(["On Monday Bob wrote:", "Alice <a@b.c> wrote:", "Someone said:"])}`);
+    if (rand() < 0.4) {
+      const quoted = parentOwn.slice(randint(parentOwn.length));
+      const marker = rand() < 0.8 ? "> " : "";
+      child.push(...quoted.map((l) => `${marker}${l}`));
+      if (rand() < 0.5) child.push(...parentQuoted.map((l) => `>> ${l}`));
+      child.push("");
+    }
+  }
+  return { body: child.join("\n"), parent_body: parent.join("\n") };
+}
+
 // --- the calls -----------------------------------------------------------------------------
+
+// --- stage-2 evidence: texts with sender and addressee names -------------------------
+
+const evidenceVectors = JSON.parse(
+  readFileSync(join(CONFORMANCE, "vectors", "clean_for_scoring.json"), "utf8"),
+).vectors.map((v) => v.args);
+const AUTHOR_NAMES = [
+  ...new Set(evidenceVectors.map((a) => a.author_name).filter((n) => typeof n === "string")),
+  "Jane Doe",
+  "José Ángel García-López",
+  "O'Brien, Patrick",
+  "j.smith@example.com",
+  "Dr. Anna-Lena Müller (ACME)",
+  "李 小龙",
+];
+const ADDRESSEE_NAMES = [
+  ...new Set(evidenceVectors.flatMap((a) => a.addressee_names ?? [])),
+  "Joseph Bloggs",
+  "Team",
+  "all",
+];
+const SALUTATION_LINES = [
+  "Thanks,",
+  "Best regards",
+  "Cheers!",
+  "Many thanks!!",
+  "Regards.",
+  "Thanks and regards,",
+  "Take care",
+  "BR",
+  "À bientôt",
+  "Later,",
+  "Mit freundlichen Grüßen",
+  "Ngā mihi",
+  "thx",
+  "Thank you very much",
+];
+const GREETING_LINES = ["Hi", "Hello all,", "Dear", "Hey team!", "Good morning", "Hallo zusammen,", "Hi there,"];
+const TAIL_LINES = [
+  "[1] https://example.com/x",
+  "https://example.org",
+  "Sent from my iPhone",
+  "---",
+  "PS: one more",
+  "P.S. see below",
+  "Example University",
+  "Head of Research",
+  "+1 555 123 4567",
+  "ORCID: 0000-0001",
+  "~ Jane",
+  "Web: www.example.com",
+  "",
+  "",
+  "Thanks, Joe. That works.",
+  "1. item",
+  "Reviewer:",
+];
+
+/** A name line derived from a display name: a word, the first-last pair, an initial, decorated. */
+function nameLine(name) {
+  const words = name.split(/[\s,()]+/).filter((w) => w && !w.includes("@"));
+  const local = name.includes("@") ? name.split("@")[0] : "";
+  const r = rand();
+  let line;
+  if (words.length === 0 || r < 0.1) line = local || "Jane";
+  else if (r < 0.4) line = words[0];
+  else if (r < 0.65) line = `${words[0]} ${words[words.length - 1]}`;
+  else if (r < 0.75) line = words[0][0];
+  else line = words.join(" ");
+  if (rand() < 0.3) line = pick(["-", "— ", "/", "~", "--", " ", "\t"]) + line;
+  if (rand() < 0.15) line = line.toLowerCase();
+  if (rand() < 0.15) line += pick([",", ".", ":", " (chair)", " | CEO", ", Example Corp"]);
+  return line;
+}
+
+function namesCase() {
+  const base = pick(evidenceVectors);
+  const author = rand() < 0.7 && base.author_name ? base.author_name : pick(AUTHOR_NAMES);
+  const pool = [...(base.addressee_names ?? []), pick(ADDRESSEE_NAMES), pick(AUTHOR_NAMES)];
+  const addressees = rand() < 0.2 ? null : pool.filter(() => rand() < 0.6);
+  const lines = mutate(base.extracted_text, SPICE, randint(3)).split("\n");
+  const ops = randint(6);
+  for (let k = 0; k < ops; k++) {
+    const r = rand();
+    const at = rand() < 0.6 ? lines.length - randint(Math.min(4, lines.length + 1)) : randint(lines.length + 1);
+    let insert;
+    if (r < 0.3) insert = [nameLine(author)];
+    else if (r < 0.5) insert = [pick(SALUTATION_LINES), ...(rand() < 0.3 ? [""] : []), nameLine(author)];
+    else if (r < 0.6)
+      insert = [
+        `${pick(SALUTATION_LINES).replace(/[,.!]+$/, "")}${pick([", ", " ", "，", " -", "! "])}${nameLine(rand() < 0.7 ? author : pick(ADDRESSEE_NAMES))}`,
+      ];
+    else if (r < 0.7) {
+      lines.unshift(
+        rand() < 0.5
+          ? pick(GREETING_LINES)
+          : `${pick(GREETING_LINES).replace(/[,!]$/, "")} ${nameLine(pick(ADDRESSEE_NAMES))},`,
+      );
+      continue;
+    } else if (r < 0.9) insert = [pick(TAIL_LINES)];
+    else insert = [pick(SALUTATION_LINES)];
+    lines.splice(at, 0, ...insert);
+  }
+  const args = { extracted_text: lines.join("\n"), author_name: rand() < 0.1 ? null : author };
+  if (addressees !== null) args.addressee_names = addressees;
+  if (rand() < 0.2) {
+    const n = lines.length;
+    args.part_starts = Array.from({ length: 1 + randint(3) }, () => 1 + randint(Math.max(1, n - 1)));
+  }
+  return args;
+}
+
+// --- learned signature lines: repeated tail lines across one sender's texts -----------
+
+const LEARN_POOL = [
+  "Jane Doe",
+  "Head of Research",
+  "Example University",
+  "Geschäftsführer: Straße 1",
+  "GESCHÄFTSFÜHRER: STRASSE 1",
+  "Tel: +49 30 1234567",
+  "İstanbul Ofisi",
+  "ΟΔΟΣ ΑΘΗΝΑΣ 12",
+  "Kelvin K and ſ long s",
+  "Contact:",
+  "Disclaimer:",
+  "This email is confidential.",
+  "Please consider the environment before printing.",
+  "Are you free?",
+  "Sent from my iPhone",
+  "https://example.com",
+  "--",
+  "> Jane Doe",
+  "  Head   of\u00a0Research ",
+  "李小龙 | 工程师",
+  "\u{1d49c}cme Corp",
+  "ẞ Strasse",
+];
+const SUBJECTS = [
+  "Meeting",
+  "Re: Meeting",
+  "RE: [ietf] Meeting",
+  "Fwd[2]: AW: meeting",
+  "[list] Re: Draft review",
+  "Draft review",
+  "SV: Budget",
+  "Antw: Budget ",
+  "WG:   Straße",
+  "re:Strasse",
+  "TR: [x] [y] Plans",
+  "Plans",
+  "Weekly sync",
+  "",
+  "Re:",
+];
+
+/** One sender's texts: novel lines followed by a varying choice of the sender's tail lines. */
+function senderTexts() {
+  const tail = Array.from({ length: 1 + randint(5) }, () =>
+    rand() < 0.15 ? mutate(pick(LEARN_POOL), SPICE, 1) : pick(LEARN_POOL),
+  );
+  const n = randint(12);
+  return Array.from({ length: n }, () => {
+    const body = rand() < 0.3 ? shortText() : `Body ${randint(1000)} here.\n${rand() < 0.5 ? "Thanks," : ""}`;
+    const kept = tail.filter(() => rand() < 0.8);
+    const extra = rand() < 0.3 ? [pick(LEARN_POOL)] : [];
+    const lines = [body, "", ...extra, ...kept];
+    if (rand() < 0.2) lines.push(...Array.from({ length: 8 }, (_, k) => `line ${k}`));
+    return rand() < 0.05 ? null : lines.join("\n");
+  });
+}
+
+function learnCase() {
+  const texts = senderTexts();
+  const args = { texts };
+  if (rand() < 0.6) args.subjects = texts.map(() => (rand() < 0.1 ? null : pick(SUBJECTS)));
+  return args;
+}
+
+function learnedCleanCase() {
+  const base = rand() < 0.5 ? namesCase() : { extracted_text: pick(evidenceVectors).extracted_text };
+  const lines = base.extracted_text.split("\n");
+  const tail = Array.from({ length: 1 + randint(4) }, () => pick(LEARN_POOL));
+  if (rand() < 0.3) tail.splice(randint(tail.length + 1), 0, pick(TAIL_LINES));
+  lines.push(...(rand() < 0.5 ? [""] : []), ...tail);
+  const variant = (line) => {
+    const r = rand();
+    if (r < 0.2) return line.toUpperCase();
+    if (r < 0.3) return `> ${line}`;
+    if (r < 0.4) return ` ${line.replaceAll(" ", "  ")} `;
+    if (r < 0.5) return line.replaceAll("ss", "ß");
+    return line;
+  };
+  const sigs = [...tail.filter(() => rand() < 0.8).map(variant)];
+  if (rand() < 0.3) sigs.push(pick(lines) ?? "");
+  if (rand() < 0.2) sigs.push("", "   ");
+  if (rand() < 0.1) lines.splice(0, lines.length, ...tail);
+  return { ...base, extracted_text: lines.join("\n"), signature_lines: sigs };
+}
 
 const GENERATORS = {
   "extraction.extract_new_text": () => {
@@ -869,11 +1108,15 @@ const GENERATORS = {
     }
     return args;
   },
+  "cleaning.clean_for_scoring#names": namesCase,
+  "cleaning.clean_for_scoring#learned": learnedCleanCase,
+  "cleaning.learn_signature_lines": learnCase,
   "extraction.strip_parent_content": stripCase,
   "extraction._aligned_run_marks": alignedCase,
   "extraction._ParentStream.contains": streamCase,
   "extraction._any_author_tag": authorTagCase,
   "extraction.extract_new_text#inline-reply": inlineReplyCase,
+  "extraction.extract_new_text#marking": markingCase,
   "html_text.html_to_text": () => ({ html: htmlInput() }),
   "html_text.split_html_parts": () => ({ html: htmlInput() }),
   "equivalence.tolerant_lines": () => ({ text: textInput() }),
@@ -890,18 +1133,14 @@ const GENERATORS = {
   "extraction.find_signoff_boundary": () => ({ lines: lines(textInput()) }),
   "extraction.custom_clean": () => ({ text: textInput(), localized: rand() < 0.7 }),
   "extraction.strip_after_original_message_divider": () => ({ lines: lines(textInput()), localized: rand() < 0.7 }),
-  "extraction.count_unquoted_content_lines": () => ({ body: textInput(), localized: rand() < 0.7 }),
   "extraction._localized_inline_reply": () => ({
     lines: lines(textInput()),
     parent_body: rand() < 0.5 ? null : textInput(),
   }),
-  "_fragments.read_fragments": () => ({ text: extraction.normalizeBody(textInput()) }),
   "cleaning.is_mobile_tagline": () => ({ line: mutate(pick(SPICE), SPICE, 2) }),
   "cleaning._is_droppable_signature_line": () => ({ line: oneLine() }),
   "extraction._is_signoff_name_like": () => ({ text: oneLine() }),
   "extraction.is_quote_line": () => ({ line: oneLine() }),
-  "cleaning.strip_greeting_lines": () => ({ lines: [oneLine(), oneLine()] }),
-  "cleaning.strip_closing_signoff": () => ({ lines: [oneLine(), oneLine(), oneLine()] }),
   "cleaning.strip_trailing_signoff_debris": () => ({ lines: [oneLine(), oneLine(), oneLine(), oneLine()] }),
   "extraction.strip_attribution_lines": () => ({ lines: [oneLine(), oneLine(), oneLine()] }),
 };
@@ -913,7 +1152,11 @@ const TS = {
     cleaning.cleanForScoring(a.extracted_text, {
       htmlSignatureText: a.html_signature_text ?? null,
       partStarts: a.part_starts ?? [],
+      authorName: a.author_name ?? null,
+      addresseeNames: a.addressee_names ?? null,
+      signatureLines: a.signature_lines ?? null,
     }),
+  "cleaning.learn_signature_lines": (a) => cleaning.learnSignatureLines(a.texts, { subjects: a.subjects ?? null }),
   "extraction.strip_parent_content": (a) =>
     extraction.stripParentContent(a.text, a.parent_body, { continuation: a.continuation }),
   "html_text.html_to_text": (a) => htmlText.htmlToText(a.html),
@@ -927,8 +1170,6 @@ const TS = {
   "extraction.custom_clean": (a) => extraction.customClean(a.text, { localized: a.localized }),
   "extraction.strip_after_original_message_divider": (a) =>
     extraction.stripAfterOriginalMessageDivider(a.lines, { localized: a.localized }),
-  "extraction.count_unquoted_content_lines": (a) =>
-    extraction.countUnquotedContentLines(a.body, { localized: a.localized }),
   "extraction._localized_inline_reply": (a) => extraction.localizedInlineReply(a.lines, a.parent_body),
   "extraction._aligned_run_marks": (a) => extraction.alignedRunMarks(a.child_seq, a.parent_seq),
   "extraction._ParentStream.contains": (a) => {
@@ -936,13 +1177,10 @@ const TS = {
     return a.needles.map((needle) => index.contains(needle));
   },
   "extraction._any_author_tag": (a) => extraction.anyAuthorTag(a.labels, a.head, a.parent_body),
-  "_fragments.read_fragments": (a) => fragments.readFragments(a.text),
   "cleaning.is_mobile_tagline": (a) => cleaning.isMobileTagline(a.line),
   "cleaning._is_droppable_signature_line": (a) => cleaning.isDroppableSignatureLine(a.line),
   "extraction._is_signoff_name_like": (a) => extraction.isSignoffNameLike(a.text),
   "extraction.is_quote_line": (a) => extraction.isQuoteLine(a.line),
-  "cleaning.strip_greeting_lines": (a) => cleaning.stripGreetingLines(a.lines),
-  "cleaning.strip_closing_signoff": (a) => cleaning.stripClosingSignoff(a.lines),
   "cleaning.strip_trailing_signoff_debris": (a) => cleaning.stripTrailingSignoffDebris(a.lines),
   "extraction.strip_attribution_lines": (a) => extraction.stripAttributionLines(a.lines),
 };
@@ -964,7 +1202,6 @@ function encode(value) {
     if ("status" in value) {
       return { text: value.text, method: value.method, status: value.status, part_starts: [...value.partStarts] };
     }
-    if ("quoted" in value) return { content: value.content, quoted: value.quoted };
   }
   return value;
 }
@@ -972,6 +1209,9 @@ function encode(value) {
 // A "#variant" suffix names a second generator for the same function.
 const fnOf = (name) => name.split("#")[0];
 TS["extraction.extract_new_text#inline-reply"] = TS["extraction.extract_new_text"];
+TS["extraction.extract_new_text#marking"] = TS["extraction.extract_new_text"];
+TS["cleaning.clean_for_scoring#names"] = TS["cleaning.clean_for_scoring"];
+TS["cleaning.clean_for_scoring#learned"] = TS["cleaning.clean_for_scoring"];
 
 const calls = [];
 for (const [name, gen] of Object.entries(GENERATORS)) {

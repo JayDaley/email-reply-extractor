@@ -103,8 +103,8 @@ regeneration.
 `EXTRACTION_VERSION` is an integer declared in
 `python/src/email_reply_extractor/extraction.py`, `typescript/src/extraction.ts`
 and `rust/src/extraction.rs`. It identifies the generation of the routine that
-derives an extraction's text: `extraction.py`, `cleaning.py`, `html_text.py`
-and the vendored `_fragments.py` taken together, and their counterparts in the
+derives an extraction's text: `extraction.py`, `cleaning.py`, `html_text.py`,
+`_names.py` and `_greetings.py` taken together, and their counterparts in the
 ports. It is independent of the package version and is incremented
 separately. Downstream applications store it alongside derived text and
 compare it with `<` to find text that an older generation produced; the full
@@ -122,11 +122,11 @@ those modules, and never decrement it: the value only ever increases, so that
 an older consumer opening a store written by a newer routine reads that store
 as current instead of offering to re-derive text it cannot reproduce.
 
-Nine generations exist: 1 (initial release of the origin application), 2
+Ten generations exist: 1 (initial release of the origin application), 2
 (from its v1.2.0), 3 (from v1.11.0), 4 (from v1.15.0, shipped by this
 package's v1.0.0), 5 (this package's v1.1.0), 6 (this package's v1.2.0), 7
-(this package's v1.3.0), 8 (this package's v1.4.0) and 9 (this package's
-v1.5.0).
+(this package's v1.3.0), 8 (this package's v1.4.0), 9 (this package's
+v1.5.0) and 10 (this package's v1.6.0).
 
 ### The digest, and re-recording it
 

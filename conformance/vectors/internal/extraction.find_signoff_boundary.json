@@ -44,6 +44,20 @@
      "Reply.",
      "",
      "Best,",
+     "Ana",
+     "",
+     "Bob Jones <bob@example.org> said on Monday:",
+     "Unmarked quoted text."
+    ]
+   },
+   "result": 4
+  },
+  {
+   "args": {
+    "lines": [
+     "Reply.",
+     "",
+     "Best,",
      "Songbo",
      "",
      "Ps. one more authored thought."
@@ -72,6 +86,39 @@
     ]
    },
    "result": null
+  },
+  {
+   "args": {
+    "lines": [
+     "Thanks Bob.",
+     "",
+     "Best,",
+     "Ana",
+     "",
+     "On Mon, 2 Mar 2026, Bob <bob@example.org> wrote:",
+     "",
+     "> Question one?",
+     "Answer one.",
+     "> Question two?",
+     "Answer two."
+    ]
+   },
+   "result": null
+  },
+  {
+   "args": {
+    "lines": [
+     "Thanks Bob.",
+     "",
+     "Best,",
+     "Ana",
+     "",
+     "On Mon, 2 Mar 2026, Bob <bob@example.org> wrote:",
+     "Question one?",
+     "> an older quote"
+    ]
+   },
+   "result": 4
   },
   {
    "args": {

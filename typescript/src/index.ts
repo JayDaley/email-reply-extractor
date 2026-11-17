@@ -15,7 +15,13 @@
  * @packageDocumentation
  */
 
-export { type CleanOptions, type CleanResult, cleanForScoring } from "./cleaning.js";
+export {
+  type CleanOptions,
+  type CleanResult,
+  cleanForScoring,
+  type LearnOptions,
+  learnSignatureLines,
+} from "./cleaning.js";
 export { textsEquivalent, tolerantLines } from "./equivalence.js";
 export {
   EXTRACTION_VERSION,
@@ -32,4 +38,4 @@ export {
 export { type HtmlParts, htmlToText, splitHtmlParts } from "./htmlText.js";
 
 /** The package version (equal to the Python package's `__version__`). */
-export const VERSION = "1.5.0";
+export const VERSION = "1.6.0";

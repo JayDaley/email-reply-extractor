@@ -80,6 +80,13 @@ impl Args<'_> {
             .filter_map(|v| usize::try_from(v.as_i64().expect("integer")).ok())
             .collect()
     }
+    /// A list of strings, or `None` (empty: the reference's `x or ()`).
+    fn opt_lines(&self, name: &str) -> Vec<&str> {
+        match self.get(name) {
+            Value::Null => Vec::new(),
+            _ => self.lines(name),
+        }
+    }
     fn lines(&self, name: &str) -> Vec<&str> {
         self.get(name)
             .as_array()
@@ -120,11 +127,41 @@ fn call(module: &str, function: &str, a: &Args) -> Option<Result<Value, ()>> {
             a.opt("parent_body"),
             a.opt("html_body"),
         ))),
-        ("cleaning", "clean_for_scoring") => Ok(clean_json(&clean_for_scoring_with_parts(
-            a.str("extracted_text"),
-            a.opt("html_signature_text"),
-            &a.indices("part_starts"),
-        ))),
+        ("cleaning", "clean_for_scoring") => {
+            let addressee_names = a.opt_lines("addressee_names");
+            let signature_lines = a.opt_lines("signature_lines");
+            Ok(clean_json(&clean_for_scoring_with_options(
+                a.str("extracted_text"),
+                &CleanOptions {
+                    html_signature_text: a.opt("html_signature_text"),
+                    part_starts: &a.indices("part_starts"),
+                    author_name: a.opt("author_name"),
+                    addressee_names: &addressee_names,
+                    signature_lines: &signature_lines,
+                },
+            )))
+        }
+        ("cleaning", "learn_signature_lines") => {
+            let texts = a.lines("texts");
+            let subjects = match a.get("subjects") {
+                Value::Null => None,
+                // The reference treats a None subject as the empty subject.
+                v => Some(
+                    v.as_array()
+                        .expect("array")
+                        .iter()
+                        .map(|s| {
+                            if s.is_null() {
+                                ""
+                            } else {
+                                s.as_str().expect("string")
+                            }
+                        })
+                        .collect::<Vec<&str>>(),
+                ),
+            };
+            Ok(json!(learn_signature_lines(&texts, subjects.as_deref())))
+        }
         ("extraction", "strip_parent_content") => Ok(json!(strip_parent_content_with_quotation(
             a.str("text"),
             a.str("parent_body"),
@@ -143,9 +180,6 @@ fn call(module: &str, function: &str, a: &Args) -> Option<Result<Value, ()>> {
             &a.lines("child_seq"),
             &a.lines("parent_seq")
         ))),
-        ("extraction", "count_unquoted_content_lines") => Ok(json!(
-            internal::count_unquoted_content_lines(a.str("body"), a.bool("localized"))
-        )),
         ("extraction", "custom_clean") => Ok(json!(internal::custom_clean(
             a.str("text"),
             a.bool("localized")
@@ -171,12 +205,6 @@ fn call(module: &str, function: &str, a: &Args) -> Option<Result<Value, ()>> {
         ("extraction", "strip_attribution_lines") => {
             Ok(json!(internal::strip_attribution_lines(&a.lines("lines"))))
         }
-        ("fragments", "read_fragments") => Ok(Value::Array(
-            internal::read_fragments(a.str("text"))
-                .iter()
-                .map(|f| json!({"content": f.content, "quoted": f.quoted}))
-                .collect(),
-        )),
         _ => return None,
     };
     Some(v)
@@ -192,6 +220,8 @@ fn run_vectors(dir: &Path) -> (usize, Vec<String>, Vec<String>) {
         let module = file["module"].as_str().expect("module");
         let function = file["function"].as_str().expect("function");
         let params = file["parameters"].as_array().expect("parameters");
+        let failed_before = failures.len();
+        let passed_before = passed;
         for (n, vector) in file["vectors"]
             .as_array()
             .expect("vectors")
@@ -225,6 +255,11 @@ fn run_vectors(dir: &Path) -> (usize, Vec<String>, Vec<String>) {
                 ));
             }
         }
+        eprintln!(
+            "{module}.{function}: {} passed, {} failed",
+            passed - passed_before,
+            failures.len() - failed_before
+        );
     }
     (passed, failures, unmapped)
 }

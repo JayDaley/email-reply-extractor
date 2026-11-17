@@ -1,5 +1,3 @@
-All,
-
 Three quick questions for everyone, since the thread is working through where the artifacts sit:
 
 1) How does your work function without identity? If identity was a part of something else, how would this work?

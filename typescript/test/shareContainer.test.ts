@@ -184,7 +184,7 @@ describe("extractNewText: Share-sheet container", () => {
     assert.equal(extractNewText(body).status, "empty");
     const result = extractNewText(body, { htmlBody: html });
     assert.equal(result.status, "ok");
-    assert.equal(result.method, "html-erp");
+    assert.equal(result.method, "html-custom");
     assert.equal(result.text, `Carol,\n\n${SHARE_PROSE.join("\n")}\n\nAlice`);
   });
 
@@ -252,14 +252,14 @@ describe("extractNewText: Share-sheet container", () => {
     const html = shareHtml([SHARE_PROSE[0], "", ...parentLines].join("<br>"));
     const body = cite([SHARE_PROSE[0] as string, "", ...parentLines]);
     const result = extractNewText(body, { parentBody: parent, htmlBody: html });
-    assert.equal(result.method, "html-erp+parent-diff");
+    assert.equal(result.method, "html-custom+parent-diff");
     assert.equal(result.text, SHARE_PROSE[0]);
   });
 
   test("the Share-sheet fixture derives its text from the HTML", () => {
     const { body, html } = fixture("toppost-share-sheet-synthetic-01");
     const result = extractNewText(body, { htmlBody: html });
-    assert.equal(result.method, "html-erp+custom");
+    assert.equal(result.method, "html-custom");
     assert.ok(result.text.startsWith("Hi Carol,\n\nThank you for the review."));
     assert.ok(result.text.endsWith("Best,\nAlice"));
     assert.ok(!result.text.includes("wrote:"));

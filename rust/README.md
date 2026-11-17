@@ -66,9 +66,9 @@ use email_reply_extractor::{clean_for_scoring, extract_new_text};
 let result = extract_new_text(Some(body), None, None); // stage 1: quoted thread removed
 let cleaned = clean_for_scoring(&result.text, None); // stage 2: furniture removed
 println!("{}", cleaned.text);
-# assert_eq!(result.method, "erp");
+# assert_eq!(result.method, "custom");
 # assert_eq!(cleaned.text, "Thanks for the quick turnaround. Replies inline.\n\n30 seconds is too long for the mobile case. I would prefer 10, with\nthe option to negotiate a longer value.\n\nIt should say so explicitly. I can send text for that.\n\nYes.");
-# assert_eq!(cleaned.ignored_lines, vec![0, 11, 12, 14, 15, 16, 18, 19, 20]);
+# assert_eq!(cleaned.ignored_lines, vec![0, 14, 15, 17, 18, 19, 21, 22, 23]);
 ```
 
 The output:
@@ -84,11 +84,11 @@ It should say so explicitly. I can send text for that.
 Yes.
 ```
 
-Stage 1 (`result.text`, method `erp`) removes the attribution line and both
+Stage 1 (`result.text`, method `custom`) removes the attribution line and both
 levels of quoted text, and keeps each inline response along with the
 greeting, sign-off, signature and list footer. Stage 2 removes those and
 reports the removed line indices in `cleaned.ignored_lines`
-(`[0, 11, 12, 14, 15, 16, 18, 19, 20]`).
+(`[0, 14, 15, 17, 18, 19, 21, 22, 23]`).
 
 ## Install
 
@@ -109,13 +109,17 @@ this message:
 - quoted lines at any indentation, including the `...>` form that survives
   `format=flowed` rewrapping;
 - attribution lines: `On … wrote:`, `Name <a@b> wrote:`, the German
-  `Am … schrieb …:` and the Japanese `…のメール:` forms, and forms wrapped
-  across two or three lines (including the French `a écrit :` and Spanish
-  `escribió:` terminators);
+  `Am … schrieb …:` and the Japanese `…のメール:` forms, forms wrapped
+  across up to five lines (including the French `a écrit :` and Spanish
+  `escribió:` terminators), and other wordings above a quote that carry an
+  e-mail address, a clock time and a date, or a speech verb ("Ana Lima
+  said:");
 - Outlook-style forwarded/quote-header blocks (`From:` / `Sent:` / `To:` /
   `Subject:`) with English, French, Spanish, Portuguese, Italian, Dutch, German
   and Chinese labels;
-- "Original message" and "Forwarded message" dividers in the same languages;
+- "Original message" and "Forwarded message" dividers in the same languages,
+  and the short "Original" dividers of QQ Mail and Foxmail;
+- the short tail of a quote line that a client re-wrapped without a marker;
 - the quoted thread that follows a sign-off boundary in a fully top-posted
   reply with no `>` markers;
 - when the caller supplies them, content provably present in the thread parent
@@ -126,16 +130,20 @@ replies written between quoted blocks.
 
 Stage 2, `clean_for_scoring`, removes that formulaic furniture from stage-1
 text: greetings, sign-offs, signature blocks, mailing-list footers, mobile
-taglines ("Sent from my iPhone") and trailing legal disclaimers. It also
-reports which non-blank input lines it removed.
+taglines ("Sent from my iPhone") and trailing legal disclaimers. Given the
+sender's display name, the addressees' display names and the sender's
+learned signature lines, it also removes sign-offs, name lines, greetings and
+signature lines that no fixed list identifies. It reports which non-blank
+input lines it removed.
 
 The stage-1 text is the author's full novel content, for storage and display;
 the stage-2 text is a strict, documented subset of it, for a downstream
 consumer such as a classifier. Because stage 2 reports the lines it dropped, a
 stage-1 view can mark exactly what was set aside.
 
-No function panics or returns an error. `extract_new_text` reports an
-internal failure as `Status::Failed` with empty text, as the reference does.
+No function returns an error. `extract_new_text` reports an internal failure
+as `Status::Failed` with empty text, as the reference does. No function
+panics.
 
 The rules of both stages are documented in
 [docs/extraction.md](https://github.com/JayDaley/email-reply-extractor/blob/main/docs/extraction.md).
@@ -157,10 +165,20 @@ parameters, in the reference's order. Its keyword-only `continuation` flag of
 `strip_parent_content` is a `bool` (the reference's default is `false`); its
 keyword-only `quoted_text` argument is taken by a separate function,
 `strip_parent_content_with_quotation`, and `strip_parent_content` is that
-function with no quotation. The
-keyword-only `part_starts` argument of `clean_for_scoring` is taken by a
-separate function, `clean_for_scoring_with_parts`; `clean_for_scoring` is that
-function with no part boundaries.
+function with no quotation.
+
+`clean_for_scoring_with_options` takes every optional argument of the
+reference's `clean_for_scoring` in one `CleanOptions` struct:
+`html_signature_text` (`Option<&str>`), `part_starts` (`&[usize]`),
+`author_name` (`Option<&str>`), `addressee_names` and `signature_lines`
+(`&[&str]`). `CleanOptions::default()` passes none of them. Two shorter forms
+remain: `clean_for_scoring(extracted_text, html_signature_text)` and
+`clean_for_scoring_with_parts(extracted_text, html_signature_text,
+part_starts)`. An empty slice is the reference's `None` for
+`addressee_names` and `signature_lines`.
+
+`learn_signature_lines(texts, subjects)` takes the reference's keyword-only
+`subjects` as an `Option<&[&str]>`.
 
 ### Quickstart
 
@@ -182,15 +200,15 @@ Lucas
 
 let result = extract_new_text(Some(body), None, None);
 assert_eq!(result.status, Status::Ok);
-assert_eq!(result.method, "erp");
+assert_eq!(result.method, "custom");
 assert_eq!(
     result.text,
-    "Hi Dan,\n\nTwo comments below.\n\nAgreed, and the draft already says so.\n\nBest,\nLucas"
+    "Hi Dan,\n\nTwo comments below.\n\n\nAgreed, and the draft already says so.\n\nBest,\nLucas"
 );
 
 let cleaned = clean_for_scoring(&result.text, None);
 assert_eq!(cleaned.text, "Two comments below.\n\nAgreed, and the draft already says so.");
-assert_eq!(cleaned.ignored_lines, vec![0, 6, 7]); // the greeting and the two sign-off lines
+assert_eq!(cleaned.ignored_lines, vec![0, 7, 8]); // the greeting and the two sign-off lines
 ```
 
 The quote and its attribution line are gone from `result.text`, and the reply
@@ -224,6 +242,79 @@ let cleaned = clean_for_scoring(&result.text, Some(&parts.signature_text));
 # assert_eq!(cleaned.text, "Agreed.");
 ```
 
+### Sender and addressee evidence
+
+Three fields of `CleanOptions` carry evidence about the message:
+`author_name`, the sender's display name; `addressee_names`, the display names
+of the people the message answers or is addressed to (for example the thread
+parent's sender and the To and Cc display names); and `signature_lines`, the
+lines the sender repeats at the end of their messages, learned by
+`learn_signature_lines` from the stage-1 texts of the sender's earlier
+messages. Without them only the rules that need no evidence run.
+
+```rust
+use email_reply_extractor::{
+    clean_for_scoring, clean_for_scoring_with_options, extract_new_text,
+    learn_signature_lines, CleanOptions,
+};
+
+// (subject, plain body) of the sender's earlier messages, stored by the caller.
+let earlier: Vec<(String, String)> = (0..6)
+    .map(|i| {
+        (
+            format!("Draft comments, round {i}"),
+            format!(
+                "Comment {i} on the draft.\n\nThanks,\nAna\nExample Networks\nhttps://example.net/ana"
+            ),
+        )
+    })
+    .collect();
+let texts: Vec<String> = earlier
+    .iter()
+    .map(|(_, body)| extract_new_text(Some(body), None, None).text)
+    .collect();
+let texts: Vec<&str> = texts.iter().map(String::as_str).collect();
+let subjects: Vec<&str> = earlier.iter().map(|(subject, _)| subject.as_str()).collect();
+let learned = learn_signature_lines(&texts, Some(&subjects));
+assert_eq!(learned, ["ana", "example networks", "https://example.net/ana", "thanks,"]);
+
+let body = "Joe, Priya,
+
+The new section reads well. One change: keep the timer at 10 seconds.
+
+Thanks,
+Ana
+Example Networks
+https://example.net/ana
+";
+let result = extract_new_text(Some(body), None, None);
+assert_eq!(
+    clean_for_scoring(&result.text, None).text,
+    "The new section reads well. One change: keep the timer at 10 seconds.\n\n\
+     Thanks,\nAna\nExample Networks\nhttps://example.net/ana"
+);
+
+let signature_lines: Vec<&str> = learned.iter().map(String::as_str).collect();
+let options = CleanOptions {
+    author_name: Some("Ana Lima"),                     // the From display name
+    addressee_names: &["Joe Example", "Priya Sharma"], // the To and Cc display names
+    signature_lines: &signature_lines,
+    ..CleanOptions::default()
+};
+let cleaned = clean_for_scoring_with_options(&result.text, &options);
+assert_eq!(
+    cleaned.text,
+    "The new section reads well. One change: keep the timer at 10 seconds."
+);
+assert_eq!(cleaned.ignored_lines, vec![0, 4, 5, 6, 7]);
+```
+
+Without evidence, the greeting is removed and the sign-off is kept, because
+the company line and the link below the name keep it from being the tail.
+With `author_name`, "Ana" is recognized as the sender's name, and the lines
+attached below it are removed with it; the learned lines would remove them
+too.
+
 ### Parts of an inline reply
 
 An inline reply interleaves the author's answers with quoted passages. Stage 1
@@ -247,7 +338,7 @@ Ann
 ";
 
 let result = extract_new_text(Some(body), None, None);
-assert_eq!(result.part_starts, vec![2]);
+assert_eq!(result.part_starts, vec![3]);
 
 let cleaned = clean_for_scoring_with_parts(&result.text, None, &result.part_starts);
 // The whole cleaned text, unchanged by the part boundaries.
@@ -261,9 +352,8 @@ assert_eq!(
 
 A top-posted reply, or any text written as one run, has an empty
 `part_starts` and a single part. The boundaries are found by aligning the
-text with the body it was derived from; when a line cannot be aligned (the
-scanner joins a wrapped attribution onto one line, for example), the text is
-reported as one part.
+text with the body it was derived from; when a line cannot be aligned, the
+text is reported as one part.
 
 ## API reference
 
@@ -276,6 +366,9 @@ reported as one part.
 | `EXTRACTION_VERSION` | `u32` generation stamp of the text-deriving routine. |
 | `clean_for_scoring(extracted_text, html_signature_text)` | Stage 2; `&str`, `Option<&str>`; returns a `CleanResult`. |
 | `clean_for_scoring_with_parts(extracted_text, html_signature_text, part_starts)` | Stage 2 with the stage-1 part boundaries; `&str`, `Option<&str>`, `&[usize]`; fills `CleanResult::parts` from them. |
+| `clean_for_scoring_with_options(extracted_text, options)` | Stage 2 with every optional argument; `&str`, `&CleanOptions`. |
+| `CleanOptions` | Struct: `html_signature_text: Option<&str>`, `part_starts: &[usize]`, `author_name: Option<&str>`, `addressee_names: &[&str]`, `signature_lines: &[&str]`; `Default` passes none of them. |
+| `learn_signature_lines(texts, subjects)` | The lines one sender repeats at the end of their messages, learned from the stage-1 `texts` (`&[&str]`) of that sender's messages and their `subjects` (`Option<&[&str]>`); a `Vec<String>` of normalized lines sorted by code point. Fewer than 5 texts learn nothing. |
 | `CleanResult` | Struct: `text: String`, `ignored_lines: Vec<usize>`, `parts: Vec<String>`. |
 | `html_to_text(html)` | Visible text of an HTML part, block structure as newlines. |
 | `split_html_parts(html)` | The same text split into `HtmlParts { novel_text, quoted_text, signature_text, has_share_container }`. |
@@ -299,10 +392,7 @@ reported as one part.
 value is one of:
 
 - `none`: no body to work from.
-- `erp`: the vendored fragment scan needed no cleanup.
-- `erp+custom`: the fragment scan plus the custom cleanup pass.
-- `custom-fallback`: the over-strip guard fired, and the custom pass ran on
-  the whole body.
+- `custom`: the cleanup pass ran on the body.
 - `failed`: extraction failed internally.
 
 Three modifiers combine with the base value:
@@ -310,8 +400,9 @@ Three modifiers combine with the base value:
 - `html-` prefix: the text was derived from the HTML part, because there was
   no usable plain body, because a flattened plain body was replaced, or
   because the HTML holds an Apple Mail Share-sheet container (for example
-  `html-erp+custom`).
-- `+parent-diff` suffix: the parent-diff assist removed content.
+  `html-custom`).
+- `+parent-diff` suffix: the parent-diff assist removed content (for example
+  `custom+parent-diff`).
 - `+html-quote` suffix: the HTML quoted-text oracle removed content from a
   plain extraction.
 
@@ -320,7 +411,7 @@ Three modifiers combine with the base value:
 `EXTRACTION_VERSION` is a `u32` identifying the generation of the routine that
 derives the text. It is independent of the package version, only ever
 increases, and is incremented whenever a change can alter the derived text. It
-is currently **8**.
+is currently **10**.
 
 An application that stores derived text should store `EXTRACTION_VERSION`
 alongside it and compare the stored stamp with the running constant using `<`
@@ -334,7 +425,8 @@ when only whitespace moved.
 
 The port reproduces the Python standard-library behavior the reference relies
 on: code point (not byte) lengths and indices, Python's whitespace,
-`\w`, `\d` and case-insensitive matching sets, and the
+`\w`, `\d` and case-insensitive matching sets, Python's `str.lower` and
+`str.upper`, the reference's name folding table, and the
 `html.parser.HTMLParser` tokenizer with `html.unescape` and the HTML5
 named character references. The parent-diff assist's index of the parent's
 word stream works in bytes, which gives the same substring answers as the
@@ -361,9 +453,7 @@ published package.
 
 ## Provenance
 
-The fragment scanner is ported from the reference's vendored copy of
-`email-reply-parser` 0.5.12 (MIT, Copyright (c) 2012 Zapier LLC). The
-repository README describes the project's history.
+The repository README describes the project's history.
 
 ## License
 

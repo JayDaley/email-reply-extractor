@@ -13,7 +13,13 @@ sequences and parent-diff chains; ``--adversarial`` sets their share) —
 or, with ``--parent-diff``, only inputs for the parent-diff assist
 (``strip_parent_content`` over small alphabets of lines and words, and the
 aligned-run marks, the parent word-stream index and the author-tag test
-called directly) — runs each through the
+called directly), with ``--marking``, only ``extract_new_text`` inputs
+with a parent body for the parent-diff marking mode, or, with ``--evidence``,
+only ``clean_for_scoring`` inputs with ``author_name`` and ``addressee_names``
+(greetings, sign-offs and signature tails built around the names), or, with
+``--learned``, only ``learn_signature_lines`` inputs (one sender's texts with
+repeated tail lines, subjects with reply prefixes and list tags) and
+``clean_for_scoring`` inputs with ``signature_lines`` — runs each through the
 Python reference (``python/src``) and through the Rust port
 (``cargo run --release --example difftest``), and reports every case whose
 outputs differ. Exit status 1 when any case differs or the Rust driver
@@ -35,7 +41,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "python" / "src"))
 
 import email_reply_extractor as ere
-from email_reply_extractor import _fragments, cleaning, extraction
+from email_reply_extractor import cleaning, extraction
 
 # --- reference calls --------------------------------------------------------------
 
@@ -49,7 +55,15 @@ REFERENCE = {
         a.get("body"), a.get("parent_body"), a.get("html_body")
     ),
     "clean_for_scoring": lambda a: ere.clean_for_scoring(
-        a["extracted_text"], a.get("html_signature_text"), part_starts=a.get("part_starts", ())
+        a["extracted_text"],
+        a.get("html_signature_text"),
+        part_starts=a.get("part_starts", ()),
+        author_name=a.get("author_name"),
+        addressee_names=a.get("addressee_names"),
+        signature_lines=a.get("signature_lines"),
+    ),
+    "learn_signature_lines": lambda a: ere.learn_signature_lines(
+        a["texts"], subjects=a.get("subjects")
     ),
     "strip_parent_content": lambda a: ere.strip_parent_content(
         a["text"], a["parent_body"], continuation=a.get("continuation", False)
@@ -58,7 +72,6 @@ REFERENCE = {
     "split_html_parts": lambda a: ere.split_html_parts(a["html"]),
     "tolerant_lines": lambda a: ere.tolerant_lines(a["text"]),
     "texts_equivalent": lambda a: ere.texts_equivalent(a["a"], a["b"]),
-    "read_fragments": lambda a: _fragments.read_fragments(a["text"]),
     "is_attribution_line": lambda a: extraction.is_attribution_line(a["line"]),
     "is_quote_line": lambda a: extraction.is_quote_line(a["line"]),
     "is_signoff_name_line": lambda a: extraction.is_signoff_name_line(a["text"]),
@@ -67,9 +80,6 @@ REFERENCE = {
     "normalize_body": lambda a: extraction.normalize_body(a["body"]),
     "custom_clean": lambda a: extraction.custom_clean(
         a["text"], localized=a.get("localized", True)
-    ),
-    "count_unquoted_content_lines": lambda a: extraction.count_unquoted_content_lines(
-        a["body"], localized=a.get("localized", True)
     ),
     "find_quote_header_block": lambda a: extraction.find_quote_header_block(
         _lines(a), localized=a.get("localized", True)
@@ -903,7 +913,6 @@ def adversarial_case(rng: random.Random) -> dict:
                 "is_attribution_line",
                 "strip_attribution_lines",
                 "clean_for_scoring",
-                "read_fragments",
                 "strip_after_original_message_divider",
                 "extract_new_text",
             ]
@@ -912,8 +921,6 @@ def adversarial_case(rng: random.Random) -> dict:
             return {"fn": fn, "args": {"line": line}}
         if fn == "clean_for_scoring":
             return {"fn": fn, "args": {"extracted_text": line}}
-        if fn == "read_fragments":
-            return {"fn": fn, "args": {"text": line}}
         if fn == "extract_new_text":
             return {"fn": fn, "args": {"body": line}}
         args = {"lines": line.split("\n")}
@@ -928,7 +935,6 @@ def adversarial_case(rng: random.Random) -> dict:
                 "clean_for_scoring",
                 "find_quote_header_block",
                 "custom_clean",
-                "count_unquoted_content_lines",
                 "find_signoff_boundary",
                 "strip_attribution_lines",
             ]
@@ -945,8 +951,6 @@ def adversarial_case(rng: random.Random) -> dict:
             return {"fn": fn, "args": args}
         if fn == "custom_clean":
             return {"fn": fn, "args": {"text": body, "localized": rng.random() < 0.7}}
-        if fn == "count_unquoted_content_lines":
-            return {"fn": fn, "args": {"body": body, "localized": rng.random() < 0.7}}
         args = {"lines": body.split("\n")}
         if fn == "find_quote_header_block":
             args["localized"] = rng.random() < 0.7
@@ -1059,6 +1063,75 @@ PD_TAG = list("aAbM1_\xe9\u0663 .-") + ["\U0001f600", "\u0301"]
 PD_TEXT = PD_TAG + ["[", "\n", "[", " "]
 
 
+# --- marking-mode inputs (extract_new_text with a parent body) ---------------
+#
+# A parent with some quote lines of its own; a child that quotes it one level
+# deeper (the marking-mode evidence) or at the same depth, places unmarked
+# copies of parent lines in blocks of its own text (protected lines), may
+# carry an attribution introducing an unmarked or a marked quotation (the stop
+# line), and may answer an unmarked copy point by point in many runs (the
+# many-runs guard).
+
+MK_WORDS = ["the", "draft", "text", "should", "say", "MUST", "not", "\xe9t\xe9", "\u5e74", "ok"]
+MK_ATTRIBUTIONS = [
+    "On Mon, Jan 5, 2026 at 10:00 AM Ann Example <ann@example.org> wrote:",
+    "Ann Example wrote:",
+    "Am 05.01.2026 um 10:00 schrieb Ann Example:",
+    "On 5 Jan 2026, at 10:00, Ann wrote:",
+    "-----Original Message-----",
+]
+MK_MARKERS = ["> ", ">", "> > ", ">> ", "  > ", "..> ", ">\t"]
+
+
+def mk_line(rng: random.Random) -> str:
+    return " ".join(rng.choice(MK_WORDS) for _ in range(rng.choice((1, 2, 3, 4, 4, 5, 6, 9))))
+
+
+def marking_case(rng: random.Random) -> dict:
+    parent = [mk_line(rng) for _ in range(rng.randint(1, 24))]
+    parent_raw = [(rng.choice(["> ", ">> "]) if rng.random() < 0.25 else "") + x for x in parent]
+    body: list[str] = []
+
+    def own_block() -> None:
+        block = [mk_line(rng) for _ in range(rng.randint(0, 3))]
+        for _ in range(rng.choice((0, 1, 1, 2))):
+            a = rng.randrange(len(parent))
+            b = rng.randint(a + 1, min(len(parent), a + 4))
+            at = rng.randint(0, len(block))
+            block[at:at] = parent[a:b]
+        if rng.random() < 0.15:
+            block.insert(rng.randint(0, len(block)), "> " + rng.choice(parent))
+        body.extend(block)
+        body.append("")
+
+    for _ in range(rng.choice((0, 1, 1, 2, 3))):
+        own_block()
+    if rng.random() < 0.25:  # point-by-point answers to an unmarked copy
+        for _ in range(rng.randint(6, 11)):
+            a = rng.randrange(len(parent))
+            body.extend(parent[a : a + rng.randint(1, 5) + rng.randint(0, 2)])
+            body.extend(["", mk_line(rng), ""])
+    if rng.random() < 0.6:
+        body.append(rng.choice(MK_ATTRIBUTIONS))
+        if rng.random() < 0.3:
+            body.append("")
+    deeper = rng.random() < 0.8
+    for raw in parent_raw:
+        if rng.random() < 0.85:
+            body.append(rng.choice(MK_MARKERS) + raw if deeper else raw)
+        if rng.random() < 0.1:
+            body.append(rng.choice(["", mk_line(rng)]))
+    if rng.random() < 0.3:
+        body.append("")
+        own_block()
+    if rng.random() < 0.2:
+        body = [x.replace(" ", rng.choice(PD_SPACES)) for x in body]
+    args = {"body": "\n".join(body), "parent_body": "\n".join(parent_raw)}
+    if rng.random() < 0.1:
+        args["html_body"] = "<p>" + "<br>".join(body) + "</p>"
+    return {"fn": "extract_new_text", "args": args}
+
+
 def pd_case(rng: random.Random) -> dict:
     r = rng.random()
     if r < 0.6:
@@ -1101,6 +1174,336 @@ def pd_case(rng: random.Random) -> dict:
                 at = rng.randint(0, len(parent))
                 parent = parent[:at] + "[" + label[: rng.randint(len(label) - 1, len(label))] + parent[at:]
     return {"fn": "_any_author_tag", "args": {"labels": labels, "head": head, "parent_body": parent}}
+
+
+# --- clean_for_scoring with sender and addressee evidence ----------------------------
+
+EVIDENCE_NAMES = [
+    "Jane Doe",
+    "Jane",
+    "jane.doe@example.com",
+    "J. Doe",
+    "Doe, Jane",
+    "Dr. Jane Q. Doe",
+    "Robert Smith",
+    "Bob",
+    "Joseph Bloggs",
+    "Joe",
+    "Élodie Lefèvre",
+    "Jürgen Weiß",
+    "Łukasz Żółw",
+    "Siobhán O'Brien",
+    "Anne-Marie Dupont",
+    "İsmail Yılmaz",
+    "Σωκράτης Παπαδόπουλος",
+    "李小龍",
+    "Mary van der Berg",
+    "Kunal Ghosh",
+    "Arun Thallapelly",
+    "S Moonesamy",
+    "info@example.org",
+    "The QUIC WG Chairs",
+    "",
+]
+EVIDENCE_SALUTATIONS = [
+    "Thanks,",
+    "Thanks",
+    "Thanks!",
+    "Thanks and regards,",
+    "Best regards,",
+    "Regards/Ngā mihi",
+    "Cheers...",
+    "Many thanks!!",
+    "With best regards",
+    "Take care,",
+    "Later,",
+    "R's,",
+    "BR",
+    "À bientôt,",
+    "Thank you",
+    "Thx",
+    "Mit freundlichen Grüßen",
+    "Regards，",
+    "Best、",
+]
+EVIDENCE_GREETINGS = [
+    "Hi {a},",
+    "Hello {a}!",
+    "Dear {a},",
+    "{a},",
+    "{a}:",
+    "Hi all,",
+    "Hi!",
+    "Morning {a} and team,",
+    "Hey {a}, thanks for the note.",
+    "Good afternoon,",
+    "{a} -",
+    "Hi {a} and {b},",
+    "Folks,",
+]
+EVIDENCE_TAIL = [
+    "",
+    "[1] https://example.com/doc",
+    "https://example.com",
+    "www.example.org/x",
+    "Web: https://example.com",
+    "ORCID: 0000-0002-1825-0097",
+    "Sent from my iPhone",
+    "----",
+    "PS: one more thing.",
+    "P.S. see below",
+    "Example University",
+    "Head of Research",
+    "+1 555 123 4567",
+    "jane@example.com",
+    "This email is confidential and intended only for the recipient.",
+    "We should talk tomorrow.",
+    "-- ",
+]
+EVIDENCE_BODY = [
+    "The draft is ready.",
+    "I agree with the proposal; let us merge it.",
+    "Can you check the numbers before Friday?",
+    "See the attached notes.",
+    "That works for me.",
+    "- item one",
+    "1. first point",
+    "Reviewer:",
+    "Jane Doe (chair)",
+    "Bob Smith",
+]
+
+
+def name_forms(rng: random.Random, name: str) -> str:
+    """A line naming ``name`` the way a sign-off might."""
+    words = name.replace(",", " ").split()
+    first = words[0] if words else "X"
+    form = rng.random()
+    if form < 0.25:
+        out = name
+    elif form < 0.45:
+        out = first
+    elif form < 0.55:
+        out = first.lower()
+    elif form < 0.65:
+        out = rng.choice(["-", "— ", "/", "~", "--", "*"]) + rng.choice([first, first[:1], name])
+    elif form < 0.75:
+        out = first[:1] + "."
+    elif form < 0.85:
+        out = name + rng.choice([" | CEO", ", Example University", " (chair)", ":", ","])
+    else:
+        out = edge_string(rng, rng.randint(1, 6)).replace("\n", " ") + first
+    if rng.random() < 0.15:
+        out = rng.choice([" ", "\t", "  "]) + out
+    return out
+
+
+def evidence_case(rng: random.Random, stage1: list[str], vectors: list[dict]) -> dict:
+    """A ``clean_for_scoring`` case with ``author_name`` and ``addressee_names``."""
+    pool = EVIDENCE_NAMES + [v for vec in vectors for v in vec]
+    author = rng.choice(pool) if rng.random() < 0.85 else None
+    addressees = (
+        [rng.choice(pool) for _ in range(rng.randint(0, 3))] if rng.random() < 0.7 else None
+    )
+    r = rng.random()
+    if r < 0.2 and stage1:
+        text = mutate(rng, rng.choice(stage1)) if rng.random() < 0.5 else rng.choice(stage1)
+    else:
+        lines: list[str] = []
+        names = [n for n in (addressees or []) if n] or ["Joe"]
+        if rng.random() < 0.7:
+            for _ in range(rng.randint(1, 2)):
+                g = rng.choice(EVIDENCE_GREETINGS)
+                lines.append(
+                    g.format(
+                        a=name_forms(rng, rng.choice(names)).strip(),
+                        b=rng.choice(names).split(" ")[0],
+                    )
+                )
+                if rng.random() < 0.5:
+                    lines.append("")
+        for _ in range(rng.randint(1, 5)):
+            pick = rng.random()
+            if pick < 0.6:
+                lines.append(rng.choice(EVIDENCE_BODY))
+            elif pick < 0.8 and author:
+                lines.append(name_forms(rng, author))
+            elif pick < 0.9:
+                lines.append(rng.choice(EVIDENCE_SALUTATIONS) + " " + name_forms(rng, author or "Ann"))
+            else:
+                lines.append("")
+        sal = rng.random()
+        who = author or rng.choice(pool) or "Ann"
+        if sal < 0.3:
+            lines += [rng.choice(EVIDENCE_SALUTATIONS), name_forms(rng, who)]
+        elif sal < 0.55:
+            sep = rng.choice([", ", " ", ",", " -", "! ", "，"])
+            target = rng.choice(names) if rng.random() < 0.4 else who
+            tail = rng.choice(["", ".", ". That works.", " and Bob", "!"])
+            lines.append(rng.choice(["Thanks", "Thank you", "Many thanks", "Thx", "Cheers"])
+                         + sep + name_forms(rng, target).strip() + tail)
+        elif sal < 0.75:
+            lines.append(name_forms(rng, who))
+        elif sal < 0.85:
+            lines += [rng.choice(["---", "—", "___", ""]), name_forms(rng, who)]
+        for _ in range(rng.choice([0, 0, 1, 2, 4])):
+            lines.append(rng.choice(EVIDENCE_TAIL))
+        if rng.random() < 0.1:
+            lines.append(name_forms(rng, who))
+        text = "\n".join(lines)
+        if rng.random() < 0.15:
+            text = mutate(rng, text)
+    args: dict = {"extracted_text": text}
+    if author is not None:
+        args["author_name"] = author
+    if addressees is not None:
+        args["addressee_names"] = addressees
+    if rng.random() < 0.15:
+        n = len(text.split("\n"))
+        args["part_starts"] = [rng.randint(0, n) for _ in range(rng.randint(0, 3))]
+    return {"fn": "clean_for_scoring", "args": args}
+
+
+LEARNED_FURNITURE = [
+    "Jane Example",
+    "Example Corp | Head of Research",
+    "Gesch\u00e4ftsf\u00fchrer: Stra\u00dfe 1",
+    "Geschaeftsfuehrer: STRASSE 1",
+    "Tel: +1 555 123 4567",
+    "https://example.com",
+    "Sent from my iPhone",
+    "Cheers,",
+    "Best regards,",
+    "Let me know if you have questions.",
+    "Questions? Ask me.",
+    "Notes:",
+    "Thoughts on this?",
+    "\u0130stanbul Office",
+    "\u03a3\u038a\u03a3\u03a5\u03a6\u039f\u03a3",
+    "\u674e\u5c0f\u9f8d",
+    "-- ",
+    "Jane",
+    "J.",
+    "Example Corp",
+    "Weiss & Partner GmbH",
+    "WEI\u00df & PARTNER GMBH",
+    "\u2014 Jane",
+    "Room 4.2, Example Building, Example Street 12, Example Town",
+]
+LEARNED_PREFIXES = [
+    "",
+    "",
+    "Re: ",
+    "RE:",
+    "re : ",
+    "Fwd: ",
+    "Fw[2]: ",
+    "AW: ",
+    "SV: ",
+    "Antw: ",
+    "WG: ",
+    "TR: ",
+    "Re [3]: ",
+    "[list] ",
+    "[quic] Re: ",
+    "Re: [list] AW: ",
+    "  [a] [b]Re:",
+    "\u017fv: ",
+    "Re\u00a0: ",
+    "[unclosed ",
+    "Ref: ",
+]
+LEARNED_SUBJECTS = ["Draft A", "draft   a", "DRAFT A", "Plan", "Stra\u00dfe", "STRASSE", "x", "", "y"]
+
+
+def learned_variant(rng: random.Random, line: str) -> str:
+    """``line`` as it may recur: case, whitespace and quote-marker variants."""
+    r = rng.random()
+    if r < 0.6:
+        return line
+    if r < 0.7:
+        return line.upper()
+    if r < 0.8:
+        return "  " + line.replace(" ", rng.choice(["  ", "\t", "\xa0", " "])) + " "
+    if r < 0.9:
+        return rng.choice(["> ", ">", "> > "]) + line
+    return line.lower()
+
+
+def learned_text(rng: random.Random, furniture: list[str]) -> str:
+    lines: list[str] = []
+    for _ in range(rng.randint(0, 4)):
+        pick = rng.random()
+        if pick < 0.7:
+            lines.append(rng.choice(EVIDENCE_BODY))
+        elif pick < 0.85:
+            lines.append("")
+        else:
+            lines.append(edge_string(rng, rng.randint(1, 12)).replace("\n", " "))
+    if rng.random() < 0.8:
+        lines.append("")
+    for line in furniture:
+        if rng.random() < 0.85:
+            lines.append(learned_variant(rng, line))
+        if rng.random() < 0.1:
+            lines.append(rng.choice(["", rng.choice(EVIDENCE_BODY), rng.choice(EVIDENCE_TAIL)]))
+    if rng.random() < 0.1:
+        lines += [rng.choice(EVIDENCE_BODY) for _ in range(rng.randint(1, 12))]
+    text = "\n".join(lines)
+    return mutate(rng, text) if rng.random() < 0.1 else text
+
+
+def learned_case(rng: random.Random) -> dict:
+    """A ``learn_signature_lines`` case, or a ``clean_for_scoring`` case with
+    ``signature_lines`` (half of them learned by the reference)."""
+    furniture = rng.sample(LEARNED_FURNITURE, rng.randint(1, 5))
+    n = rng.choice([0, 2, 4, 5, 5, 6, 7, 10, 15, 20])
+    texts = [learned_text(rng, furniture) for _ in range(n)]
+    subjects = None
+    if rng.random() < 0.5:
+        subjects = [
+            rng.choice(LEARNED_PREFIXES) + rng.choice(LEARNED_SUBJECTS) for _ in range(n)
+        ]
+    if rng.random() < 0.5:
+        args: dict = {"texts": texts}
+        if subjects is not None:
+            args["subjects"] = subjects
+        return {"fn": "learn_signature_lines", "args": args}
+    learned = list(cleaning.learn_signature_lines(texts, subjects=subjects))
+    if rng.random() < 0.5 or not learned:
+        learned += [learned_variant(rng, line) for line in rng.sample(furniture, 1)]
+    if rng.random() < 0.2:
+        learned.append(rng.choice(["", " ", "> ", rng.choice(EVIDENCE_BODY)]))
+    args = {"extracted_text": learned_text(rng, furniture), "signature_lines": learned}
+    if rng.random() < 0.4:
+        args["author_name"] = rng.choice(["Jane Example", "Jane", "Robert Smith"])
+    if rng.random() < 0.1:
+        args["extracted_text"] = "\n".join(learned)
+    return {"fn": "clean_for_scoring", "args": args}
+
+
+def vector_names() -> list[list[str]]:
+    """The author and addressee names of the ``clean_for_scoring`` vectors."""
+    path = ROOT / "conformance" / "vectors" / "clean_for_scoring.json"
+    out: list[list[str]] = []
+    for vec in json.loads(path.read_text(encoding="utf-8"))["vectors"]:
+        args = vec["args"]
+        names = list(args.get("addressee_names") or [])
+        if args.get("author_name"):
+            names.append(args["author_name"])
+        if names:
+            out.append(names)
+    return out
+
+
+def evidence_texts() -> list[str]:
+    """The texts of the ``clean_for_scoring`` vectors that pass a sender name."""
+    path = ROOT / "conformance" / "vectors" / "clean_for_scoring.json"
+    return [
+        vec["args"]["extracted_text"]
+        for vec in json.loads(path.read_text(encoding="utf-8"))["vectors"]
+        if vec["args"].get("author_name") or vec["args"].get("addressee_names")
+    ]
 
 
 def cases(
@@ -1181,10 +1584,7 @@ def cases(
             text = f"Reply.\n\nOn Mon, Jan 1, 2026{rng.choice([' ', chr(10)])}{esc} X{rng.choice(['', chr(10)])} wrote:\n> q\n"
             if rng.random() < 0.3:
                 text = "On " + text
-            fn = "read_fragments" if rng.random() < 0.5 else "extract_new_text"
-            out.append(
-                {"fn": fn, "args": {"text": text} if fn == "read_fragments" else {"body": text}}
-            )
+            out.append({"fn": "extract_new_text", "args": {"body": text}})
         elif r < 0.42:
             src = mutate(rng, rng.choice(stage1)) if rng.random() < 0.5 else text_source()
             args = {"extracted_text": src}
@@ -1193,6 +1593,10 @@ def cases(
             if rng.random() < 0.4:
                 n = len(src.split("\n"))
                 args["part_starts"] = [rng.randint(-1, n + 1) for _ in range(rng.randint(0, 4))]
+            if rng.random() < 0.3:
+                args["author_name"] = rng.choice(EVIDENCE_NAMES)
+            if rng.random() < 0.3:
+                args["addressee_names"] = rng.sample(EVIDENCE_NAMES, rng.randint(0, 3))
             out.append({"fn": "clean_for_scoring", "args": args})
         elif r < 0.50:
             base = rng.choice(bodies)
@@ -1225,7 +1629,7 @@ def cases(
                 }
             )
         elif r < 0.86:
-            out.append({"fn": "read_fragments", "args": {"text": text_source()}})
+            out.append({"fn": "extract_new_text", "args": {"body": text_source()}})
         elif r < 0.93:
             fn = rng.choice(
                 [
@@ -1242,7 +1646,6 @@ def cases(
             fn = rng.choice(
                 [
                     "custom_clean",
-                    "count_unquoted_content_lines",
                     "find_quote_header_block",
                     "find_signoff_boundary",
                     "strip_attribution_lines",
@@ -1252,13 +1655,10 @@ def cases(
             body = generated_body(rng) if rng.random() < 0.6 else mutate(rng, rng.choice(bodies))
             if fn in ("custom_clean",):
                 args = {"text": body}
-            elif fn == "count_unquoted_content_lines":
-                args = {"body": body}
             else:
                 args = {"lines": body.split("\n")}
             if fn in (
                 "custom_clean",
-                "count_unquoted_content_lines",
                 "find_quote_header_block",
                 "strip_after_original_message_divider",
             ):
@@ -1283,6 +1683,21 @@ def main() -> int:
         help="only parent-diff cases: strip_parent_content and its matching structures",
     )
     parser.add_argument(
+        "--marking",
+        action="store_true",
+        help="only marking-mode cases: extract_new_text with a parent body",
+    )
+    parser.add_argument(
+        "--evidence",
+        action="store_true",
+        help="only clean_for_scoring cases with author_name / addressee_names",
+    )
+    parser.add_argument(
+        "--learned",
+        action="store_true",
+        help="only learn_signature_lines cases and clean_for_scoring with signature_lines",
+    )
+    parser.add_argument(
         "--keep", type=pathlib.Path, help="write cases and results to this directory"
     )
     opts = parser.parse_args()
@@ -1293,6 +1708,14 @@ def main() -> int:
     ]
     if opts.parent_diff:
         all_cases = [pd_case(rng) for _ in range(opts.cases)]
+    elif opts.marking:
+        all_cases = [marking_case(rng) for _ in range(opts.cases)]
+    elif opts.learned:
+        all_cases = [learned_case(rng) for _ in range(opts.cases)]
+    elif opts.evidence:
+        stage1 = [e["extract_new_text"]["text"] for e in corpus] + evidence_texts()
+        names = vector_names()
+        all_cases = [evidence_case(rng, stage1, names) for _ in range(opts.cases)]
     else:
         all_cases = cases(rng, opts.cases, corpus, opts.adversarial)
     expected = [reference(c) for c in all_cases]

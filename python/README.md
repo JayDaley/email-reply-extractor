@@ -12,7 +12,9 @@ headers, signatures and sign-offs.**
 other email. It removes the quoted reply (`>` lines, Gmail-style "On … wrote:"
 attribution lines, Outlook quote-header blocks, "Original message" dividers)
 from top-posted, bottom-posted and inline replies, then optionally removes
-greetings, signatures, sign-offs, mailing-list footers and legal disclaimers.
+greetings, signatures, sign-offs, mailing-list footers and legal disclaimers,
+using the sender's and addressees' display names and the sender's repeated
+signature lines as evidence when the caller has them.
 It is an alternative to
 [talon](https://github.com/mailgun/talon) and
 [email-reply-parser](https://github.com/zapier/email-reply-parser): pure
@@ -80,11 +82,11 @@ It should say so explicitly. I can send text for that.
 Yes.
 ```
 
-Stage 1 (`result.text`, method `erp`) removes the attribution line and both
-levels of quoted text, and keeps each inline response along with the
+Stage 1 (`result.text`, method `custom`) removes the attribution line and
+both levels of quoted text, and keeps each inline response along with the
 greeting, sign-off, signature and list footer. Stage 2 removes those and
 reports the removed line indices in `cleaned.ignored_lines`
-(`[0, 11, 12, 14, 15, 16, 18, 19, 20]`).
+(`[0, 14, 15, 17, 18, 19, 21, 22, 23]`).
 
 ## Contents
 
@@ -95,6 +97,7 @@ reports the removed line indices in `cleaned.ignored_lines`
 - [Usage](#usage)
   - [Quickstart](#quickstart)
   - [Thread parent and HTML part](#thread-parent-and-html-part)
+  - [Sender and addressee evidence](#sender-and-addressee-evidence)
 - [API reference](#api-reference)
   - [Status values](#status-values)
   - [Method strings](#method-strings)
@@ -123,13 +126,12 @@ project's documented behavior; release data is from PyPI as of November 2026.
 | Output stability | Behavior pinned by an integer generation (`EXTRACTION_VERSION`) and a corpus digest test; whitespace-tolerant equivalence helpers for consumers | Not versioned separately | Not versioned separately |
 | Test corpus | Hand-labeled real mailing-list messages (`fixtures/`) | Unit-test fixture emails | Unit-test fixture emails; ML training data |
 | Runtime dependencies | None (standard library) | None (standard library) | lxml, regex, numpy, scipy, scikit-learn, chardet, and others |
-| Latest release | 1.5.0 (2026) | 0.5.12 (2020) | 1.4.4 (2017) |
+| Latest release | 1.6.0 (2026) | 0.5.12 (2020) | 1.4.4 (2017) |
 | License | MIT | MIT | Apache 2.0 |
 
-The fragment scanner at this library's core derives from email-reply-parser
-(see [Provenance](#provenance)), so on a plain-text body with English quoting
-the two produce related results; the differences above are what this library
-adds on top of that scan.
+Through generation 9 this library used a fragment scanner derived from
+email-reply-parser (see [Provenance](#provenance)). Generation 10 replaced it
+with the library's own line rules.
 
 ## Install
 
@@ -145,13 +147,17 @@ this message:
 - quoted lines at any indentation, including the `...>` form that survives
   `format=flowed` rewrapping;
 - attribution lines: `On … wrote:`, `Name <a@b> wrote:`, the German
-  `Am … schrieb …:` and the Japanese `…のメール:` forms, and forms wrapped
-  across two or three lines (including the French `a écrit :` and Spanish
-  `escribió:` terminators);
+  `Am … schrieb …:` and the Japanese `…のメール:` forms, forms wrapped
+  across up to five lines (including the French `a écrit :` and Spanish
+  `escribió:` terminators), and other wordings above a quote that carry an
+  e-mail address, a clock time and a date, or a speech verb ("Ana Lima
+  said:");
 - Outlook-style forwarded/quote-header blocks (`From:` / `Sent:` / `To:` /
   `Subject:`) with English, French, Spanish, Portuguese, Italian, Dutch, German
   and Chinese labels;
-- "Original message" and "Forwarded message" dividers in the same languages;
+- "Original message" and "Forwarded message" dividers in the same languages,
+  and the short "Original" dividers of QQ Mail and Foxmail;
+- the short tail of a quote line that a client re-wrapped without a marker;
 - the quoted thread that follows a sign-off boundary in a fully top-posted
   reply with no `>` markers;
 - when the caller supplies them, content provably present in the thread parent
@@ -162,8 +168,11 @@ inline replies written between quoted blocks.
 
 Stage 2, `clean_for_scoring`, removes that formulaic furniture from stage-1
 text: greetings, sign-offs, signature blocks, mailing-list footers, mobile
-taglines ("Sent from my iPhone") and trailing legal disclaimers. It also
-reports which non-blank input lines it removed.
+taglines ("Sent from my iPhone") and trailing legal disclaimers. Given the
+sender's display name, the addressees' display names and the sender's
+learned signature lines, it also removes sign-offs, name lines, greetings and
+signature lines that no fixed list identifies. It reports which non-blank
+input lines it removed.
 
 The split is deliberate. The stage-1 text is the author's full novel content,
 which is what an application should store and display; the stage-2 text is a
@@ -182,39 +191,33 @@ The rules of both stages are documented in
 
 The rules are heuristics over text, tuned and measured on technical
 mailing-list mail. The limits below are known; each follows from a rule
-described in [docs/extraction.md](https://github.com/JayDaley/email-reply-extractor/blob/main/docs/extraction.md).
-
-### Text the author repeats from the thread parent
-
-The parent-diff assist removes lines of a reply that also occur in the thread
-parent. It cannot always tell a quotation the client left unmarked from a line
-the author wrote again. From generation 9 a repeated line is kept when the
-message also carries it inside its own `>`-marked quotation and the line sits
-in a block of consecutive non-blank lines that is mostly unmatched text (see
-[docs/generation-9.md](https://github.com/JayDaley/email-reply-extractor/blob/main/docs/generation-9.md)). Outside those conditions:
-
-- **A message with no marked quotation.** When the client marks no quotation
-  (an Outlook-style reply, a plain proposed-text edit), a line the author
-  repeats from the parent is removed: a line kept in a revised paragraph, the
-  new wording of an `OLD:` / `NEW:` edit, a phrase of the parent cited inside
-  a sentence.
-- **Passages left unchanged.** A paragraph or list item that a revised
-  document carries over unchanged from the version in the parent is removed
-  as a whole.
-- **Short blocks.** A repeated line that has at least as many words as the
-  rest of its block is removed, for example the first line of a two-line list
-  item whose second line was reworded.
-- **A quoted line directly above its answer.** When an author pastes a line of
-  the parent and answers it on the next line, with no blank line between, and
-  the answer is longer than the pasted line, the pasted line is kept if the
-  message also quotes it with markers.
-- **Short quotations without markers.** An unmarked quoted line of fewer than
-  8 words is removed only as part of a matching run of at least 10 words, or
-  by chaining from a removed neighbour when at least 3 lines were removed. A
-  short quoted line that stands alone is kept.
+described in [docs/extraction.md](https://github.com/JayDaley/email-reply-extractor/blob/main/docs/extraction.md). The figures are from
+the origin application's corpus of 154,394 IETF list messages and from two
+audits of messages drawn from it at random (see
+[docs/generation-10.md](https://github.com/JayDaley/email-reply-extractor/blob/main/docs/generation-10.md)). On the held-out audit of 160
+messages, 36 (22.5%) have at least one error in generation 10, against 104
+(65%) in generation 9.
 
 ### Evidence the caller must supply
 
+Several rules act only when the caller passes the evidence they need. Without
+it, the corresponding errors remain.
+
+- **The sender's name.** Without `author_name`, a trailing line that is only
+  the sender's name is removed only as part of a salutation-and-name sign-off;
+  a bare name with no salutation above it ("Dino", "—Daniel") is kept. In
+  generation 9, 23.8% of the corpus's cleaned texts ended in a line that is
+  only the sender's name. A sender whose display name yields no name token
+  (an empty name, or a name with no letters) gets no sender-name rules, and a
+  sender who signs in a different script from the display name is not
+  matched.
+- **Learned signature lines.** `learn_signature_lines` needs at least 5
+  stage-1 texts of one sender, and a line must occur among the last 10
+  non-blank lines of at least 3 of them and at least one fifth of them. A
+  sender with fewer messages gets no learned lines.
+- **The addressees' names.** Without `addressee_names`, a greeting line that
+  only names people is removed only when it opens with a greeting word, or
+  has one to four capitalized words ending in `,`, `:` or `-` ("Jane, Joe,").
 - **The thread parent.** Without `parent_body`, a previous message reproduced
   with no `>` markers, no attribution line, no quote-header block and no
   sign-off boundary above it is not removed. Only the direct parent is
@@ -224,18 +227,60 @@ in a block of consecutive non-blank lines that is mostly unmatched text (see
   when `html_body` is passed. The HTML assist removes nothing unless it
   removes at least 3 non-blank lines.
 - **Decoding.** The functions take decoded strings. MIME parsing, charset
-  decoding and resolving `In-Reply-To` to the parent's body are the caller's.
+  decoding, resolving `In-Reply-To` to the parent's body, and storing a
+  sender's earlier texts for `learn_signature_lines` are the caller's.
+
+With none of the generation-10 evidence arguments, stage 2 still removes more
+than generation 9 did: the tolerant sign-off forms and the greeting rules that
+need no evidence change the cleaned text of 19,910 of the 154,394 messages.
+
+### What remains
+
+- **Author text carrying `>` markers.** A pasted diff, an mbox `>From` line,
+  or inline replies typed inside an Outlook quote block carry quote markers
+  and are removed as quoted text: 9 of the 160 held-out messages.
+- **Role lines and split signature blocks.** A role line written above the
+  sign-off ("Speaking as IAB Chair,", "(as IAB Chair)") is kept, and so is a
+  signature block or role line separated from the sign-off by a blank line,
+  when it has no `-- ` delimiter, no recognizable contact shape and no learned
+  or HTML-hinted lines. A role written on the name line ("Jane (as chair)",
+  "Jane, as IAB Chair") or directly below it is removed with the name.
+- **Long wrap remainders.** A re-wrapped quote remainder between two quote
+  lines is removed only when it has at most two words and starts lowercase;
+  a longer remainder is kept as the author's.
+- **Text the author repeats from the thread parent.** The parent-diff assist
+  cannot always tell a quotation the client left unmarked from a line the
+  author wrote again. A repeated line is kept when the message also carries it
+  inside its own `>`-marked quotation and the line sits in a block that is
+  mostly unmatched text (generation 9), and when the client marks its
+  quotation and the line stands in a block with no quote line (marking mode,
+  generation 10). A message whose client marks no quotation loses such lines;
+  a paragraph a revision carries over unchanged from the parent is removed as
+  a whole; and a message that answers an unmarked copy of the parent point by
+  point in 8 or more pieces loses its protected runs.
+- **Short quotations without markers.** An unmarked quoted line of fewer than
+  8 words is removed only as part of a matching run of at least 10 words, or
+  by chaining from a removed neighbour when at least 3 lines were removed. A
+  short quoted line that stands alone is kept.
+- **Part boundaries.** `part_starts` is empty (one part) when a line of the
+  text has no counterpart in the body: 10 of the 154,394 messages (72 in
+  generation 9).
 
 ### Languages and clients
 
 - **Attribution lines** are recognized in English, German, French, Spanish
-  and Japanese forms. An attribution line in another language is kept as text.
+  and Japanese fixed forms. Other wordings are recognized only when they end
+  in a colon directly above a quote line and carry an e-mail address, a clock
+  time and a date, or a speech verb from the list in
+  [docs/extraction.md](https://github.com/JayDaley/email-reply-extractor/blob/main/docs/extraction.md).
 - **Quote-header blocks and "Original message" dividers** are recognized with
   English, German, French, Spanish, Portuguese, Italian, Dutch and Chinese
-  labels. A localized block is recognized only when its opener is followed by
-  at least two further field lines including the language's subject label.
-- **Greetings and sign-offs** are matched against fixed multilingual lists; a
-  salutation outside them is kept.
+  labels, and the short "Original" dividers of QQ Mail and Foxmail. A
+  localized block is recognized only when its opener is followed by at least
+  two further field lines including the language's subject label.
+- **Greetings and sign-offs** are matched against fixed multilingual lists,
+  and, with the evidence, against the sender's and addressees' names. A
+  salutation outside the lists is kept.
 - **HTML quote containers** are `<blockquote>`, the Gmail, Mozilla and Outlook
   class and id hooks listed in [docs/extraction.md](https://github.com/JayDaley/email-reply-extractor/blob/main/docs/extraction.md), and Apple Mail's
   Share-sheet wrapper. A client that marks quoted text by another means is not
@@ -245,35 +290,23 @@ in a block of consecutive non-blank lines that is mostly unmatched text (see
 
 - **Sign-off boundary.** A fully top-posted reply with no `>` markers is cut
   at its sign-off only when a salutation line, a name line and an attribution
-  line follow one another. A reply with no sign-off, or no attribution line
-  after it, is not cut there.
+  follow one another. A reply with no sign-off, or no attribution after it, is
+  not cut there.
 - **Pasted headers.** A `From:` block the author pasted as evidence is kept
   only when a transport or trace field (`Message-ID`, `Received`, …) sits in
   the header run directly above it; otherwise the body is truncated at the
   block.
-- **Part boundaries.** `part_starts` is empty (one part) when a line of the
-  text has no counterpart in the body, which happens when the scanner joined
-  wrapped lines into one: 11 of 29,895 sampled extractions.
-
-### What stage 2 keeps
-
-Stage 2 removes one opening greeting line, one closing sign-off and trailing
-disclaimer paragraphs. It keeps a bare trailing name with no salutation
-("Dino", "—Daniel"), greetings and valedictions in the middle of the text,
-elision markers (`[...]`), URLs pasted in prose, and a disclaimer-shaped
-paragraph that is not at the end. Signature lines with no `-- ` delimiter and
-no recognizable contact shape are removed only with the HTML signature hint.
 
 ### Scope of the measurements
 
 The hand-labeled corpus is 28 messages (25 from the public IETF mail archive,
-3 synthetic), and the measured effects recorded in `docs/` are taken over the
-stored IETF mailing-list mail of the origin application. The corpus digest
-covers no fixture that exercises the generation-9 rule, which is pinned by
-unit tests and conformance vectors only. Behaviour on other kinds of mail
-(personal correspondence, customer-support threads, newsletters) has not been
-measured. No minimum-length gate is applied: whether a short extraction is
-worth processing is the consuming application's decision.
+3 synthetic), processed without the evidence arguments; the rules that need
+evidence are pinned by unit tests and conformance vectors only. All measured
+effects recorded in `docs/` are taken over IETF mailing-list mail. Behaviour
+on other kinds of mail (personal correspondence, customer-support threads,
+newsletters) has not been measured. No minimum-length gate is applied:
+whether a short extraction is worth processing is the consuming application's
+decision.
 
 ## Usage
 
@@ -297,12 +330,12 @@ Lucas
 
 result = extract_new_text(body)
 result.status  # 'ok'
-result.method  # 'erp'
-result.text  # 'Hi Dan,\n\nTwo comments below.\n\nAgreed, and the draft already says so.\n\nBest,\nLucas'
+result.method  # 'custom'
+result.text  # 'Hi Dan,\n\nTwo comments below.\n\n\nAgreed, and the draft already says so.\n\nBest,\nLucas'
 
 cleaned = clean_for_scoring(result.text)
 cleaned.text  # 'Two comments below.\n\nAgreed, and the draft already says so.'
-cleaned.ignored_lines  # [0, 6, 7] — the greeting and the two sign-off lines
+cleaned.ignored_lines  # [0, 7, 8] — the greeting and the two sign-off lines
 ```
 
 The quote and its attribution line are gone from `result.text`, and the reply
@@ -337,6 +370,63 @@ parts = split_html_parts(html_body)
 cleaned = clean_for_scoring(result.text, html_signature_text=parts.signature_text)
 ```
 
+### Sender and addressee evidence
+
+Three optional keyword arguments of `clean_for_scoring` carry evidence about
+the message: `author_name`, the sender's display name; `addressee_names`, the
+display names of the people the message answers or is addressed to (for
+example the thread parent's sender and the To and Cc display names); and
+`signature_lines`, the lines the sender repeats at the end of their messages,
+learned by `learn_signature_lines` from the stage-1 texts of the sender's
+earlier messages. Without them only the rules that need no evidence run.
+
+```python
+from email_reply_extractor import clean_for_scoring, extract_new_text, learn_signature_lines
+
+# (subject, plain body) of the sender's earlier messages, stored by the caller.
+earlier = [
+    (
+        f"Draft comments, round {i}",
+        f"Comment {i} on the draft.\n\nThanks,\nAna\nExample Networks\nhttps://example.net/ana",
+    )
+    for i in range(6)
+]
+learned = learn_signature_lines(
+    [extract_new_text(text).text for _subject, text in earlier],
+    subjects=[subject for subject, _text in earlier],
+)
+learned  # ('ana', 'example networks', 'https://example.net/ana', 'thanks,')
+
+body = """Joe, Priya,
+
+The new section reads well. One change: keep the timer at 10 seconds.
+
+Thanks,
+Ana
+Example Networks
+https://example.net/ana
+"""
+
+result = extract_new_text(body)
+clean_for_scoring(result.text).text
+# 'The new section reads well. One change: keep the timer at 10 seconds.\n\nThanks,\nAna\nExample Networks\nhttps://example.net/ana'
+
+cleaned = clean_for_scoring(
+    result.text,
+    author_name="Ana Lima",  # the From display name
+    addressee_names=["Joe Example", "Priya Sharma"],  # the To and Cc display names
+    signature_lines=learned,
+)
+cleaned.text  # 'The new section reads well. One change: keep the timer at 10 seconds.'
+cleaned.ignored_lines  # [0, 4, 5, 6, 7]
+```
+
+Without evidence, the greeting is removed and the sign-off is kept, because
+the company line and the link below the name keep it from being the tail.
+With `author_name`, "Ana" is recognized as the sender's name, and the lines
+attached below it are removed with it; the learned lines would remove them
+too.
+
 ## Parts of an inline reply
 
 An inline reply interleaves the author's answers with quoted passages. Stage 1
@@ -354,9 +444,8 @@ cleaned.parts  # one string per run of the author's text
 
 A top-posted reply, or any text written as one run, has an empty
 `part_starts` and a single part. The boundaries are found by aligning the
-text with the body it was derived from; when a line cannot be aligned (the
-scanner joins a wrapped attribution onto one line, for example), the text is
-reported as one part.
+text with the body it was derived from; when a line cannot be aligned, the
+text is reported as one part (10 of 154,394 messages measured).
 
 ## API reference
 
@@ -366,7 +455,8 @@ reported as one part.
 | `ExtractionResult` | Frozen dataclass: `text`, `method`, `status`, `part_starts`. |
 | `STATUS_OK`, `STATUS_EMPTY`, `STATUS_FAILED` | The three `status` values. |
 | `EXTRACTION_VERSION` | `int` generation stamp of the text-deriving routine. |
-| `clean_for_scoring(extracted_text, html_signature_text=None, *, part_starts=())` | Stage 2; returns a `CleanResult`. |
+| `clean_for_scoring(extracted_text, html_signature_text=None, *, part_starts=(), author_name=None, addressee_names=None, signature_lines=None)` | Stage 2; returns a `CleanResult`. `author_name` is the sender's display name, `addressee_names` the addressees' display names, `signature_lines` the sender's learned signature lines. |
+| `learn_signature_lines(texts, *, subjects=None)` | The lines one sender repeats at the end of their messages, learned from the stage-1 `texts` of that sender's messages (and their `subjects`); a tuple of normalized lines, sorted. Fewer than 5 texts learn nothing. |
 | `CleanResult` | Frozen dataclass: `text`, `ignored_lines`, `parts`. |
 | `html_to_text(html)` | Visible text of an HTML part, block structure as newlines. |
 | `split_html_parts(html)` | The same text split into `HtmlParts(novel_text, quoted_text, signature_text, has_share_container)`. |
@@ -389,20 +479,21 @@ reported as one part.
 auditable after the fact. The base value is one of:
 
 - `none` — no body to work from.
-- `erp` — the vendored fragment scan needed no cleanup.
-- `erp+custom` — the fragment scan plus the custom cleanup pass.
-- `custom-fallback` — the over-strip guard fired, and the custom pass ran on
-  the whole body.
+- `custom` — the cleanup pass ran on the body.
 - `failed` — extraction raised.
+
+Through generation 9 the base values `erp`, `erp+custom` and
+`custom-fallback` named the paths through the vendored fragment scanner;
+generation 10 replaced all three with `custom`.
 
 Three modifiers combine with the base value:
 
 - `html-` prefix — the text was derived from the HTML part, because there
   was no usable plain body, because a flattened plain body was replaced, or
   because the HTML holds an Apple Mail Share-sheet container (for example
-  `html-erp+custom`).
+  `html-custom`).
 - `+parent-diff` suffix — the parent-diff assist removed content (for example
-  `erp+parent-diff`).
+  `custom+parent-diff`).
 - `+html-quote` suffix — the HTML quoted-text oracle removed content from a
   plain extraction.
 
@@ -411,8 +502,8 @@ Three modifiers combine with the base value:
 `EXTRACTION_VERSION` is an `int` identifying the generation of the routine that
 derives the text. It is independent of the package version, only ever
 increases, and is incremented whenever a change to the extraction, cleaning,
-HTML or vendored-scanner modules can alter the derived text. It is currently
-**8**.
+HTML or name and greeting modules can alter the derived text. It is currently
+**10**.
 
 An application that stores derived text should store `EXTRACTION_VERSION`
 alongside it and compare the stored stamp with the running constant using `<`
@@ -420,7 +511,7 @@ to decide whether the text needs re-deriving. The full contract, including the
 digest that pins the behavior over the fixture corpus, is in
 [docs/versioning.md](https://github.com/JayDaley/email-reply-extractor/blob/main/docs/versioning.md).
 
-Generation 5 (shipped in v1.1.0) and the work deferred from it are described in
+Generation 5 (shipped in v1.1.0) and the work it deferred to generation 10 are described in
 [docs/generation-5.md](https://github.com/JayDaley/email-reply-extractor/blob/main/docs/generation-5.md).
 Generation 6 (v1.2.0) adds the Latin-script localized quote-header blocks and
 dividers described in
@@ -435,6 +526,11 @@ Generation 9 (v1.5.0) keeps a line of the author's that repeats a line of the
 thread parent, when the message also carries that line inside its own marked
 quotation and the line sits in a block that is mostly unmatched text; see
 [docs/generation-9.md](https://github.com/JayDaley/email-reply-extractor/blob/main/docs/generation-9.md).
+Generation 10 (v1.6.0) removes the vendored fragment scanner, adds stage-1
+rules for attribution lines, dividers, re-wrapped quote remainders and
+unmarked text the author placed, and adds the sender and addressee evidence
+of stage 2; see
+[docs/generation-10.md](https://github.com/JayDaley/email-reply-extractor/blob/main/docs/generation-10.md).
 
 Because a generation bump can move bytes without changing substance, the
 package exports `tolerant_lines` and `texts_equivalent` so a consumer can
@@ -465,13 +561,16 @@ and [docs/ports.md](https://github.com/JayDaley/email-reply-extractor/blob/main/
 - [conformance/README.md](https://github.com/JayDaley/email-reply-extractor/blob/main/conformance/README.md)
   — the language-neutral conformance data and the corpus digest.
 - [docs/generation-5.md](https://github.com/JayDaley/email-reply-extractor/blob/main/docs/generation-5.md)
-  — generation 5 and the deferred scanner changes.
+  — generation 5 and the scanner changes deferred to generation 10.
 - [docs/generation-7.md](https://github.com/JayDaley/email-reply-extractor/blob/main/docs/generation-7.md)
   — generation 7: the linear parent-diff assist and its new aligned-run rule.
 - [docs/generation-8.md](https://github.com/JayDaley/email-reply-extractor/blob/main/docs/generation-8.md)
   — generation 8: Apple Mail Share-sheet containers.
 - [docs/generation-9.md](https://github.com/JayDaley/email-reply-extractor/blob/main/docs/generation-9.md)
   — generation 9: the parent-diff own-quotation rule.
+- [docs/generation-10.md](https://github.com/JayDaley/email-reply-extractor/blob/main/docs/generation-10.md)
+  — generation 10: the scanner removed, new stage-1 rules, and evidence for
+  stage 2.
 - [CONTRIBUTING.md](https://github.com/JayDaley/email-reply-extractor/blob/main/CONTRIBUTING.md)
   — development setup and contributor contracts.
 - [CHANGELOG.md](https://github.com/JayDaley/email-reply-extractor/blob/main/CHANGELOG.md)
@@ -490,12 +589,15 @@ provenance came with it; see
 
 The extraction also absorbed the application's only runtime dependency,
 `email-reply-parser` 0.5.12 (MIT, Zapier's Python port of GitHub's Email Reply
-Parser). Its fragment scanner is vendored, trimmed to the scan path this
-package consumes, as `python/src/email_reply_extractor/_fragments.py`. Two upstream
-defects were preserved through generation 4 so the output did not move, and
-fixed in generation 5 (see
+Parser). Its fragment scanner was vendored, trimmed to the scan path this
+package consumed, as `_fragments.py`. Two upstream defects were preserved
+through generation 4 so the output did not move, and fixed in generation 5
+(see
 [docs/generation-5.md](https://github.com/JayDaley/email-reply-extractor/blob/main/docs/generation-5.md)).
-The package therefore has no runtime dependencies.
+Generation 10 removed the scanner and replaced it with the package's own line
+rules (see
+[docs/generation-10.md](https://github.com/JayDaley/email-reply-extractor/blob/main/docs/generation-10.md)).
+The package has no runtime dependencies.
 
 Two pieces of evidence support the claim that v1.0.0 derives the same text as
 the application it came from: the recorded corpus digest carried over

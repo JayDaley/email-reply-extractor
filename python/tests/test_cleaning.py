@@ -19,6 +19,7 @@ from email_reply_extractor.cleaning import (
     clean_for_scoring,
     is_mobile_tagline,
     is_signature_delimiter,
+    learn_signature_lines,
 )
 from email_reply_extractor.extraction import extract_new_text
 
@@ -392,7 +393,7 @@ def test_clean_never_raises_on_empty_input():
     assert clean_for_scoring("   \n\n").ignored_lines == []
 
 
-# --- HTML signature hint (step 8) ---------------------------------------------
+# --- HTML signature hint (step 4) ---------------------------------------------
 
 
 def test_html_signature_hint_drops_matching_lines():
@@ -528,3 +529,542 @@ def test_parts_lose_trailing_signoff_with_the_text():
     text = "Answer one.\n\nAnswer two.\n\nThanks!\nDhruv"
     result = clean_for_scoring(text, part_starts=(2,))
     assert result.parts == ["Answer one.", "Answer two."]
+
+
+# --- tolerant sign-off forms (no evidence) ----------------------------------------
+
+
+@pytest.mark.parametrize(
+    "signoff",
+    [
+        "Best,\n-jane",  # decorated lower-case name under a salutation
+        "Best Regards,\n-xyz",
+        "Regards.\n--xyz.",  # "." after the salutation, decorated name
+        "Regards,\n\u2014 Jane Example",  # em-dash decorated full name
+        "Cheers,\n/xyz",
+        "Thanks,\n    xyz",  # indented single word
+        "Thanks -Jane",  # one-line form, decorated name, no punctuation
+        "Later, Jane",  # an added salutation
+        "Regards\uff0cJane",  # full-width comma
+        "Regards\u3001Jane",  # ideographic comma
+        "Thanks and regards,\nJane",  # two salutations joined
+        "Regards/Ng\u0101 mihi\nJane Example",
+        "With best regards,\nJane",
+        "Many thanks!!",  # a run of "!"
+        "Cheers...",
+        "Take care",
+    ],
+)
+def test_tolerant_closing_signoff_is_stripped(signoff):
+    result = clean_for_scoring(f"The actual content.\n\n{signoff}")
+    assert result.text == "The actual content."
+    assert result.ignored_lines == list(range(2, 2 + signoff.count("\n") + 1))
+
+
+@pytest.mark.parametrize(
+    "ending",
+    [
+        "Regards, John Example. I approve the change.",  # not a name line
+        "Thanks,\nthe draft is fine as it stands now and can move on.",
+        "Regards,\nJane\n\nPS: see the agenda.",  # no sender name: nothing exposes it
+    ],
+)
+def test_tolerant_closing_signoff_keeps_content(ending):
+    text = f"The actual content.\n\n{ending}"
+    assert clean_for_scoring(text).text == text
+
+
+def test_one_line_form_after_a_comma_needs_a_name_line():
+    # "John²" is not a name line (a digit) and is capitalized, so the one-line
+    # form after a comma does not take it; under a salutation line it is a
+    # loose name word.
+    assert clean_for_scoring("Text.\n\nRegards, John\u00b2").ignored_lines == []
+    assert clean_for_scoring("Text.\n\nRegards,\nJohn\u00b2").ignored_lines == [2, 3]
+
+
+# --- sign-offs with the sender's name -----------------------------------------------
+
+AUTHOR = "Jane Example"
+
+
+@pytest.mark.parametrize(
+    "name_line",
+    [
+        "Jane",
+        "jane",
+        "Jane Example",
+        "-jane",
+        "\u2014 Jane",
+        "/je",
+        "JE",
+        "/j",
+        "-J.",
+        "Jane (as chair)",
+    ],
+)
+def test_trailing_sender_name_line_is_stripped(name_line):
+    result = clean_for_scoring(f"Text.\n\n{name_line}", author_name=AUTHOR)
+    assert result.text == "Text."
+    assert result.ignored_lines == [2]
+
+
+@pytest.mark.parametrize("name_line", ["Jane", "-jane", "/j"])
+def test_trailing_sender_name_needs_the_author_name(name_line):
+    text = f"Text.\n\n{name_line}"
+    assert clean_for_scoring(text).text == text
+    assert clean_for_scoring(text, author_name="Bob Other").text == text
+
+
+def test_trailing_sender_name_takes_a_rule_line_above():
+    result = clean_for_scoring("Text.\n\n---\nJane Example", author_name=AUTHOR)
+    assert result.text == "Text."
+    assert result.ignored_lines == [2, 3]
+
+
+def test_initial_line_must_be_the_first_initial():
+    text = "Text.\n\n/x"
+    assert clean_for_scoring(text, author_name=AUTHOR).text == text
+    # An undecorated single letter is not a sign-off.
+    assert clean_for_scoring("Text.\n\nJ", author_name=AUTHOR).text == "Text.\n\nJ"
+
+
+def test_sender_signoff_with_attached_signature_lines():
+    text = "Text.\n\nCheers,\nJane Example\nExample University\nhttps://example.org/jane"
+    result = clean_for_scoring(text, author_name=AUTHOR)
+    assert result.text == "Text."
+    assert result.ignored_lines == [2, 3, 4, 5]
+
+
+def test_footnotes_below_a_sender_signoff_stay():
+    text = (
+        "Text with a reference [1].\n\n"
+        "Regards,\nJane\n\n"
+        "[1] https://example.org/a\n"
+        "https://example.org/b"
+    )
+    result = clean_for_scoring(text, author_name=AUTHOR)
+    # The sign-off goes; the footnote and its reference link stay.
+    assert (
+        result.text
+        == "Text with a reference [1].\n\n[1] https://example.org/a\nhttps://example.org/b"
+    )
+    assert result.ignored_lines == [2, 3]
+
+
+def test_tail_debris_below_a_sender_signoff_goes():
+    text = "Text.\n\nRegards,\nJane\nhttps://example.org/b\nSent from my iPhone"
+    result = clean_for_scoring(text, author_name=AUTHOR)
+    assert result.text == "Text."
+    assert result.ignored_lines == [2, 3, 4, 5]
+
+
+def test_postscript_below_a_sender_signoff_stays():
+    text = "Text.\n\nRegards,\nJane\n\nP.S. The agenda is attached.\nMore words for the note."
+    result = clean_for_scoring(text, author_name=AUTHOR)
+    assert result.text == "Text.\n\nP.S. The agenda is attached.\nMore words for the note."
+    assert result.ignored_lines == [2, 3]
+
+
+def test_sender_name_above_prose_is_not_a_tail_signoff():
+    text = "Text.\n\nJane\nExample University\nThis is a longer sentence that continues the text."
+    assert clean_for_scoring(text, author_name=AUTHOR).text == text
+
+
+@pytest.mark.parametrize(
+    "signoff, removed",
+    [("Thanks,\nJane", [2, 3]), ("Cheers, Jane", [2]), ("Best -Jane", [2])],
+)
+def test_sender_signoff_away_from_the_tail_is_stripped(signoff, removed):
+    text = f"Answer.\n\n{signoff}\n\nThe forwarded discussion continues here with more words."
+    result = clean_for_scoring(text, author_name=AUTHOR)
+    assert result.text == "Answer.\n\nThe forwarded discussion continues here with more words."
+    assert result.ignored_lines == removed
+
+
+def test_lone_sender_name_line_mid_text_is_stripped():
+    text = "The answer is yes.\n\nJane\n\nThe pasted material continues here with more words."
+    result = clean_for_scoring(text, author_name=AUTHOR)
+    assert (
+        result.text == "The answer is yes.\n\nThe pasted material continues here with more words."
+    )
+    assert result.ignored_lines == [2]
+    assert clean_for_scoring(text).text == text
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        # a speaker label
+        "The answer is yes.\n\nJane:\nThe pasted material continues here with more words.",
+        # a reviewer line
+        "Notes.\nReviewer: Jane Example\nThe review text follows here.",
+        # a name under a label line
+        "The notes.\nPresenter:\nJane Example\nThe slides follow here.",
+        # an attendee list
+        "Attendees:\nJohn Doe\nJane Example\nBob Smith\n\nNotes follow.",
+        # a list of names with affiliations
+        "We met today.\nJane Example (Example Corp)\nJohn Doe (Other Corp)\nwere present.",
+        # a list item
+        "The answer is yes.\n\n* Jane Example\n\nThe pasted material continues here.",
+    ],
+)
+def test_sender_name_in_content_is_kept(text):
+    assert clean_for_scoring(text, author_name=AUTHOR).text == text
+
+
+def test_greeting_to_a_namesake_is_not_a_signature():
+    # The sender is also Michael: "Michael," mid-text ends in a comma, so the
+    # lone-name rule leaves it; as the first line it is a greeting.
+    sender = "Michael Example"
+    text = "Some context first.\n\nMichael,\n\nI agree with your proposal."
+    assert clean_for_scoring(text, author_name=sender).text == text
+    result = clean_for_scoring(
+        "Michael,\n\nI agree with your proposal.",
+        author_name=sender,
+        addressee_names=["Michael Other"],
+    )
+    assert result.text == "I agree with your proposal."
+    assert result.ignored_lines == [0]
+
+
+def test_sender_name_matching_forms():
+    # Nicknames, initials with a middle initial, prefixes, folded accents, a
+    # "Last, First" display name, an address-only display name.
+    cases = [
+        ("Robert Example", "Bob"),
+        ("Robert Example", "RjE"),
+        ("Robert Example", "Rob E."),
+        ("S\u00f8ren \u00c5ngstr\u00f6m", "Soren"),
+        ("Example, Jane", "JE"),
+        ("jane.example@example.org", "Jane"),
+        ("mail@janeexample.org", "Jane Example"),
+        ("Jane Example via Example-List", "Jane"),
+        ('"Jane (JJ) Example"', "JJ"),
+    ]
+    for author, name_line in cases:
+        result = clean_for_scoring(f"Text.\n\n{name_line}", author_name=author)
+        assert result.text == "Text.", (author, name_line)
+
+
+@pytest.mark.parametrize(
+    "author, line",
+    [
+        ("", "Secretariat"),
+        ("IETF Secretariat", "Secretariat"),
+        ("\u0930\u093e\u092e", "\u0930\u093e\u092e"),
+    ],
+)
+def test_author_name_without_tokens_gives_no_evidence(author, line):
+    # Only stop words, or no letter run of 2+ letters (the Devanagari vowel
+    # sign is not \w): the sender-name rules stay off.
+    text = f"Text.\n\n{line}"
+    assert clean_for_scoring(text, author_name=author).text == text
+
+
+# --- thanks to an addressee -----------------------------------------------------------
+
+ADDRESSEES = ["Peter Other"]
+
+
+@pytest.mark.parametrize(
+    "line",
+    ["Thanks, Pete, these are good suggestions.", "Thanks, Pete.", "Thank you, Peter"],
+)
+def test_thanks_to_an_addressee_is_content(line):
+    text = f"Text.\n\n{line}"
+    assert clean_for_scoring(text, author_name=AUTHOR, addressee_names=ADDRESSEES).text == text
+    # Without the sender's name the exception is off.
+    assert clean_for_scoring(text, addressee_names=ADDRESSEES).text == "Text."
+
+
+def test_thanks_followed_by_a_sentence_is_content():
+    text = "Text.\n\nThanks, Joe. That works."
+    assert clean_for_scoring(text, author_name=AUTHOR).text == text
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "Cheers, Jane",  # the sender's own name
+        "Regards, Pete",  # not a thanks salutation
+        "Thanks,Pete",  # no blank before the name: a collapsed two-line sign-off
+    ],
+)
+def test_signoff_to_or_from_the_sender_is_stripped(line):
+    result = clean_for_scoring(f"Text.\n\n{line}", author_name=AUTHOR, addressee_names=ADDRESSEES)
+    assert result.text == "Text."
+
+
+def test_exposed_one_line_form_needs_a_plain_name():
+    # The sender-name rule removes "Jane" and exposes the line above it; that
+    # line goes only when its name is a plain name.
+    kept = clean_for_scoring(
+        "Text.\n\nThanks, Sandy. I approve the change.\nJane", author_name=AUTHOR
+    )
+    assert kept.text == "Text.\n\nThanks, Sandy. I approve the change."
+    gone = clean_for_scoring("Text.\n\nThanks, Sandy\nJane", author_name=AUTHOR)
+    assert gone.text == "Text."
+
+
+# --- greetings ---------------------------------------------------------------------
+
+BODY = "\n\nThe body text follows."
+NAMES = ["Jane Doe", "Joseph Other"]
+
+
+@pytest.mark.parametrize(
+    "line, addressees",
+    [
+        ("Jane,", NAMES),  # an addressee name
+        ("Jane", NAMES),  # an addressee name, no terminator
+        ("Jane Doe:", NAMES),
+        ("Jane, Joe:", NAMES),  # a nickname of an addressee
+        ("Jane, Joe and all,", NAMES),
+        ("Dr. Doe,", NAMES),  # a title
+        ("Jan,", NAMES),  # a name prefix after a comma
+        ("Thanks Jane,", NAMES),  # thanks + name + comma
+        ("S\u00f8ren,", ["Soren Example"]),  # folded
+        ("Soren,", ["S\u00f8ren Example"]),
+        ("Hiya Jane,", None),  # added greeting words
+        ("Moin,", None),
+        ("Howdy", None),
+        ("Good morning everyone,", None),
+        ("All:", None),  # group addressees
+        ("WG chairs,", None),
+        ("Stefano,", None),  # structural: one capitalized word and a comma
+        ("Jane, Joe:", None),  # structural: two items before ":"
+    ],
+)
+def test_opening_greeting_rules(line, addressees):
+    result = clean_for_scoring(line + BODY, addressee_names=addressees)
+    assert result.text == "The body text follows."
+    assert result.ignored_lines == [0]
+
+
+@pytest.mark.parametrize(
+    "line, addressees",
+    [
+        ("Jan.", NAMES),  # a name prefix needs "," or ":" without a greeting word
+        ("Thanks Jane!", NAMES),  # thanks, not a greeting
+        ("++ Jane and Joe.", NAMES),  # adds people to a thread
+        ("Jane", None),  # a bare word needs name evidence
+        ("Actually,", None),  # stoplist
+        ("Finally,", None),
+        ("Basically,", None),  # an adverb in -ly
+        ("Inline:", None),  # a single label before ":"
+        ("People:", None),
+        ("V/R,", None),  # a sign-off abbreviation
+        ("Hi Jane, apologies for the late reply.", None),  # runs into a sentence
+        ("Hi, I'm writing about the draft.", None),
+    ],
+)
+def test_opening_line_that_is_not_a_greeting_is_kept(line, addressees):
+    text = line + BODY
+    assert clean_for_scoring(text, addressee_names=addressees).text == text
+
+
+def test_structural_greeting_needs_a_capitalized_next_line():
+    text = "Stefano,\nthe body text follows."
+    assert clean_for_scoring(text).text == text
+
+
+def test_two_stacked_greetings_are_stripped_and_no_more():
+    result = clean_for_scoring("Jane,\n\nHi!" + BODY, addressee_names=NAMES)
+    assert result.text == "The body text follows."
+    assert result.ignored_lines == [0, 2]
+    result = clean_for_scoring("Hi,\nHello,\nHey," + BODY)
+    assert result.text == "Hey,\n\nThe body text follows."
+    assert result.ignored_lines == [0, 1]
+
+
+def test_addressee_with_the_senders_own_name_is_not_evidence():
+    # A reply-all lists the sender among the addressees; that name does not
+    # make "Michael." a greeting.
+    text = "Michael." + BODY
+    kwargs = {"author_name": "Michael Example", "addressee_names": ["Michael Example", "Bob Smith"]}
+    assert clean_for_scoring(text, **kwargs).text == text
+    other = {"author_name": "Bob Smith", "addressee_names": ["Michael Example"]}
+    assert clean_for_scoring(text, **other).text == "The body text follows."
+
+
+# --- learned signature lines ---------------------------------------------------------
+
+LEARNED = ["Jane Example", "Example University"]
+
+
+def test_learned_lines_are_stripped_in_the_trailing_zone():
+    text = "Text that is long enough.\n\nJane Example\nExample University"
+    result = clean_for_scoring(text, signature_lines=LEARNED)
+    assert result.text == "Text that is long enough."
+    assert result.ignored_lines == [2, 3]
+    assert clean_for_scoring(text).text == text
+
+
+def test_learned_lines_are_compared_normalized():
+    # Whitespace runs, case and quote markers do not matter.
+    text = "Body text here.\n\n> EXAMPLE   University\nok then"
+    result = clean_for_scoring(text, signature_lines=["example university"])
+    assert result.text == "Body text here.\n\nok then"
+    assert result.ignored_lines == [2]
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        # a learned line above a line of more than four words: outside the zone
+        "Body text here.\n\nExample University\nThis sentence has many more words than four.",
+        # learned lines at the top of the text, prose below
+        "Jane Example\nExample University\n\nThe body text follows here with more words.",
+        # the whole text: never emptied
+        "Jane Example\nExample University",
+    ],
+)
+def test_learned_lines_outside_the_trailing_zone_are_kept(text):
+    assert clean_for_scoring(text, signature_lines=LEARNED).text == text
+
+
+def test_learned_line_four_word_boundary():
+    four = "Body text here.\n\nExample University\none two three four"
+    assert clean_for_scoring(four, signature_lines=LEARNED).text == (
+        "Body text here.\n\none two three four"
+    )
+    five = "Body text here.\n\nExample University\none two three four five"
+    assert clean_for_scoring(five, signature_lines=LEARNED).text == five
+
+
+def test_learned_line_drop_exposes_a_signoff():
+    # The ordinary passes resume after the learned-line drop.
+    text = "Body.\n\nRegards,\nJane Example\nExample University"
+    result = clean_for_scoring(text, signature_lines=["Example University"])
+    assert result.text == "Body."
+    assert result.ignored_lines == [2, 3, 4]
+
+
+def _sender_texts(count, with_line, line="Jane Example", subjects=None):
+    texts = [f"Message {i} body text.\n\n{line}" for i in range(with_line)]
+    texts += [f"Message {i} body text." for i in range(with_line, count)]
+    return texts
+
+
+def test_learn_signature_lines_basic_and_sorted():
+    texts = [f"Body {i}.\n\nCheers,\n  Jane   Example\n" for i in range(5)]
+    assert learn_signature_lines(texts) == ("cheers,", "jane example")
+
+
+@pytest.mark.parametrize(
+    "count, with_line, learned",
+    [
+        (5, 3, True),  # 3 of 5
+        (5, 2, False),  # fewer than 3 texts
+        (4, 4, False),  # fewer than 5 texts in all
+        (15, 3, True),  # exactly one fifth
+        (16, 3, False),  # below one fifth
+        (20, 4, True),
+        (21, 4, False),
+    ],
+)
+def test_learn_signature_lines_count_thresholds(count, with_line, learned):
+    got = learn_signature_lines(_sender_texts(count, with_line))
+    assert ("jane example" in got) is learned
+
+
+def test_learn_signature_lines_subject_threshold():
+    texts = _sender_texts(5, 3)
+    three = ["Draft A", "Draft B", "Draft C", "x", "y"]
+    assert learn_signature_lines(texts, subjects=three) == ("jane example",)
+    # "Re:", "Fwd:" and "[list]" prefixes, whitespace and case are ignored.
+    two = ["Draft A", "Re: [list] AW: draft   a", "Draft C", "x", "y"]
+    assert learn_signature_lines(texts, subjects=two) == ()
+
+
+def test_learn_signature_lines_shorter_subjects():
+    # A text with no corresponding subject has the empty subject.
+    texts = _sender_texts(5, 3)
+    assert learn_signature_lines(texts, subjects=["Draft A", "Draft B"]) == ("jane example",)
+    assert learn_signature_lines(texts, subjects=["Draft A", "Draft B", ""]) == ("jane example",)
+    assert learn_signature_lines(texts, subjects=["Draft A", "Draft B", "", ""]) == (
+        "jane example",
+    )
+    assert learn_signature_lines(texts, subjects=["Draft A"]) == ()
+    assert learn_signature_lines(texts, subjects=["Draft A", "", None]) == ()
+    assert learn_signature_lines(texts, subjects=[]) == ()
+
+
+def test_learn_signature_lines_longer_subjects():
+    # Subjects beyond the last text are ignored.
+    texts = _sender_texts(5, 3)
+    five = ["Draft A", "Draft A", "Draft C", "x", "y"]
+    assert learn_signature_lines(texts, subjects=five) == ()
+    assert learn_signature_lines(texts, subjects=[*five, "Draft D", "Draft E"]) == ()
+    three = ["Draft A", "Draft B", "Draft C", "x", "y"]
+    assert learn_signature_lines(texts, subjects=[*three, "z"]) == ("jane example",)
+
+
+def test_learn_signature_lines_reads_the_last_ten_lines():
+    def text(lines_below):
+        return "Body.\nJane Example\n" + "\n".join(f"Line {k}" for k in range(lines_below))
+
+    # The line is the 10th non-blank line from the end: counted.
+    assert "jane example" in learn_signature_lines([text(9) + f" {i}" for i in range(5)])
+    # The 11th: not counted.
+    assert "jane example" not in learn_signature_lines([text(10) + f" {i}" for i in range(5)])
+
+
+def test_learn_signature_lines_rejects_a_lone_sentence():
+    sentence = "Let me know if you have questions."
+    lone = [f"Body {i} text here.\n\nUnique line {i}\n{sentence}" for i in range(5)]
+    assert learn_signature_lines(lone) == ()
+    # Under another learned line in at least half of its occurrences, it is
+    # part of the furniture.
+    under = [f"Body {i} text here.\n\nJane Example\n{sentence}" for i in range(3)]
+    under += [f"Body {i} text here.\n\nUnique line {i}\n{sentence}" for i in range(3, 5)]
+    assert learn_signature_lines(under) == ("jane example", sentence.lower())
+    # A label ending in ":" is treated the same way.
+    label = [f"Body {i} text here.\n\nUnique line {i}\nContact:" for i in range(5)]
+    assert learn_signature_lines(label) == ()
+
+
+def test_learned_lone_sentence_is_not_stripped_without_learning():
+    sentence = "Let me know if you have questions."
+    text = f"Body text here.\n\n{sentence}"
+    learned = learn_signature_lines([f"Body {i}.\n\nUnique {i}\n{sentence}" for i in range(5)])
+    assert clean_for_scoring(text, signature_lines=learned).text == text
+
+
+# --- parts and ignored_lines with evidence --------------------------------------------
+
+
+def test_parts_and_ignored_lines_follow_the_evidence_rules():
+    text = (
+        "Jane,\n"  # 0 greeting (addressee)
+        "\n"
+        "First answer here.\n"  # 2
+        "\n"
+        "Second answer here.\n"  # 4 part 2
+        "\n"
+        "Cheers,\n"  # 6
+        "Bob\n"  # 7 sender name
+        "Example University"  # 8 learned
+    )
+    result = clean_for_scoring(
+        text,
+        part_starts=(4,),
+        author_name="Bob Sender",
+        addressee_names=["Jane Doe"],
+        signature_lines=["Example University"],
+    )
+    assert result.text == "First answer here.\n\nSecond answer here."
+    assert result.ignored_lines == [0, 6, 7, 8]
+    assert result.parts == ["First answer here.", "Second answer here."]
+    kept = [i for i, line in enumerate(text.split("\n")) if line.strip()]
+    assert sorted(set(kept) - set(result.ignored_lines)) == [2, 4]
+
+
+def test_no_evidence_equals_explicit_none():
+    text = "Jane,\n\nText.\n\nCheers,\nBob\nExample University"
+    assert clean_for_scoring(text) == clean_for_scoring(
+        text, author_name=None, addressee_names=None, signature_lines=None
+    )
+    assert clean_for_scoring(text) == clean_for_scoring(
+        text, author_name="", addressee_names=[], signature_lines=[]
+    )

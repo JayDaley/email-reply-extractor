@@ -35,10 +35,12 @@ commit and release. Never edit the JSON under `conformance/` by hand.
   - `src/email_reply_extractor/` — package source (src layout)
     - `__init__.py` — the public API and `__version__`
     - `extraction.py` — stage 1 (`extract_new_text`) and `EXTRACTION_VERSION`
-    - `cleaning.py` — stage 2 (`clean_for_scoring`)
+    - `cleaning.py` — stage 2 (`clean_for_scoring`, `learn_signature_lines`)
     - `html_text.py` — `html_to_text` / `split_html_parts`, the HTML oracle
     - `equivalence.py` — `tolerant_lines` / `texts_equivalent`
-    - `_fragments.py` — the vendored email-reply-parser fragment scanner
+    - `_names.py` — display-name folding, tokens and sender-name lines
+      (stage-2 evidence)
+    - `_greetings.py` — the opening-greeting rules and word lists (stage 2)
   - `tests/` — pytest suite: unit tests, `corpus.py` (decodes the fixtures),
     `conformance_support.py` (the conformance file formats),
     `test_conformance.py` (committed data matches live output; vector replay),
@@ -51,10 +53,20 @@ commit and release. Never edit the JSON under `conformance/` by hand.
   - `tools/conformance.py` — generates and checks `conformance/`
   - `tools/check_sync.py` — version, `EXTRACTION_VERSION` and `LICENSE` sync
     across ports
+  - `tools/gen_fold_table.py` — generates the literal name-folding table in
+    `_names.py` (`--check` verifies the committed table)
 - `typescript/` — the TypeScript port (`package.json`, `src/extraction.ts`
   holds `EXTRACTION_VERSION`, `LICENSE` copy)
+  - `src/pyCompat.ts` — Python string, predicate, lower-casing (`pyLower`)
+    and `re` semantics
+  - `tools/generate_tables.py` — generates `src/unicodeTables.ts`,
+    `src/entities.ts` and `src/foldTable.ts` from the reference Python
 - `rust/` — the Rust port (`Cargo.toml`, `src/extraction.rs` holds
   `EXTRACTION_VERSION`, `LICENSE` copy)
+  - `src/pystr.rs` and `src/pyre.rs` — Python string, predicate,
+    lower-casing (`pystr::lower`) and `re` semantics
+  - `tools/gen_tables.py` — generates `src/unicode_tables.rs` (including
+    `FOLD_TABLE`) and `src/html_entities.rs` from the reference Python
 - `fixtures/` — the hand-labeled corpus of 28 messages (`<stem>.eml`,
   `expected/<stem>.txt`, `README.md`), shared by all ports
 - `conformance/` — generated, committed test data: `corpus.json`,
@@ -63,8 +75,9 @@ commit and release. Never edit the JSON under `conformance/` by hand.
 - `docs/` — `extraction.md` (the rules of both stages), `versioning.md` (the
   `EXTRACTION_VERSION` contract), `ports.md` (the port contract and the
   semantic hazards a porter must respect), `generation-5.md`,
-  `generation-7.md`, `generation-8.md` and `generation-9.md` (the output
-  changes of those generations, with their measured effect)
+  `generation-7.md`, `generation-8.md`, `generation-9.md` and
+  `generation-10.md` (the output changes of those generations, with their
+  measured effect)
 - `Makefile` — run from the root: `make test`, `make lint`, `make vectors`,
   `make check-vectors`, `make check-sync`, and per-port
   `make test-python|test-typescript|test-rust` and `lint-…` targets
@@ -90,10 +103,10 @@ measurements and rationale plainly.
 
 ## Extraction version
 
-`EXTRACTION_VERSION` (an integer, currently 9) identifies the generation of
+`EXTRACTION_VERSION` (an integer, currently 10) identifies the generation of
 the routine that derives an extraction's text: `extraction.py`, `cleaning.py`,
-`html_text.py` and `_fragments.py` taken together, and their counterparts in
-the ports. It is independent of the package version and is incremented
+`html_text.py`, `_names.py` and `_greetings.py` taken together, and their
+counterparts in the ports. It is independent of the package version and is incremented
 separately. It is declared in `python/src/email_reply_extractor/extraction.py`,
 `typescript/src/extraction.ts` and `rust/src/extraction.rs`, and recorded with
 the corpus digest in `conformance/digest.json`; `make check-sync` requires all
@@ -119,7 +132,7 @@ of them to agree.
 - Adding or removing a fixture moves the digest without changing the routine:
   `make vectors` re-records the digest and leaves the generation where it is.
   An edited `.eml` needs `python python/tools/conformance.py --rerecord-digest`.
-- Nine generations exist: **1** (initial release of the origin
+- Ten generations exist: **1** (initial release of the origin
   application), **2** (from its v1.2.0), **3** (from v1.11.0), **4** (from
   v1.15.0, the generation this package's v1.0.0 shipped), **5** (this
   package's v1.1.0: fragment edges kept, Outlook-boundary fix uncapped), **6**
@@ -130,35 +143,37 @@ of them to agree.
   `docs/generation-7.md`), **8** (v1.4.0: a `<blockquote>` whose parent
   carries Apple Mail's `Apple-Mail-URLShareWrapperClass` is the author's own
   text, and a message holding one derives its text from the HTML part; see
-  `docs/generation-8.md`) and **9** (v1.5.0: the parent-diff assist keeps a
+  `docs/generation-8.md`), **9** (v1.5.0: the parent-diff assist keeps a
   matched run that the message also carries inside its own marked quotation,
-  in a block that is mostly unmatched text; see `docs/generation-9.md`). The
-  corpus digest did not move in generation 9: no fixture exercises the rule,
-  which the unit tests and recorded vectors pin. The digest of each is listed in
-  `conformance/README.md`.
+  in a block that is mostly unmatched text; see `docs/generation-9.md`) and
+  **10** (v1.6.0: the vendored scanner, the pre-truncation and the over-strip
+  guard are removed, new stage-1 attribution, divider, wrap-remainder,
+  marking-mode and composed-signature rules are added, and stage 2 takes the
+  sender's and addressees' names and learned signature lines as evidence; see
+  `docs/generation-10.md`). The corpus digest did not move in generation 9: no
+  fixture exercises the rule, which the unit tests and recorded vectors pin.
+  The generation-10 rules that need evidence are likewise pinned only by unit
+  tests and vectors. The digest of each is listed in `conformance/README.md`.
 
-## The vendored scanner
+## The removed scanner
 
-`_fragments.py` is trimmed from `email-reply-parser` 0.5.12. Two upstream
-defects (a `count=8` cap on the Outlook-boundary fix; per-fragment edge
-stripping) were preserved through generation 4 and fixed in generation 5 —
-see `docs/generation-5.md`. A third (the collapsed "On … wrote:" header passed
-to `re.sub` as a replacement template, so backslash sequences in a body were
-rewritten, an invalid escape failed the extraction, and `\1` repeats
-amplified the output quadratically) was preserved through generation 6 and is
-fixed in generation 7: the collapsed header is inserted literally (pinned in
-`python/tests/test_port_hazards.py`). One upstream behavior remains and is
-deliberate: the wrapped-attribution collapse itself.
-`extraction.py`'s quote-header pre-truncation compensates for the collapse's
-line-gluing and must stay until the collapse itself is removed; that removal
-is deferred, with the measured evidence, in `docs/generation-5.md`. Any change
-to the scanner that can move output bytes is a generation bump with a digest
-re-record.
+Through generation 9 stage 1 ran `_fragments.py`, a fragment scanner trimmed
+from `email-reply-parser` 0.5.12, with a quote-header pre-truncation and an
+over-strip guard that compensated for its line joining and its truncation at
+`---` rules. Generation 10 removed all three (`docs/generation-10.md`;
+`docs/generation-5.md` records why the removal was deferred until then). The
+cleanup pass now runs on the whole normalized body, and five per-line rules
+cover what the scanner did that the cleanup pass did not: "--On … wrote:"
+attributions and wrapped start lines after `>` or `--`; wrapped attributions
+over up to 4 lines and 400 characters; the blank line before an Outlook
+boundary line; dividers on quote lines ignored; and an attribution followed by
+a quote line not ending the text at a sign-off boundary. Do not reintroduce a
+scanner; extend the line rules.
 
 ## Versioning
 
 The packages use [semantic versioning](https://semver.org/); the current
-version is **1.5.0**. The three ports always carry the same version. The
+version is **1.6.0**. The three ports always carry the same version. The
 sources are `__version__` in `python/src/email_reply_extractor/__init__.py`
 (`python/pyproject.toml` reads it dynamically), `version` in
 `typescript/package.json`, and `version` in `rust/Cargo.toml`; `make
@@ -217,6 +232,15 @@ changelog covers all three ports.
   stable Rust.
 - Keep the module split and function names parallel across ports, in each
   language's own casing (`docs/ports.md`).
+- The ports take Python's character data (whitespace, `\w`, `\d`, the
+  `str.is…()` predicates, `str.lower()` / `str.upper()`, `re.IGNORECASE`
+  equivalents, HTML entities, `_FOLD_TABLE`) from generated tables, never from
+  the runtime's Unicode functions. `_FOLD_TABLE` is generated by
+  `python/tools/gen_fold_table.py` (edit its ranges, not the table); after a
+  change to the fold table or to the Python version that generates
+  `conformance/`, run
+  `typescript/tools/generate_tables.py` and `rust/tools/gen_tables.py` with
+  that Python and commit the output (`docs/ports.md`, "Generated tables").
 - `make check-vectors` and `make check-sync` must pass before a commit.
 - The fixtures are real public IETF mail-archive messages. Their provenance
   requirements are in `fixtures/README.md`; do not add a fixture without

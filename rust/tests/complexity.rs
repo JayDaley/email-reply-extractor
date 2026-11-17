@@ -22,11 +22,12 @@
 use std::time::{Duration, Instant};
 
 use email_reply_extractor::internal::{
-    custom_clean, find_quote_header_block, is_attribution_line, read_fragments,
+    custom_clean, find_quote_header_block, is_attribution_line,
     strip_after_original_message_divider, strip_attribution_lines,
 };
 use email_reply_extractor::{
-    clean_for_scoring, clean_for_scoring_with_parts, extract_new_text, split_html_parts,
+    clean_for_scoring, clean_for_scoring_with_options, clean_for_scoring_with_parts,
+    extract_new_text, learn_signature_lines, split_html_parts, CleanOptions, CleanResult,
 };
 use email_reply_extractor::{strip_parent_content, strip_parent_content_with_quotation, Status};
 
@@ -115,7 +116,6 @@ fn localized_tags(n: usize) -> (String, String) {
 #[test]
 fn a1_multi_quote_header() {
     // The reference's lookahead was cubic (800 repeats took 1.2 s).
-    bounded(|| read_fragments(&"On ".repeat(4000)));
     bounded(|| extract_new_text(body(&format!("hello\n{}", "On ".repeat(4000))), None, None));
 }
 
@@ -125,7 +125,6 @@ fn a8_attribution_collapse_template() {
     // template; every "\1" expanded to the whole match, so the output was
     // quadratic in size (4,000 repeats built 32 MB).
     let header = format!("On {} wrote:", "\\1".repeat(60000));
-    bounded(|| read_fragments(&header));
     bounded(|| extract_new_text(body(&format!("hello\n{header}\n> q")), None, None));
 }
 
@@ -434,4 +433,304 @@ fn schrieb_and_mailing_list_next_to_multibyte() {
     assert_eq!((r.text.as_str(), r.ignored_lines), ("Body.", vec![2]));
     let r = extract_new_text(body("Hi\n\u{1f600}--Original Message--\nq"), None, None);
     assert_eq!((r.text.as_str(), r.status), ("Hi\n\u{1f600}", Status::Ok));
+}
+
+// --- generation 10: stage 1 (added with the rules; no earlier cost) ---------
+//
+// The generation-10 cases use the reference's input shapes. Where the
+// reference's size took more than about a second in a debug build, the
+// repeat count is reduced (to between a seventh and a half of it); every one
+// of these paths scales linearly in this port.
+
+fn extract(text: &str) {
+    bounded(|| extract_new_text(Some(text), None, None));
+}
+
+#[test]
+fn g10_wrapped_starts() {
+    // Wrapped attributions: every line a start line, each scanning the lines
+    // below.
+    extract(&format!("hello\n{}", "On a\n".repeat(50_000)));
+}
+
+#[test]
+fn g10_wrapped_starts_quoted() {
+    extract(&format!("hello\n{}", ">> On a\n".repeat(50_000)));
+}
+
+#[test]
+fn g10_generic_long_starts() {
+    // Generic attribution units: every colon line above a quote is tested,
+    // and each test reads the long start lines above it.
+    extract(&format!(
+        "hello\n{}",
+        format!("On {}\nb:\n> q\n", "a ".repeat(20_000)).repeat(30)
+    ));
+}
+
+#[test]
+fn g10_generic_units() {
+    extract(&format!(
+        "hello\n{}",
+        format!("{}\nend:\n> q\n", "from x".repeat(66)).repeat(3_000)
+    ));
+}
+
+#[test]
+fn g10_generic_email() {
+    // The e-mail cue over a run of word characters with no "@" (quadratic in
+    // the unit's 400 characters as one regex search in the reference).
+    extract(&format!(
+        "hello\n{}",
+        format!("{}:\n> q\n", "x".repeat(398)).repeat(1_200)
+    ));
+}
+
+#[test]
+fn g10_generic_at() {
+    extract(&format!(
+        "hello\n{}",
+        format!("{}:\n> q\n", "a@".repeat(199)).repeat(1_000)
+    ));
+}
+
+#[test]
+fn g10_generic_opener() {
+    // An attribution opener over a long dash run, above a unit's last line.
+    extract(&format!(
+        "hello\n{}x\nAna <a@b.co>:\n> q",
+        "-".repeat(400_000)
+    ));
+}
+
+#[test]
+fn g10_quote_marker_run() {
+    extract(&format!("hello\n{}x\nb:\n> q", ">".repeat(400_000)));
+}
+
+#[test]
+fn g10_signoffs() {
+    // Sign-off boundaries, each followed by a generic unit above a quote.
+    extract(&format!(
+        "hello\n{}",
+        "Best,\nAna\nBob <bob@example.org> said on Monday:\n> q\n".repeat(10_000)
+    ));
+}
+
+#[test]
+fn g10_remainders() {
+    // Wrap remainders between long quote lines.
+    extract(&format!(
+        "hello\n{}",
+        format!("> {}\nbc\n", "a".repeat(70)).repeat(15_000)
+    ));
+}
+
+#[test]
+fn g10_dividers_quoted() {
+    // Candidate dividers: quoted dividers, bare "Original" lines, a long
+    // "&nbsp;" run, and the inline note.
+    extract(&format!(
+        "inline\n{}x",
+        "> --- Original ---\n".repeat(50_000)
+    ));
+}
+
+#[test]
+fn g10_bare_original() {
+    extract(&format!("hello\n{}", "Original\n\n\n\nx\n".repeat(25_000)));
+}
+
+#[test]
+fn g10_divider_nbsp() {
+    extract(&format!(
+        "hello\n--{}Original{}x",
+        "&nbsp;".repeat(100_000),
+        " ".repeat(100_000)
+    ));
+}
+
+#[test]
+fn g10_divider_dashes() {
+    extract(&format!("hello\n{}", "-- Original ".repeat(100_000)));
+}
+
+#[test]
+fn g10_outlook_boundaries() {
+    bounded(|| custom_clean(&"a\n_______\n".repeat(50_000), true));
+}
+
+/// A parent of `n` three-line paragraphs, and a child in marking mode that
+/// copies each paragraph unmarked and answers it, then quotes every
+/// paragraph's first line after an attribution: `n` protected blocks, `n`
+/// runs, and `n` attributions above quote lines for the stop-line search.
+fn marking_runs(n: usize) -> (String, String) {
+    let paras: Vec<Vec<String>> = (0..n)
+        .map(|k| {
+            (0..3)
+                .map(|j| {
+                    let words: Vec<String> = (0..8).map(|i| format!("w{k}x{j}x{i}")).collect();
+                    format!("p{k} l{j} {}", words.join(" "))
+                })
+                .collect()
+        })
+        .collect();
+    let parent = paras
+        .iter()
+        .map(|p| p.join("\n"))
+        .collect::<Vec<_>>()
+        .join("\n\n");
+    let mut child = paras
+        .iter()
+        .enumerate()
+        .map(|(k, p)| format!("{}\n\nAnswer {k}.", p.join("\n")))
+        .collect::<Vec<_>>()
+        .join("\n\n");
+    child.push_str("\n\n");
+    for p in &paras {
+        child.push_str(&format!("Bob Jones said:\n> {}\n", p[0]));
+    }
+    (child, parent)
+}
+
+#[test]
+fn g10_marking_mode() {
+    // Parent-diff marking mode over many blocks and runs.
+    let (child, parent) = marking_runs(1_500);
+    bounded(|| extract_new_text(Some(&child), Some(&parent), None));
+}
+
+#[test]
+fn marking_runs_input_reaches_the_many_runs_guard() {
+    // Marking mode is on and the runs lose their protection: only the
+    // answers are left.
+    let (child, parent) = marking_runs(20);
+    let result = extract_new_text(Some(&child), Some(&parent), None);
+    let answers: Vec<String> = (0..20).map(|k| format!("Answer {k}.")).collect();
+    assert_eq!(result.text, answers.join("\n\n"));
+}
+
+// --- generation 10: stage 2 (sender-name, greeting and learned-line rules) ---
+
+/// The sender display name of the stage-2 cases.
+const AUTHOR: &str = "Jane Example";
+
+/// A distinct five-letter word for each `k` below 26**5.
+fn letter_word(k: usize) -> String {
+    (0..5)
+        .map(|i| char::from(b'a' + ((k / 26usize.pow(i)) % 26) as u8))
+        .collect()
+}
+
+fn clean_by(text: &str, author_name: &str) -> CleanResult {
+    let options = CleanOptions {
+        author_name: Some(author_name),
+        ..CleanOptions::default()
+    };
+    bounded(|| clean_for_scoring_with_options(text, &options))
+}
+
+#[test]
+fn s1_author_tokens() {
+    // A sender display name of many tokens: every name-like line was
+    // compared with every token (over 30 s in the reference).
+    let author: Vec<String> = (0..10_000).map(letter_word).collect();
+    clean_by(
+        &format!("hello\n{}", "Zzzq\n".repeat(10_000)),
+        &author.join(" "),
+    );
+}
+
+#[test]
+fn s2_name_tail_blanks() {
+    // A role-tail search restarted inside a long blank run of a name line.
+    clean_by(
+        &format!("hello\nJane{}x\nmore", " ".repeat(100_000)),
+        AUTHOR,
+    );
+}
+
+#[test]
+fn s3_paren_blanks() {
+    // The trailing-parenthesis search over a long blank run above a name
+    // line.
+    clean_by(
+        &format!("x{}y\nJane\nmore text here.", " ".repeat(100_000)),
+        AUTHOR,
+    );
+}
+
+#[test]
+fn s4_salutation_blanks() {
+    // A salutation followed by a long blank run.
+    clean_by(&format!("hello\nThanks{}x", " ".repeat(100_000)), AUTHOR);
+}
+
+#[test]
+fn s5_subject_prefixes() {
+    // Subject prefixes: repeated one-prefix substitution, and two adjacent
+    // blank runs around an optional "[n]" (both quadratic in the reference's
+    // earlier form).
+    let subject = format!("{}x", "Re: ".repeat(200_000));
+    bounded(|| learn_signature_lines(&["a\nJane"; 5], Some(&[subject.as_str(); 5])));
+}
+
+#[test]
+fn s5_subject_blanks() {
+    let subject = format!("Re{}x", " ".repeat(200_000));
+    bounded(|| learn_signature_lines(&["a\nJane"; 5], Some(&[subject.as_str(); 5])));
+}
+
+#[test]
+fn s6_name_lines() {
+    // Many name-like, salutation, learned and greeting lines, and a long
+    // non-blocking tail below a sender name: linear passes.
+    clean_by(
+        &format!("hello\n{}prose here.", "Jane\n".repeat(10_000)),
+        AUTHOR,
+    );
+}
+
+#[test]
+fn s6_salutation_lines() {
+    clean_by(&format!("hello\n{}", "Thanks,\n".repeat(4_000)), AUTHOR);
+}
+
+#[test]
+fn s6_learned_lines() {
+    let text = format!("hello\n{}", "Jane Example\n".repeat(15_000));
+    let options = CleanOptions {
+        signature_lines: &["Jane Example"],
+        ..CleanOptions::default()
+    };
+    bounded(|| clean_for_scoring_with_options(&text, &options));
+}
+
+#[test]
+fn s6_greeting_lines() {
+    let text = format!("{}body", "Hi,\n".repeat(50_000));
+    let options = CleanOptions {
+        addressee_names: &["Jane Doe"],
+        ..CleanOptions::default()
+    };
+    bounded(|| clean_for_scoring_with_options(&text, &options));
+}
+
+#[test]
+fn s6_footnote_tail() {
+    clean_by(
+        &format!(
+            "hello\nJane\n{}",
+            "[1] https://example.org/a\n".repeat(7_000)
+        ),
+        AUTHOR,
+    );
+}
+
+#[test]
+fn s6_learn_many_texts() {
+    let contacts: Vec<String> = (0..10).map(|k| format!("Contact {k}:")).collect();
+    let text = format!("body\n{}", contacts.join("\n"));
+    let texts = vec![text.as_str(); 20_000];
+    bounded(|| learn_signature_lines(&texts, None));
 }

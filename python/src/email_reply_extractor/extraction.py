@@ -1,12 +1,10 @@
 """New-text extraction: recover the author's *novel content* (stage 1 of 2).
 
-Strategy: **the ERP fragment scanner as the primary extractor, followed by a
-small custom cleanup pass.** "ERP" throughout this package refers to the
-scanner vendored from email-reply-parser into :mod:`._fragments`. Talon is not
-used. The public entry point is the pure function :func:`extract_new_text`,
-which takes a decoded ``text/plain`` body and returns an :class:`ExtractionResult`
-(``text``, ``method``, ``status``) with no I/O — so the quality tests run without
-a database.
+Strategy: **a line-based cleanup pass over the normalized body**, followed by
+an optional parent-diff assist. The public entry point is the pure function
+:func:`extract_new_text`, which takes a decoded ``text/plain`` body and returns
+an :class:`ExtractionResult` (``text``, ``method``, ``status``) with no I/O — so
+the quality tests run without a database.
 
 This module is **stage 1** of a two-stage pipeline. Stage 1 recovers everything
 the author put in the message that is *not* quoted or reproduced from elsewhere:
@@ -19,67 +17,90 @@ also reports what it removed so a consumer can show it. Keeping furniture in sta
 1 means the stored "extracted text" is the author's full novel content, and the
 scored text is a strict, documented subset of it.
 
-The custom pass fixes, in a general way, the cases where the raw ERP scan
-diverges from hand-labeled ground truth:
+The cleanup pass (:func:`custom_clean`, after
+:func:`_mark_generic_attributions`) applies these rules:
 
-- **Pre-normalization** strips a byte-order mark and zero-width characters and
-  converts CRLF/CR to LF *before* ERP runs. This alone lets ERP recognize a
-  leading ``>`` that a BOM would otherwise hide.
-- **ERP fragments, signatures kept**: the primary path joins ERP's fragments
-  that are not ``quoted`` — *including* fragments ERP labels ``signature`` — so a
-  signature block survives stage 1 (stage 2 removes it). This is the one place
-  stage 1 keeps more than upstream email-reply-parser's ``parse_reply`` would,
-  which hides signature fragments outright.
-- **Attribution lines** ("On <date>, X wrote:", "Name <a@b> wrote:", and the
-  German "Am <date> schrieb X:") are removed, including two-line-wrapped forms.
-  The pattern lists are structured so more languages are easy to add.
-- **Indented quote blocks** — lines that are optional whitespace then one or more
-  ``>`` (which ERP misses when the marker is not in column 0) — are dropped.
+- **Pre-normalization** strips a byte-order mark, zero-width characters and
+  U+0000 and converts CRLF/CR to LF, so a leading BOM cannot hide a ``>``
+  quote marker. U+0000 is reserved for marking generic attribution lines.
+- **Attribution lines** ("On <date>, X wrote:", also after "--"; "Name <a@b>
+  wrote:"; the German "Am <date> schrieb X:"; the Japanese "…のメール:") are
+  removed, including wrapped forms: a start line ("On", "Am", "Le", "El",
+  "El día" or a leading year, optionally after ``>`` markers and a "--")
+  whose terminator lands on one of the next 4 lines, with no blank line and
+  no complete attribution line between, within 400 characters (see
+  :func:`_wrapped_attribution_end`). The pattern lists are structured so more
+  languages are easy to add.
+- **Generic attribution lines**: a unit of one to three lines ending in a
+  colon, directly above a quote line (one blank line allowed between), is
+  removed when its text (at most 400 characters) carries a cue — an e-mail
+  address, or a clock time and a date, within 25 words — or ends in a speech
+  verb within 8 words ("Ana Lima said:", "I wrote:"). Document references
+  ("Section 2.3 says:", "OLD:"), lead-ins ("the following:", "what the draft
+  says:") and the fixed forms above are excluded (see the comment above
+  :func:`_generic_attribution_start`).
+- **Wrap remainders**: an unmarked line of at most 2 words that starts
+  lowercase, between two quote lines, below a quote line of at least 60
+  characters with no closing punctuation, is the tail of a re-wrapped quote
+  line and is removed with the quote (see :func:`_is_wrap_remainder`). A line
+  of 3 or more words stays.
+- **Indented quote blocks** — lines that are optional whitespace then one or
+  more ``>``, also after leader dots (``...>``) — are dropped.
 - **Sign-off boundary**: a salutation line ("Best," / "Cheers" / "Thanks," …)
-  plus a name line, directly followed by an attribution line, ends the new text —
-  everything after the name is the quoted message even when the client added no
-  ``>`` markers (Gmail-style fully top-posted replies, typical of AI-generated
-  mail). The name is required: a bare mid-thread "Thanks." never truncates. The
-  sign-off *itself* survives stage 1 (this rule removes only the quoted thread
-  the sign-off precedes); stage 2 strips the sign-off.
+  plus a name line, directly followed by an attribution (a fixed form, a
+  wrapped form or a generic attribution unit) that is *not* followed by a
+  quote line, ends the new text — everything after the name is the quoted
+  message even when the client added no ``>`` markers (Gmail-style fully
+  top-posted replies, typical of AI-generated mail). The name is required: a
+  bare mid-thread "Thanks." never truncates. An attribution followed by a
+  quote line heads an interleaved quote, so the inline replies below it are
+  kept. The sign-off *itself* survives stage 1 (this rule removes only the
+  quoted thread the sign-off precedes); stage 2 strips the sign-off.
 - **Forwarded / quote-header blocks**: an Outlook-style ``From:``/``Sent:``/
   ``To:``/``Subject:`` block introducing quoted content with no ``>`` markers,
   and everything after it, is dropped. Localized label sets are recognized too
   (German; Chinese 发件人/发送时间/收件人/主题 with full-width colons, as
   produced by Alibaba Mail and Chinese Outlook), along with the dashed divider
-  Alibaba Mail draws above the block. Latin-script localized blocks open with
+  Alibaba Mail draws above the block and the bare "Original" line QQ Mail
+  draws there. Latin-script localized blocks open with
   ``De``/``Da``/``Van``/``Von`` (French, Spanish, Portuguese, Italian, Dutch,
   German), accept U+00A0 / U+202F around the colon (``De\xa0: …``), and must
   carry their language's subject label. A message whose author answers inline,
   with tagged lines, below such a block keeps the generation-5 treatment (see
-  :func:`_localized_inline_reply`). The truncation runs on the intact body
-  *before* ERP: re-joining ERP's edge-stripped fragments can glue a signature
-  line (``Tel:``/``Email:``) directly above the block's ``From:``, which would
-  otherwise disguise the block as pasted header evidence. When the ``From:``
-  line carries an address, the block is also recognized in the two mangled
-  renderings archives produce — folded header lines that lost their leading
-  whitespace, and a blank line between every field.
+  :func:`_localized_inline_reply`). When the ``From:`` line carries an
+  address, the block is also recognized in the two mangled renderings
+  archives produce — folded header lines that lost their leading whitespace,
+  and a blank line between every field.
 - **"Original message" dividers**: the dashed ``-------- Original message
-  --------`` (or ``-----Original Message-----`` / "Forwarded message", and the
-  Chinese and Latin-script localized forms such as ``-----Message d'origine-----``)
-  divider and everything after it is dropped — including when HTML-to-text conversion
-  glues the divider mid-line onto the author's last sentence, where only the
-  author's prefix before the divider is kept.
-- **Over-strip guard**: dashed-separator digest bodies make ERP treat the ``---``
-  rule as a signature boundary and truncate. When ERP keeps far fewer of the
-  body's plainly-unquoted lines than the body actually has, we discard the ERP
-  output and run the custom cleanup on the whole body instead.
+  --------`` (or ``-----Original Message-----`` / "Forwarded message", the
+  Chinese and Latin-script localized forms such as ``-----Message
+  d'origine-----``, and the short ``--- Original ---`` / ``--- Original
+  Messages ---`` / ``--- 邮件原文 ---`` forms) divider and everything after it
+  is dropped — including when HTML-to-text conversion glues the divider
+  mid-line onto the author's last sentence, where only the author's prefix
+  before the divider is kept. A divider on a quote line is quoted content and
+  is ignored. A bare "Original" line above a ``From:`` line counts as a
+  divider. The short forms are ignored below a line that says the author
+  answers "inline" (see :func:`strip_after_original_message_divider`).
+- **Outlook boundary lines**: a blank line is inserted between a non-empty line
+  and a ``_______`` / ``-------`` line (an optional space, then 7 or more
+  underscores or hyphens) directly below it.
 - **Parent-diff assist** (optional): when the reply's thread parent is available,
-  the caller passes ``parent_body`` and — *after* the guard has resolved the
-  chosen text — any content that provably came from the parent is removed. This
-  catches fully top-posted replies whose quoted previous message carries no
-  ``>`` markers at all (so the quote/attribution/header filters see nothing to
-  drop), using a line-level alignment around the longest common run of lines
-  and an exact substring index over the parent as an evidence-based backstop.
-  A matched run that the message also carries inside its own marked quotation,
-  in a block that is mostly unmatched text, is kept.
-  See :func:`strip_parent_content`; it adds the ``"+parent-diff"`` method
-  suffix.
+  the caller passes ``parent_body`` and — after the cleanup pass — any content
+  that provably came from the parent is removed. This catches fully top-posted
+  replies whose quoted previous message carries no ``>`` markers at all (so the
+  quote/attribution/header filters see nothing to drop), using a line-level
+  alignment around the longest common run of lines and an exact substring
+  index over the parent as an evidence-based backstop. A matched run that the
+  message also carries inside its own marked quotation, in a block that is
+  mostly unmatched text, is kept. In *marking mode* — at least 3 quote-marked
+  lines of at least 4 words that the parent holds at a smaller quote depth —
+  unmarked parent text in a block with no quote line, above any attribution
+  that introduces unmarked text, is the author's (a pasted OLD/NEW block, a
+  re-sent paragraph) and is kept, unless 8 or more such kept runs of more than
+  2 lines show a point-by-point answer to an unmarked copy of the parent. See
+  :func:`strip_parent_content` and the marking-mode comment; it adds the
+  ``"+parent-diff"`` method suffix.
 
 HTML as a structural oracle (optional ``html_body``)
 ----------------------------------------------------
@@ -90,7 +111,7 @@ visible so it is auditable downstream:
 a. **HTML-only** — the plain body is missing or blank but an HTML part exists:
    the HTML's novel text (:func:`~html_text.split_html_parts`) becomes the body
    for the normal stage-1 pipeline, and the method is prefixed ``html-`` (e.g.
-   ``html-erp+custom``).
+   ``html-custom``).
 b. **Degenerate plain fallback** — the plain body survived but is flattened
    (fewer than 4 non-blank lines, at least one over 400 chars) and the HTML
    novel text has at least 3× as many non-blank lines: the HTML path (a) is used
@@ -140,7 +161,7 @@ and treat a row as stale when its stamp is *lower* than the running value (see
 releases that do not touch the pipeline leave it alone.
 
 Bump it by one — by hand, in the same commit — whenever a change to this module,
-:mod:`cleaning`, :mod:`html_text` or :mod:`._fragments` can alter the stage-1 or
+:mod:`cleaning` or :mod:`html_text` can alter the stage-1 or
 stage-2 output, including a whitespace-only difference. Do not bump it for comments,
 docstrings, type annotations or refactors that provably keep every output byte
 identical; ``conformance/digest.json`` pins the composite output of the whole
@@ -164,7 +185,15 @@ the parent-diff aligned-run rule aligns around the longest common run of lines
 instead of ``difflib.SequenceMatcher``, and the vendored scanner inserts the
 collapsed attribution header literally (v1.3.0); **8** a ``<blockquote>`` whose
 parent carries Apple Mail's ``Apple-Mail-URLShareWrapperClass`` is novel, not
-quoted, and a message holding one derives its text from the HTML part (v1.4.0).
+quoted, and a message holding one derives its text from the HTML part (v1.4.0);
+**9** the parent-diff assist keeps a matched run that the message also carries
+inside its own marked quotation, in a block that is mostly unmatched text
+(v1.5.0); **10** the vendored fragment scanner, the quote-header
+pre-truncation and the over-strip guard are removed and the cleanup pass runs
+on the whole body, with generic attribution lines, wrap remainders, the short
+"Original" dividers, the Outlook boundary rule, the parent-diff marking mode and
+the composed-signature HTML containers, together with that generation's
+changes to :mod:`cleaning` (v1.6.0).
 """
 
 from __future__ import annotations
@@ -172,16 +201,15 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from ._fragments import read_fragments
 from .html_text import html_to_text, split_html_parts
 
 # --- generation stamp -----------------------------------------------------------
 
-#: The generation of the text-deriving routine (this module, :mod:`cleaning`,
-#: :mod:`html_text` and :mod:`._fragments` together). Hand-incremented; see the
-#: module docstring for when and why. Consumers stamp stored derived text with
-#: it and compare with ``<``, so it must only ever increase.
-EXTRACTION_VERSION: int = 9
+#: The generation of the text-deriving routine (this module, :mod:`cleaning` and
+#: :mod:`html_text` together). Hand-incremented; see the module docstring for
+#: when and why. Consumers stamp stored derived text with it and compare with
+#: ``<``, so it must only ever increase.
+EXTRACTION_VERSION: int = 10
 
 # --- result -------------------------------------------------------------------
 
@@ -204,15 +232,12 @@ class ExtractionResult:
 
     - ``text``: the author's newly written text, furniture included (may be
       empty).
-    - ``method``: which path produced it — ``"none"`` (no body), ``"erp"``
-      (email-reply-parser output needed no cleanup), ``"erp+custom"`` (ERP plus
-      the custom pass), ``"custom-fallback"`` (over-strip guard fired; custom
-      pass on the whole body), or ``"failed"``. When a thread parent was supplied
-      and the parent-diff assist removed content, ``"+parent-diff"`` is appended
-      to whichever of the above produced the text (e.g. ``"erp+parent-diff"``).
-      When the text was derived from the HTML part (HTML-only, degenerate-plain
-      fallback or Share-sheet container) the method is **prefixed** ``"html-"``
-      (e.g. ``"html-erp+custom"``);
+    - ``method``: which path produced it — ``"none"`` (no body), ``"custom"``
+      (the cleanup pass), or ``"failed"``. When a thread parent was supplied
+      and the parent-diff assist removed content, ``"+parent-diff"`` is
+      appended (``"custom+parent-diff"``). When the text was derived from the
+      HTML part (HTML-only, degenerate-plain fallback or Share-sheet container)
+      the method is **prefixed** ``"html-"`` (e.g. ``"html-custom"``);
       when the HTML quoted-text oracle removed content from a plain extraction,
       ``"+html-quote"`` is appended.
     - ``status``: one of :data:`STATUS_OK`, :data:`STATUS_EMPTY`,
@@ -237,18 +262,19 @@ class ExtractionResult:
 # --- pre-normalization --------------------------------------------------------
 
 #: Characters removed before parsing: BOM / zero-width space / zero-width
-#: non-joiner / zero-width joiner / word-joiner.
+#: non-joiner / zero-width joiner / word-joiner. U+0000 is removed as well (see
+#: :data:`_GENERIC_ATTRIBUTION_MARK`).
 _ZERO_WIDTH = "﻿​‌‍⁠"
 _ZERO_WIDTH_RE = re.compile(f"[{_ZERO_WIDTH}]")
 
 
 def normalize_body(body: str) -> str:
-    """Normalize line endings and strip BOM / zero-width characters.
+    """Normalize line endings and strip BOM / zero-width characters and U+0000.
 
-    Runs before email-reply-parser so a leading BOM cannot hide a ``>`` quote
+    Runs before the cleanup pass so a leading BOM cannot hide a ``>`` quote
     marker (the documented ``interleaved-bom`` fixture).
     """
-    body = body.replace("\r\n", "\n").replace("\r", "\n")
+    body = body.replace("\r\n", "\n").replace("\r", "\n").replace("\x00", "")
     return _ZERO_WIDTH_RE.sub("", body)
 
 
@@ -282,10 +308,11 @@ def is_quote_line(line: str) -> bool:
 # Each is decided by a linear helper that accepts exactly the strings the
 # original pattern (given in its docstring) accepts under ``re.match``.
 _ATTRIBUTION_RES = (
-    # English: "On <date>, <who> wrote:". No word boundary before "wrote" —
-    # ERP unwraps a line-wrapped attribution by deleting the newline, which can
-    # glue the author's address straight onto it ("…example.comwrote:").
-    re.compile(r"^[ \t]*On\b.*wrote:[ \t]*$"),
+    # English: "On <date>, <who> wrote:", also after a "--" ("--On <date>
+    # <who> wrote:"). No word boundary before "wrote": a line-wrapped
+    # attribution unwrapped by deleting the newline glues the author's address
+    # straight onto it ("…example.comwrote:").
+    re.compile(r"^[ \t]*(?:--)?On\b.*wrote:[ \t]*$"),
     # Japanese (Spark / Apple Mail): "2026年7月22日 18:12 +0900、<who>のメール:"
     # ("mail from <who>"). Anchored on a leading year so prose mentioning
     # someone's mail never matches.
@@ -367,9 +394,16 @@ def _is_german_attribution(line: str) -> bool:
     return schrieb is not None and body.endswith(":") and len(body) - 1 >= schrieb.end()
 
 
-# For two-line-wrapped attributions: a start token and a terminator that may
-# appear on the following line(s). Structured per language for easy extension.
-_ATTRIBUTION_START_RE = re.compile(r"^[ \t]*(?:(?:On|Am|Le|El|El día)\b|\d{4}(?:年|[/.-]))")
+# For wrapped attributions: a start token, optionally after ``>`` markers and
+# blanks and then a "--", and a terminator that may appear on the following
+# lines. Structured per language for easy extension.
+_ATTRIBUTION_START_RE = re.compile(r"^[ \t>]*(?:--)?(?:(?:On|Am|Le|El|El día)\b|\d{4}(?:年|[/.-]))")
+#: A wrapped attribution's terminator lies on one of this many lines below its
+#: start line ...
+_WRAPPED_ATTRIBUTION_MAX_LINES = 4
+#: ... and the lines from the start line through the terminator line hold at
+#: most this many characters in total.
+_WRAPPED_ATTRIBUTION_MAX_CHARS = 400
 #: The terminators, except ``\bschrieb\b.*:``, which :func:`_has_attribution_end`
 #: decides separately: under ``search`` the engine retried ``.*:`` from every
 #: "schrieb", which is quadratic. The remaining alternatives are literals, or
@@ -399,23 +433,40 @@ def _has_attribution_end(line: str) -> bool:
 
 
 def is_attribution_line(line: str) -> bool:
-    """True if ``line`` on its own is a complete attribution line."""
+    """True if ``line`` on its own is a complete attribution line, or a line of a
+    generic attribution unit marked by :func:`_mark_generic_attributions`."""
     return (
-        any(pat.match(line) for pat in _ATTRIBUTION_RES)
+        line.startswith(_GENERIC_ATTRIBUTION_MARK)
+        or any(pat.match(line) for pat in _ATTRIBUTION_RES)
         or _is_address_attribution(line)
         or _is_german_attribution(line)
     )
 
 
 def _wrapped_attribution_end(lines: list[str], i: int) -> int | None:
-    """If ``lines[i]`` opens a wrapped attribution — a start line ("On …" /
-    "Am …") whose terminator ("wrote:" / "schrieb …:") lands on the next line or
-    two, with no blank between — return the terminator line's index, else None.
+    """If ``lines[i]`` opens a wrapped attribution, return the index of its
+    terminator line, else ``None``.
+
+    A wrapped attribution is a start line (:data:`_ATTRIBUTION_START_RE`: "On …",
+    "Am …", "Le …", "El …", a leading year, optionally after ``>`` markers and a
+    "--") without a terminator of its own, followed by the first line ``j``
+    within :data:`_WRAPPED_ATTRIBUTION_MAX_LINES` lines that holds a terminator
+    ("wrote:", "schrieb …:", "a écrit :", "escribió:", "のメール:"), where no
+    line from ``i + 1`` through ``j`` is blank or is itself a complete
+    attribution line that matches :data:`_ATTRIBUTION_START_RE`, and the lines
+    ``i`` through ``j`` hold at most :data:`_WRAPPED_ATTRIBUTION_MAX_CHARS`
+    characters in total.
     """
     if not _ATTRIBUTION_START_RE.match(lines[i]) or _has_attribution_end(lines[i]):
         return None
-    for j in range(i + 1, min(i + 3, len(lines))):
+    total = len(lines[i])
+    for j in range(i + 1, min(i + 1 + _WRAPPED_ATTRIBUTION_MAX_LINES, len(lines))):
         if not lines[j].strip():
+            return None
+        total += len(lines[j])
+        if total > _WRAPPED_ATTRIBUTION_MAX_CHARS:
+            return None
+        if _ATTRIBUTION_START_RE.match(lines[j]) and is_attribution_line(lines[j]):
             return None
         if _has_attribution_end(lines[j]):
             return j
@@ -423,7 +474,8 @@ def _wrapped_attribution_end(lines: list[str], i: int) -> int | None:
 
 
 def strip_attribution_lines(lines: list[str]) -> list[str]:
-    """Drop attribution lines, including forms wrapped across up to two lines."""
+    """Drop attribution lines, wrapped forms and marked generic attribution
+    lines included."""
     out: list[str] = []
     i = 0
     n = len(lines)
@@ -438,6 +490,306 @@ def strip_attribution_lines(lines: list[str]) -> list[str]:
         out.append(lines[i])
         i += 1
     return out
+
+
+# --- generic attribution lines ------------------------------------------------
+#
+# Clients introduce a quote with many wordings the fixed forms above do not
+# list ("Le 3 mars 2026 à 10:15, Ana <ana@example.org> a écrit :", "Ana Lima
+# said:"). A *generic attribution unit* is one to three lines, the last ending
+# in a colon, whose text names its source by a cue (an e-mail address, or a
+# clock time and a date) or ends in a speech verb. A unit directly above a
+# quote line, with at most one blank line between, is removed with the
+# attribution lines; a unit with no quote line below can end the new text at a
+# sign-off boundary (see :func:`find_signoff_boundary`).
+#
+# The unit ending at line ``e`` (:func:`_generic_attribution_start`):
+#
+# 1. Line ``e``, without trailing whitespace, ends in ":" or "：" (U+FF1A); it
+#    is not a quote line and holds at most _GENERIC_ATTRIBUTION_MAX_CHARS
+#    characters.
+# 2. Line ``e`` is neither the terminator of a wrapped attribution starting
+#    on one of the _WRAPPED_ATTRIBUTION_MAX_LINES lines above it, nor a
+#    complete attribution line that matches _ATTRIBUTION_START_RE. Those are
+#    fixed forms.
+# 3. The unit extends upward over at most two more lines. The line above the
+#    unit's first line joins when it is neither blank nor a quote line and the
+#    unit's first line reads as its continuation (:func:`_continues`).
+# 4. A one-line unit that is an attribution line of a fixed form is left to the
+#    fixed forms.
+# 5. The unit's lines, stripped and joined by single spaces, are its *text*,
+#    which holds at most _GENERIC_ATTRIBUTION_MAX_CHARS characters. Its *head*
+#    is the text without the final colon and without trailing spaces, tabs and
+#    U+00A0. The head is not empty, does not open with a document reference
+#    (_DOCUMENT_REFERENCE_RE), and does not end in a URL, "as follows",
+#    "following" or "below" (_LEAD_IN_TAIL_RE). The unit is an attribution when
+#    either holds:
+#    - cue: the head has at most _CUE_ATTRIBUTION_MAX_WORDS words and holds an
+#      e-mail address (:func:`_has_email_address`), or both a clock time
+#      (_CLOCK_TIME_RE) and a date (_DATE_CUE_RE);
+#    - speech verb: the head has at most _VERB_ATTRIBUTION_MAX_WORDS words,
+#      ends in a speech verb (_SPEECH_VERB_RE), holds no word that introduces
+#      quoted content rather than a person ("it", "this", "section", …), and
+#      does not open with a bullet (_CONTENT_LEAD_IN_RE). "I wrote:" and "Ana
+#      wrote:" qualify; "Section 2.3 says:" and "the text said:" do not.
+#
+# The unit's text is tested only when it holds at most
+# _GENERIC_ATTRIBUTION_MAX_CHARS characters, which bounds the backtracking of
+# the patterns above. Every other step reads a bounded number of lines around
+# ``e``, so testing every line of a body is linear in its size.
+
+#: The longest generic attribution unit, and its last line, in characters.
+_GENERIC_ATTRIBUTION_MAX_CHARS = 400
+#: The most words a head with a cue may hold.
+_CUE_ATTRIBUTION_MAX_WORDS = 25
+#: The most words a head ending in a speech verb may hold.
+_VERB_ATTRIBUTION_MAX_WORDS = 8
+#: The character before the "@" of an e-mail address, and the domain after it.
+_EMAIL_LOCAL_CHAR_RE = re.compile(r"[\w.+=-]")
+_EMAIL_DOMAIN_RE = re.compile(r"[\w-]+(?:\.[\w-]+)+")
+#: A clock time: "9:30", "19:30", "19h30".
+_CLOCK_TIME_RE = re.compile(r"(?<!\d)\d{1,2}(?::\d{2}|h\d{2}\b)")
+#: A date cue: a four-digit year from 1900 to 2099, a day and month ("3/12",
+#: "3.12", "3-12"), a CJK month ("3月"), or a day and month with dots ("3. 12.").
+_DATE_CUE_RE = re.compile(
+    r"(?<!\d)(?:19|20)\d{2}(?!\d)|(?<![\d.])\d{1,2}[./-]\d{1,2}(?!\d)|\d{1,2}月|\d{1,2}\.\s?\d{1,2}\."
+)
+#: The opening of an attribution whose rest wraps onto the next line: "On",
+#: "-On", "--On", "Le", "Am", "El", "Il", "Op", "Den", "Ar", "At", "In", "Em",
+#: "Dne", "W dniu", "Pe", "Às", or a digit.
+_ATTRIBUTION_OPENER_RE = re.compile(
+    r"^[ \t]*(?:-*On|Le|Am|El|Il|Op|Den|Ar|At|In|Em|Dne|W dniu|Pe|Às|\d)\b"
+)
+#: A head that opens with a document reference, optionally after "(":
+#: section, sec., §, figure, fig., table, appendix, RFC, OLD, NEW, CURRENT,
+#: PROPOSED.
+_DOCUMENT_REFERENCE_RE = re.compile(
+    r"^[ \t]*(?:\(?(?:sections?|sec\.|§|figures?|fig\.|tables?|appendix|rfc|old|new|current"
+    r"|proposed)\b)",
+    re.IGNORECASE,
+)
+#: A head that ends in a URL or in a phrase announcing text below.
+_LEAD_IN_TAIL_RE = re.compile(
+    r"(?:https?://|www\.)\S*$|\b(?:as follows|following|below)$", re.IGNORECASE
+)
+#: A speech verb at the end of a head, in English, German, French, Spanish,
+#: Italian, Dutch, Scandinavian, Finnish, Polish, Portuguese, Welsh, Russian,
+#: Chinese and Korean. Applied to the last _SPEECH_VERB_SPAN characters of
+#: the head, which hold every alternative.
+_SPEECH_VERB_RE = re.compile(
+    r"(?:\b(?:wrote|writes|said|schrieb|schreibt|[ée]crit|escribi[óo]|escribe|scritto|scrisse"
+    r"|scrive|schreef|schrijft|skrev|skriver|kirjoitti|napisa[łl]a?|escreveu|ysgrifennodd"
+    r"|написал|написала|пишет)|写道|寫道|쓴[ \t]*글)$",
+    re.IGNORECASE,
+)
+_SPEECH_VERB_SPAN = 24
+#: A head that introduces quoted content rather than a person: a word such as
+#: "it", "this", "that", "what", "text", "draft", "document", "spec",
+#: "section", "rfc", "paragraph" or "figure", or a leading bullet.
+_CONTENT_LEAD_IN_RE = re.compile(
+    r"\b(?:it|this|that|what|text|draft|document|spec|section|rfc|paragraph|figure)\b"
+    r"|^[ \t]*[*•-]",
+    re.IGNORECASE,
+)
+
+#: Prefixed to every line of a generic attribution unit found above a quote
+#: line (see :func:`_mark_generic_attributions`). The marked line keeps its
+#: place, so the searches for a quote-header block, a divider and a sign-off
+#: boundary see the body's line sequence; the line rules anchored at the start
+#: of a line do not match it, and :func:`is_attribution_line` accepts it, so
+#: :func:`strip_attribution_lines` removes it. :func:`normalize_body` removes
+#: U+0000 from every body, so no other line carries it.
+_GENERIC_ATTRIBUTION_MARK = "\x00"
+
+
+def _has_email_address(text: str) -> bool:
+    """``re.search(r"[\\w.+=-]+@[\\w-]+(?:\\.[\\w-]+)+", text)``, linear.
+
+    The pattern matches when some "@" has a character of ``[\\w.+=-]`` directly
+    before it and the domain pattern matches directly after it. The domain
+    match from one "@" stops at the next "@", so testing every "@" reads each
+    character a bounded number of times; ``search`` retried the local part from
+    every character of a long run of word characters, which is quadratic.
+    """
+    at = text.find("@")
+    while at >= 0:
+        if (
+            at > 0
+            and _EMAIL_LOCAL_CHAR_RE.match(text, at - 1)
+            and _EMAIL_DOMAIN_RE.match(text, at + 1)
+        ):
+            return True
+        at = text.find("@", at + 1)
+    return False
+
+
+def _continues(above: str, line: str) -> bool:
+    """True when ``line`` reads as the wrapped continuation of ``above``.
+
+    That is when the first non-blank character of ``line`` is lowercase
+    (``str.islower``), is not a letter (``str.isalpha``), or lies in U+3000 to
+    U+D7AF (CJK and Hangul); or when ``above``, without trailing whitespace,
+    does not end in ".", "!", "?" or ":" and opens like an attribution
+    (:data:`_ATTRIBUTION_OPENER_RE`).
+    """
+    first = line.lstrip()[:1]
+    if first and (first.islower() or not first.isalpha() or "　" <= first <= "힯"):
+        return True
+    tail = above.rstrip()
+    return bool(tail) and tail[-1] not in ".!?:" and _ATTRIBUTION_OPENER_RE.match(above) is not None
+
+
+def _unit_start(lines: list[str], e: int) -> int:
+    """The first line of the generic attribution unit whose last line is
+    ``lines[e]``: up to two lines above it join (step 3 of the rules above)."""
+    s = e
+    while s > e - 2 and s > 0:
+        above = lines[s - 1]
+        if not above.strip() or is_quote_line(above) or not _continues(above, lines[s]):
+            break
+        s -= 1
+    return s
+
+
+def _is_generic_attribution_text(text: str) -> bool:
+    """Step 5 of the rules above, for a unit's ``text`` ending in a colon."""
+    if len(text) > _GENERIC_ATTRIBUTION_MAX_CHARS:
+        return False
+    head = text[:-1].rstrip(" \t ")
+    if not head or _DOCUMENT_REFERENCE_RE.match(head) or _LEAD_IN_TAIL_RE.search(head):
+        return False
+    words = len(head.split())
+    if words <= _CUE_ATTRIBUTION_MAX_WORDS and (
+        _has_email_address(head) or (_CLOCK_TIME_RE.search(head) and _DATE_CUE_RE.search(head))
+    ):
+        return True
+    return (
+        words <= _VERB_ATTRIBUTION_MAX_WORDS
+        and _SPEECH_VERB_RE.search(head[-_SPEECH_VERB_SPAN:]) is not None
+        and not _CONTENT_LEAD_IN_RE.search(head)
+    )
+
+
+def _generic_attribution_start(lines: list[str], e: int) -> int | None:
+    """The first line of the generic attribution unit whose last line is
+    ``lines[e]``, or ``None`` when no unit ends there (see the rules above)."""
+    line = lines[e]
+    if (
+        not line.rstrip().endswith((":", "："))
+        or is_quote_line(line)
+        or len(line) > _GENERIC_ATTRIBUTION_MAX_CHARS
+    ):
+        return None
+    for k in range(max(0, e - _WRAPPED_ATTRIBUTION_MAX_LINES), e):
+        if _wrapped_attribution_end(lines, k) == e:
+            return None
+    if _ATTRIBUTION_START_RE.match(line) and is_attribution_line(line):
+        return None
+    s = _unit_start(lines, e)
+    if s == e and is_attribution_line(line):
+        return None
+    if not _is_generic_attribution_text(" ".join(x.strip() for x in lines[s : e + 1])):
+        return None
+    return s
+
+
+# --- wrap remainders ----------------------------------------------------------
+#
+# A client that re-wraps a quote at a narrower width without marking the new
+# lines leaves the tail of a long quote line as a short unmarked line between
+# two quote lines ("> … the working group has" / "consensus" / "> on …"). Such a
+# line is a *wrap remainder* and is treated as a quote line when all hold:
+#
+# - the lines directly above and below it are quote lines;
+# - the line above, without trailing whitespace, holds at least
+#   _WRAP_REMAINDER_MIN_ABOVE characters and does not end in ".", "?", "!",
+#   ":", ";", ")" or '"';
+# - the line holds at most _WRAP_REMAINDER_MAX_WORDS words, its first
+#   non-blank character is lowercase (``str.islower``), and it does not open
+#   with an answer word or a URL (_ANSWER_WORD_RE).
+#
+# A line of three or more words, or one that opens uppercase, is left as the
+# author's: inline answers between quoted lines take those shapes.
+
+_WRAP_REMAINDER_MIN_ABOVE = 60
+_WRAP_REMAINDER_MAX_WORDS = 2
+#: An answer word or a URL at the start of a line.
+_ANSWER_WORD_RE = re.compile(
+    r"^(?:ok(?:ay)?|yes|yep|no|nope|agreed?|done|sure|fine|ack|right|true|correct|see|thanks?"
+    r"|https?://|www\.)\b",
+    re.IGNORECASE,
+)
+
+
+def _is_wrap_remainder(above: str, line: str, below: str) -> bool:
+    """True when ``line``, between ``above`` and ``below``, is a wrap remainder."""
+    text = line.strip()
+    if not text or is_quote_line(line) or not is_quote_line(above) or not is_quote_line(below):
+        return False
+    tail = above.rstrip()
+    if len(tail) < _WRAP_REMAINDER_MIN_ABOVE or len(text.split()) > _WRAP_REMAINDER_MAX_WORDS:
+        return False
+    if not text[0].islower() or _ANSWER_WORD_RE.match(text):
+        return False
+    return tail[-1] not in '.?!:;)"'
+
+
+def _mark_generic_attributions(text: str) -> str:
+    """Mark the generic attribution units and wrap remainders of ``text``.
+
+    Every line of a generic attribution unit whose last line is followed by a
+    quote line, directly or after one blank line, is prefixed with
+    :data:`_GENERIC_ATTRIBUTION_MARK`; a wrap remainder is prefixed with
+    ``"> "`` instead (a line that is both is a wrap remainder). Each unit and
+    remainder is decided on the unmarked lines. The line count is unchanged.
+    """
+    lines = text.split("\n")
+    n = len(lines)
+    prefix = [""] * n
+    for e in range(n):
+        j = e + 1
+        if j < n and not lines[j].strip():
+            j += 1
+        if j >= n or not is_quote_line(lines[j]):
+            continue
+        start = _generic_attribution_start(lines, e)
+        if start is not None:
+            for k in range(start, e + 1):
+                prefix[k] = _GENERIC_ATTRIBUTION_MARK
+    for i in range(1, n - 1):
+        if _is_wrap_remainder(lines[i - 1], lines[i], lines[i + 1]):
+            prefix[i] = "> "
+    return "\n".join(p + line for p, line in zip(prefix, lines))
+
+
+def _attribution_end_at(lines: list[str], k: int) -> int | None:
+    """The last line of an attribution that starts at ``lines[k]``, or ``None``.
+
+    The attribution is, in order of precedence: a run of marked generic
+    attribution lines (to the last consecutive marked line); a complete
+    attribution line (``k`` itself); a wrapped attribution
+    (:func:`_wrapped_attribution_end`); or a generic attribution unit that
+    starts at ``k``, whether or not a quote line follows it. For the last, the
+    first line ending in a colon among ``lines[k]`` and the two lines below it
+    must be the unit's last line, and no line before it may be blank or a
+    quote line.
+    """
+    if lines[k].startswith(_GENERIC_ATTRIBUTION_MARK):
+        e = k
+        while e + 1 < len(lines) and lines[e + 1].startswith(_GENERIC_ATTRIBUTION_MARK):
+            e += 1
+        return e
+    if is_attribution_line(lines[k]):
+        return k
+    end = _wrapped_attribution_end(lines, k)
+    if end is not None:
+        return end
+    for e in range(k, min(k + 3, len(lines))):
+        if not lines[e].strip() or is_quote_line(lines[e]):
+            return None
+        if lines[e].rstrip().endswith((":", "：")):
+            return e if _generic_attribution_start(lines, e) == k else None
+    return None
 
 
 # --- sign-off boundary ----------------------------------------------------------
@@ -554,13 +906,17 @@ def _signoff_name_index(lines: list[str], i: int) -> int | None:
 
 def find_signoff_boundary(lines: list[str]) -> int | None:
     """Return the index just past a sign-off (salutation + name) that is directly
-    followed by an attribution line, or ``None``.
+    followed by an attribution introducing unmarked text, or ``None``.
+
+    The attribution is the next non-blank line after the name and is recognized
+    by :func:`_attribution_end_at` (a fixed form, a wrapped form or a generic
+    attribution unit). It must not be followed, after any blank lines, by a
+    quote line: an attribution above ``>``-quoted text heads an interleaved
+    quote, and the author's inline replies may follow it.
 
     All three parts are required, so neither a mid-thread "Thanks." (no name), a
     sign-off at the true end of a message (nothing after), nor a sign-off
-    followed by authored content (a "Ps." block) ever truncates. Interleaved
-    replies are safe too: there the attribution precedes ``>``-quoted text and
-    the sign-off comes last.
+    followed by authored content (a "Ps." block) ever truncates.
     """
     n = len(lines)
     for i in range(n):
@@ -572,8 +928,15 @@ def find_signoff_boundary(lines: list[str]) -> int | None:
             k += 1
         if k >= n:
             continue
-        if is_attribution_line(lines[k]) or _wrapped_attribution_end(lines, k) is not None:
-            return name_idx + 1
+        end = _attribution_end_at(lines, k)
+        if end is None:
+            continue
+        q = end + 1
+        while q < n and not lines[q].strip():
+            q += 1
+        if q < n and is_quote_line(lines[q]):
+            continue
+        return name_idx + 1
     return None
 
 
@@ -832,8 +1195,10 @@ def strip_after_quote_header_block(lines: list[str], *, localized: bool = True) 
     """Truncate everything from a forwarded/quote-header block to the end.
 
     A dashed divider line left dangling directly above the removed block (the
-    Alibaba Mail style) is client furniture, not author content, and is dropped
-    with the block. ``localized`` is passed to :func:`find_quote_header_block`.
+    Alibaba Mail style), or failing that a bare "Original" line (the QQ Mail
+    and Foxmail style, :data:`_BARE_ORIGINAL_RE`), is client furniture, not
+    author content, and is dropped with the block. ``localized`` is passed to
+    :func:`find_quote_header_block`.
     """
     idx = find_quote_header_block(lines, localized=localized)
     if idx is None:
@@ -841,7 +1206,7 @@ def strip_after_quote_header_block(lines: list[str], *, localized: bool = True) 
     out = lines[:idx]
     while out and not out[-1].strip():
         out.pop()
-    if out and _QUOTE_HEADER_DIVIDER_RE.match(out[-1]):
+    if out and (_QUOTE_HEADER_DIVIDER_RE.match(out[-1]) or _BARE_ORIGINAL_RE.match(out[-1])):
         out.pop()
     return out
 
@@ -894,9 +1259,46 @@ _LOCALIZED_DIVIDER_RE = re.compile(
 )
 
 
-def _find_divider(line: str, *, localized: bool = True) -> re.Match[str] | None:
-    """The first "Original message" divider in ``line``, or ``None``."""
+# The short "Original" dividers of QQ Mail, Foxmail and similar clients:
+# "------------------ Original ------------------" (the spacing often an
+# HTML-rendered "&nbsp;"), "--- Original Message(s) ---" and the Chinese
+# 邮件原文, with dashes on both sides as above; the spacing may include U+00A0,
+# U+3000 or a literal "&nbsp;". The ``(?<!-)`` is the same linear-time guard.
+_DIVIDER_SPACE = r"(?:[ \t\u00a0\u3000]|&nbsp;)"
+_SHORT_ORIGINAL_DIVIDER_RE = re.compile(
+    rf"(?<!-)-{{2,}}{_DIVIDER_SPACE}*(?:Original(?:{_DIVIDER_SPACE}+Messages?)?|邮件原文)"
+    rf"{_DIVIDER_SPACE}*-{{2,}}",
+    re.IGNORECASE,
+)
+#: A bare "Original" line, which QQ Mail and Foxmail draw above their quote
+#: header in place of a dashed divider.
+_BARE_ORIGINAL_RE = re.compile(r"^[ \t]*Original[ \t]*$")
+#: The ``From:`` (or 发件人) line a bare "Original" line must stand above.
+_BARE_ORIGINAL_FROM_RE = re.compile(r"^[ \t*]*(?:From|发件人)[ \t]*[:：]")
+#: A note that the author answers inline ("replies inline", "in-line").
+_INLINE_NOTE_RE = re.compile(r"\bin-?line\b", re.IGNORECASE)
+
+
+def _is_bare_original_divider(lines: list[str], i: int) -> bool:
+    """True when ``lines[i]`` is a bare "Original" line and the first non-blank
+    line among the four below it is a ``From:`` / 发件人 line."""
+    if not _BARE_ORIGINAL_RE.match(lines[i]):
+        return False
+    for line in lines[i + 1 : i + 5]:
+        if line.strip():
+            return _BARE_ORIGINAL_FROM_RE.match(line) is not None
+    return False
+
+
+def _find_divider(line: str, *, localized: bool = True, short: bool = True) -> re.Match[str] | None:
+    """The first "Original message" divider in ``line``, or ``None``.
+
+    ``short=False`` leaves out the short "Original" forms
+    (:data:`_SHORT_ORIGINAL_DIVIDER_RE`).
+    """
     found = [m for m in (_ORIGINAL_MESSAGE_DIVIDER_RE.search(line),) if m]
+    if short:
+        found += [m for m in (_SHORT_ORIGINAL_DIVIDER_RE.search(line),) if m]
     if localized:
         found += [m for m in (_LOCALIZED_DIVIDER_RE.search(line),) if m]
     return min(found, key=lambda m: m.start()) if found else None
@@ -907,12 +1309,32 @@ def strip_after_original_message_divider(lines: list[str], *, localized: bool = 
 
     The line holding the divider is dropped too, except that a non-empty author
     prefix glued before a mid-line divider survives. ``localized=False``
-    recognizes only the English and Chinese wordings (the rule before
-    generation 6).
+    recognizes only the English and Chinese wordings of the dashed form (the
+    rule before generation 6); the short "Original" forms apply either way.
+
+    - A divider on a quote line is quoted content and never truncates.
+    - A bare "Original" line above a ``From:`` line
+      (:func:`_is_bare_original_divider`) truncates like a divider, the line
+      itself included.
+    - Once a line above holds an inline note (:data:`_INLINE_NOTE_RE`: a quote
+      line, or a line without a divider), the short forms are ignored: the
+      author announced replies written inside the quoted message below them.
+      A divider of the other forms still truncates.
     """
+    inline_note = False
     for i, line in enumerate(lines):
+        if is_quote_line(line):
+            if not inline_note and _INLINE_NOTE_RE.search(line):
+                inline_note = True
+            continue
+        if not inline_note and _is_bare_original_divider(lines, i):
+            return lines[:i]
         m = _find_divider(line, localized=localized)
         if m is None:
+            if not inline_note and _INLINE_NOTE_RE.search(line):
+                inline_note = True
+            continue
+        if inline_note and _find_divider(line, localized=localized, short=False) is None:
             continue
         out = lines[:i]
         prefix = line[: m.start()].rstrip()
@@ -922,13 +1344,34 @@ def strip_after_original_message_divider(lines: list[str], *, localized: bool = 
     return lines
 
 
+# --- Outlook boundary lines -----------------------------------------------------
+
+#: A line Outlook draws above a quoted message: an optional space, then at
+#: least seven underscores or hyphens.
+_OUTLOOK_BOUNDARY_RE = re.compile(r" ?[_-]{7,}")
+
+
+def _separate_outlook_boundaries(lines: list[str]) -> list[str]:
+    """Insert a blank line between a non-empty line and an Outlook boundary line
+    (:data:`_OUTLOOK_BOUNDARY_RE`) directly below it, so the boundary never
+    reads as part of the paragraph above it."""
+    out: list[str] = []
+    for line in lines:
+        if out and out[-1] and _OUTLOOK_BOUNDARY_RE.match(line):
+            out.append("")
+        out.append(line)
+    return out
+
+
 def custom_clean(text: str, *, localized: bool = True) -> str:
     """Apply the stage-1 quote/attribution cleanup to ``text``.
 
-    Composable steps, in order: truncate at a forwarded/quote-header block, an
-    "Original message" divider, or a sign-off boundary (which must run while the
-    attribution evidence is still present), drop attribution lines (incl.
-    wrapped forms), then filter out quoted lines. Signature blocks, greetings
+    Composable steps, in order: separate Outlook boundary lines from the line
+    above (:func:`_separate_outlook_boundaries`), truncate at a
+    forwarded/quote-header block, an "Original message" divider, or a sign-off
+    boundary (which must run while the attribution evidence is still present),
+    drop attribution lines (wrapped forms and marked generic attribution lines
+    included), then filter out quoted lines. Signature blocks, greetings
     and sign-offs are **kept** — they are the author's own furniture and are
     removed later by :mod:`cleaning`. Blank-line structure is left as-is; the
     tolerant test comparison ignores it.
@@ -938,7 +1381,7 @@ def custom_clean(text: str, *, localized: bool = True) -> str:
     localizations; :func:`_core_extract` passes it for an inline reply written
     below a localized block (see :func:`_localized_inline_reply`).
     """
-    lines = text.split("\n")
+    lines = _separate_outlook_boundaries(text.split("\n"))
     lines = strip_after_quote_header_block(lines, localized=localized)
     lines = strip_after_original_message_divider(lines, localized=localized)
     lines = strip_after_signoff_boundary(lines)
@@ -954,40 +1397,6 @@ def custom_clean(text: str, *, localized: bool = True) -> str:
     while lines and not lines[-1]:
         lines.pop()
     return "\n".join(lines)
-
-
-# --- over-strip guard ---------------------------------------------------------
-
-#: If the primary path keeps fewer than this fraction of the body's plainly
-#: unquoted content lines, treat it as an over-strip and fall back. Calibrated so
-#: the dashed-separator digests and the pasted-headers fixture fall back while
-#: genuinely quote-heavy replies do not.
-_GUARD_MIN_RETAINED = 0.6
-
-
-def count_unquoted_content_lines(body: str, *, localized: bool = True) -> int:
-    """Count non-blank body lines that are plainly authored content.
-
-    This is the denominator of the over-strip guard, so it must mirror what
-    stage 1 now keeps: it excludes quoted lines, attribution lines, and
-    everything after a forwarded/quote-header block or a sign-off boundary — but
-    it **no longer** excludes the signature region, greetings or sign-offs,
-    because stage 1 keeps those (ERP's signature fragments are retained, and the
-    ``-- `` truncation moved to :mod:`cleaning`). Mirroring the numerator this way
-    keeps the guard from misfiring on ordinary signed mail while still catching
-    the dashed-separator digests, where ERP truncates most of the body.
-    """
-    lines = strip_after_quote_header_block(body.split("\n"), localized=localized)
-    lines = strip_after_original_message_divider(lines, localized=localized)
-    lines = strip_after_signoff_boundary(lines)
-    count = 0
-    for line in lines:
-        if not line.strip():
-            continue
-        if is_quote_line(line) or is_attribution_line(line):
-            continue
-        count += 1
-    return count
 
 
 def _nonblank_line_count(text: str) -> int:
@@ -1518,6 +1927,137 @@ def _restored_by_own_quotation(
     return protected
 
 
+# --- marking mode: unmarked parent text the author placed ---------------------
+#
+# Rules (a)-(c) remove every substantial unmarked copy of parent text, which is
+# right when the client reproduced the parent without ">" markers. A client that
+# does mark its quotation deepens the parent's own quote lines by one level, and
+# then an unmarked copy of parent text outside the marked quotation was placed
+# by the author: a pasted OLD/NEW block, a re-sent paragraph, a citation. In
+# *marking mode* such lines are protected.
+#
+# 1. Evidence. A body line's *depth* is the number of ">" in its leading marker
+#    run (optional indentation and leader dots, then ">" with blanks between,
+#    _QUOTE_DEPTH_RE); its *content* is the rest of the line,
+#    whitespace-collapsed. A body line counts when its depth is at least 1, its
+#    content has at least _MARKING_MODE_MIN_WORDS words, and the parent holds a
+#    line with the same content at a smaller depth (the parent's smallest depth
+#    for that content is compared). Marking mode is on when at least
+#    _MARKING_MODE_MIN_LINES body lines count. Both bodies are read after
+#    normalize_body.
+# 2. Stop line. The first attribution (_attribution_end_at, generic units
+#    included) whose next non-blank line exists and is not a quote line
+#    introduces an unmarked quotation; its next non-blank line is the stop line
+#    (none: the end of the body). The attribution is read on the body with its
+#    generic attribution units and wrap remainders marked.
+# 3. Protected lines. Above the stop line, the body is divided into blocks
+#    (maximal runs of non-blank lines). Every line of a block that holds no
+#    quote line is protected, by its _normalize_line_for_diff form.
+# 4. In strip_parent_content, a non-blank text line that is not a quote line and
+#    whose normalized form is protected is protected like a rule (d) line:
+#    rule (c) is evaluated again without it.
+# 5. Many runs. A *run* is a maximal sequence of consecutive non-blank text
+#    lines (blank lines do not end it) each protected by step 4 and not by rule
+#    (d), and marked by rules (a)-(c). When at least _MARKING_MODE_MANY_RUNS runs
+#    hold more than _MARKING_MODE_SHORT_RUN lines each, those runs lose the
+#    protection: the message reproduces the parent unmarked in pieces and
+#    answers it point by point, and the pieces are the parent's text.
+#
+# Linear: the evidence is one pass over each body with a dict, the blocks one
+# pass, and the stop-line search tests each line with a bounded number of
+# neighbors (see _attribution_end_at).
+
+_MARKING_MODE_MIN_LINES = 3
+_MARKING_MODE_MIN_WORDS = 4
+_MARKING_MODE_SHORT_RUN = 2
+_MARKING_MODE_MANY_RUNS = 8
+
+#: The leading quote-marker run of a line: indentation, optional leader dots,
+#: then one or more ">" each followed by optional blanks.
+_QUOTE_DEPTH_RE = re.compile(r"^[ \t]*(?:\.{2,}[ \t]*)?((?:>[ \t]*)+)")
+
+
+def _quote_depth(line: str) -> tuple[int, str]:
+    """``(depth, content)`` of ``line`` (step 1 of the rules above)."""
+    m = _QUOTE_DEPTH_RE.match(line)
+    if not m:
+        return 0, " ".join(line.split())
+    return m.group(1).count(">"), " ".join(line[m.end() :].split())
+
+
+def _marking_mode(body_lines: list[str], parent_body: str) -> bool:
+    """Step 1 of the rules above: whether marking mode is on."""
+    parent_depth: dict[str, int] = {}
+    for line in normalize_body(parent_body).split("\n"):
+        depth, content = _quote_depth(line)
+        if content and (content not in parent_depth or depth < parent_depth[content]):
+            parent_depth[content] = depth
+    count = 0
+    for line in body_lines:
+        depth, content = _quote_depth(line)
+        if depth == 0 or not content or content not in parent_depth:
+            continue
+        if len(content.split()) < _MARKING_MODE_MIN_WORDS:
+            continue
+        if depth > parent_depth[content]:
+            count += 1
+    return count >= _MARKING_MODE_MIN_LINES
+
+
+def _unmarked_quote_start(lines: list[str]) -> int:
+    """Step 2 of the rules above: the stop line of the marked body ``lines``."""
+    n = len(lines)
+    for k in range(n):
+        if not lines[k].strip() or is_quote_line(lines[k]):
+            continue
+        end = _attribution_end_at(lines, k)
+        if end is None:
+            continue
+        q = end + 1
+        while q < n and not lines[q].strip():
+            q += 1
+        if q < n and not is_quote_line(lines[q]):
+            return q
+    return n
+
+
+def _marking_protected_lines(body_lines: list[str], stop: int) -> set[str]:
+    """Step 3 of the rules above: the protected normalized lines."""
+    protected: set[str] = set()
+    i = 0
+    while i < stop:
+        if not body_lines[i].strip():
+            i += 1
+            continue
+        j = i
+        while j < stop and body_lines[j].strip():
+            j += 1
+        if not any(is_quote_line(line) for line in body_lines[i:j]):
+            for line in body_lines[i:j]:
+                protected.add(_normalize_line_for_diff(line))
+        i = j
+    return protected
+
+
+def _runs_losing_protection(own: list[bool], marks: list[bool]) -> list[tuple[int, int]]:
+    """Step 5 of the rules above: the runs ``[start, end)`` that lose their
+    protection. ``own[k]`` is true for a line protected by step 4 and not by
+    rule (d)."""
+    count = len(own)
+    long_runs: list[tuple[int, int]] = []
+    k = 0
+    while k < count:
+        if not (own[k] and marks[k]):
+            k += 1
+            continue
+        start = k
+        while k < count and own[k] and marks[k]:
+            k += 1
+        if k - start > _MARKING_MODE_SHORT_RUN:
+            long_runs.append((start, k))
+    return long_runs if len(long_runs) >= _MARKING_MODE_MANY_RUNS else []
+
+
 def strip_parent_content(
     text: str,
     parent_body: str,
@@ -1576,6 +2116,22 @@ def strip_parent_content(
     blank lines left by removals collapses to one, and leading/trailing blank
     lines are trimmed (matching :func:`custom_clean`'s edge handling).
     """
+    return _strip_parent_content(
+        text, parent_body, continuation=continuation, quoted_text=quoted_text
+    )
+
+
+def _strip_parent_content(
+    text: str,
+    parent_body: str,
+    *,
+    continuation: bool = False,
+    quoted_text: str | None = None,
+    protected_lines: set[str] | None = None,
+) -> str:
+    """:func:`strip_parent_content` with marking mode: ``protected_lines`` is
+    the set of step 3 of the marking-mode rules (``None`` or empty: marking
+    mode is off)."""
     child_raw = normalize_body(text).split("\n")
     child_norm = [_normalize_line_for_diff(line) for line in child_raw]
     parent_norm = [
@@ -1622,6 +2178,16 @@ def strip_parent_content(
             if norm
         ]
     protected = _restored_by_own_quotation(child_pairs, marks, quoted_seq)
+    if protected_lines:
+        own = [False] * count
+        for k in range(count):
+            i, norm = child_pairs[k]
+            if norm in protected_lines and not is_quote_line(child_raw[i]):
+                own[k] = not protected[k]
+                protected[k] = True
+        for start, end in _runs_losing_protection(own, marks):
+            for k in range(start, end):
+                protected[k] = False
     if any(protected):
         seeds = [seeds[k] and not protected[k] for k in range(count)]
         marks = seeds
@@ -1679,7 +2245,7 @@ def _first_quote_boundary(lines: list[str], *, localized: bool) -> int:
     end = find_quote_header_block(lines, localized=localized)
     end = len(lines) if end is None else end
     for i in range(end):
-        if _find_divider(lines[i], localized=localized):
+        if not is_quote_line(lines[i]) and _find_divider(lines[i], localized=localized):
             return i
     return end
 
@@ -1821,7 +2387,7 @@ def _name_in_head(head: str, names: list[str]) -> bool:
 
 
 def _core_extract(body: str, parent_body: str | None) -> tuple[str, str]:
-    """Run the ERP + custom + over-strip-guard + parent-diff pipeline.
+    """Run the cleanup pass and the parent-diff assist.
 
     ``body`` is a non-blank decoded body (from ``text/plain`` or, for the HTML
     paths, the HTML's novel text). Returns ``(text, method)`` where ``method`` is
@@ -1829,64 +2395,37 @@ def _core_extract(body: str, parent_body: str | None) -> tuple[str, str]:
     owns the try/except and the empty/status decision.
     """
     normalized = normalize_body(body)
-    # The marked quotation is taken from the whole body, before any truncation.
+    # The marked quotation and the marking-mode reading are taken from the
+    # whole body, before any truncation or marking.
     quoted_text = _marked_quotation(normalized)
+    body_lines = normalized.split("\n")
+    marked = _mark_generic_attributions(normalized)
 
-    # Truncate at a forwarded/quote-header block *before* ERP. The scanner's
-    # wrapped-attribution collapse deletes newlines inside the block ("On\n
-    # Behalf Of X\nSent:" becomes one line), which hides the block from the
-    # finder; on the intact body the finder sees the true shape. Measured on a
-    # 95k-message corpus when fragment edge-stripping was removed (generation
-    # 5): dropping this pre-truncation leaked quote headers in 10 messages and
-    # reverted none, so it stays until the collapse itself is unified away (see
-    # docs/generation-5.md).
-    #
     # The Latin-script localized blocks and dividers are not applied to an
     # inline reply written below one (see _localized_inline_reply): the
     # message keeps its generation-5 treatment, where the parent-diff assist
     # below removes the quoted parent around the author's tagged answers.
-    lines = normalized.split("\n")
+    lines = marked.split("\n")
     localized = not _localized_inline_reply(lines, parent_body)
-    pretruncated = find_quote_header_block(lines, localized=localized) is not None
-    if pretruncated:
-        normalized = "\n".join(strip_after_quote_header_block(lines, localized=localized))
+    text = custom_clean(marked, localized=localized)
+    method = "custom"
 
-    # Primary: join every ERP fragment that is not quoted — *including*
-    # signature fragments, which stage 1 must keep (stage 2 removes them). This
-    # is why the scanner exposes fragments directly rather than upstream
-    # email-reply-parser's ``parse_reply``, which drops them. Forwarded quote-header
-    # blocks that survive (ERP re-joining can reshape one out of the truncation
-    # above) arrive as non-quoted "header" fragments here; the custom pass
-    # (``strip_after_quote_header_block`` / sign-off boundary) truncates them.
-    erp_out = "\n".join(frag.content for frag in read_fragments(normalized) if not frag.quoted)
-    cleaned = custom_clean(erp_out, localized=localized)
-    custom_changed = pretruncated or cleaned != erp_out.strip()
-
-    # Over-strip guard: dashed-separator digests make ERP truncate at the
-    # first "---" rule. If the primary path dropped most of the body's
-    # plainly-unquoted lines, redo the cleanup on the whole body.
-    unquoted = count_unquoted_content_lines(normalized, localized=localized)
-    if unquoted > 0 and _nonblank_line_count(cleaned) < _GUARD_MIN_RETAINED * unquoted:
-        fallback = custom_clean(normalized, localized=localized)
-        if fallback.strip():
-            text = fallback
-            method = "custom-fallback"
-        else:
-            text = cleaned
-            method = "erp+custom" if custom_changed else "erp"
-    else:
-        text = cleaned
-        method = "erp+custom" if custom_changed else "erp"
-
-    # Parent-diff assist: runs *after* guard resolution (so it never
-    # perturbs the over-strip guard's denominator). We adopt the assisted text
-    # (and the "+parent-diff" suffix) only when it actually dropped a content
-    # line: strip_parent_content also collapses internal blank runs, so a plain
-    # string comparison would fire — mutating the text and mislabeling the
-    # method — on a parent that removed nothing.
+    # Parent-diff assist. The assisted text (and the "+parent-diff" suffix) is
+    # adopted only when it dropped a content line: strip_parent_content also
+    # collapses internal blank runs, so a plain string comparison would fire —
+    # mutating the text and mislabeling the method — on a parent that removed
+    # nothing.
     if parent_body is not None and text.strip():
-        assisted = strip_parent_content(
-            text, parent_body, continuation=True, quoted_text=quoted_text
+        protected_lines = None
+        if _marking_mode(body_lines, parent_body):
+            stop = _unmarked_quote_start(lines)
+            protected_lines = _marking_protected_lines(body_lines, stop)
+        assisted = _strip_parent_content(
+            text,
+            parent_body,
+            continuation=True,
+            quoted_text=quoted_text,
+            protected_lines=protected_lines,
         )
         if _nonblank_line_count(assisted) < _nonblank_line_count(text):
             text = assisted
@@ -1936,7 +2475,7 @@ def extract_new_text(
 
     When ``parent_body`` (the thread parent's raw body, resolved by the caller
     from ``In-Reply-To``) is supplied, the parent-diff assist runs after the
-    primary/guard logic has chosen the text and removes content that provably
+    cleanup pass and removes content that provably
     came from the parent (see :func:`strip_parent_content`), appending
     ``"+parent-diff"`` to the method. The default ``None`` is a behavioral no-op.
 
@@ -2045,8 +2584,8 @@ def _part_starts(text: str, source: str) -> tuple[int, ...]:
     second line then begins a new part. Blank lines never begin a part.
 
     The rule is deliberately conservative: when a line of ``text`` has no match
-    (the scanner's attribution collapse can join lines; a parent-diff assist
-    can reflow none, but a future rule might), the alignment is abandoned and
+    (an author prefix cut before a mid-line divider has no equal source line;
+    a future rule might reflow lines), the alignment is abandoned and
     an empty tuple — a single part — is returned. The search pointer only moves
     forward and each gap is inspected once, so the cost is linear in the two
     line counts.

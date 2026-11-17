@@ -18,8 +18,7 @@ What it writes (formats in ``conformance/README.md``):
 - ``vectors/<function>.json`` and ``vectors/internal/<module>.<function>.json``
   — call-level vectors recorded while the Python unit tests run. Every library
   function a test module imports is wrapped; each call's arguments (by name)
-  and result (or exception type) are logged, de-duplicated and sorted. The
-  calls the pipeline makes to the vendored fragment scanner are recorded too.
+  and result (or exception type) are logged, de-duplicated and sorted.
 
 The recording run excludes ``test_conformance.py`` and
 ``test_extraction_version.py``: those check this data rather than exercising
@@ -63,10 +62,10 @@ _NOT_RECORDED = ("test_conformance.py", "test_extraction_version.py", "test_comp
 
 #: Library-internal call sites also recorded, as ``(module, name)``: the bound
 #: name inside ``module`` is wrapped, so every call the pipeline makes through
-#: it is logged. The vendored fragment scanner has no unit tests of its own;
-#: recording its calls from the corpus and unit tests gives a port a way to
-#: localize a scanner mismatch.
-_INTERNAL_CALL_SITES = (("email_reply_extractor.extraction", "read_fragments"),)
+#: it is logged. Used for a helper without unit tests of its own; none at
+#: present (the vendored fragment scanner, recorded this way through generation
+#: 9, was removed in generation 10).
+_INTERNAL_CALL_SITES: tuple[tuple[str, str], ...] = ()
 
 #: Files under ``conformance/`` that are maintained by hand, not generated.
 _HAND_WRITTEN = frozenset({"README.md"})
@@ -76,7 +75,7 @@ _HAND_WRITTEN = frozenset({"README.md"})
 
 
 def _module_name(func: Callable[..., Any]) -> str:
-    """``email_reply_extractor._fragments`` -> ``fragments``."""
+    """``email_reply_extractor._names`` -> ``names``."""
     return func.__module__.rsplit(".", 1)[-1].lstrip("_")
 
 

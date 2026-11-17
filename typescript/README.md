@@ -10,7 +10,9 @@ quoted text, quote headers, signatures and sign-offs.**
 `email-reply-extractor` removes the quoted reply (`>` lines, "On … wrote:"
 attribution lines, Outlook quote-header blocks, "Original message" dividers)
 from top-posted, bottom-posted and inline replies, then optionally removes
-greetings, signatures, sign-offs, mailing-list footers and legal disclaimers.
+greetings, signatures, sign-offs, mailing-list footers and legal disclaimers,
+using the sender's and addressees' display names and the sender's repeated
+signature lines as evidence when the caller has them.
 
 This package is the TypeScript port of the Python reference implementation
 ([`email-reply-extractor` on PyPI](https://pypi.org/project/email-reply-extractor/)).
@@ -28,6 +30,7 @@ regular expressions.
 - [Usage](#usage)
   - [Quickstart](#quickstart)
   - [Thread parent and HTML part](#thread-parent-and-html-part)
+  - [Sender and addressee evidence](#sender-and-addressee-evidence)
   - [Parts of an inline reply](#parts-of-an-inline-reply)
 - [API reference](#api-reference)
   - [Argument convention](#argument-convention)
@@ -54,13 +57,17 @@ message:
 - quoted lines at any indentation, including the `...>` form that survives
   `format=flowed` rewrapping;
 - attribution lines: `On … wrote:`, `Name <a@b> wrote:`, the German
-  `Am … schrieb …:` and the Japanese `…のメール:` forms, and forms wrapped
-  across two or three lines (including the French `a écrit :` and Spanish
-  `escribió:` terminators);
+  `Am … schrieb …:` and the Japanese `…のメール:` forms, forms wrapped
+  across up to five lines (including the French `a écrit :` and Spanish
+  `escribió:` terminators), and other wordings above a quote that carry an
+  e-mail address, a clock time and a date, or a speech verb ("Ana Lima
+  said:");
 - Outlook-style forwarded/quote-header blocks (`From:` / `Sent:` / `To:` /
   `Subject:`) with English, French, Spanish, Portuguese, Italian, Dutch, German
   and Chinese labels;
-- "Original message" and "Forwarded message" dividers in the same languages;
+- "Original message" and "Forwarded message" dividers in the same languages,
+  and the short "Original" dividers of QQ Mail and Foxmail;
+- the short tail of a quote line that a client re-wrapped without a marker;
 - the quoted thread that follows a sign-off boundary in a fully top-posted
   reply with no `>` markers;
 - when the caller supplies them, content provably present in the thread parent
@@ -71,8 +78,11 @@ replies written between quoted blocks.
 
 Stage 2, `cleanForScoring`, removes that formulaic furniture from stage-1
 text: greetings, sign-offs, signature blocks, mailing-list footers, mobile
-taglines ("Sent from my iPhone") and trailing legal disclaimers. It also
-reports which non-blank input lines it removed.
+taglines ("Sent from my iPhone") and trailing legal disclaimers. Given the
+sender's display name, the addressees' display names and the sender's
+learned signature lines, it also removes sign-offs, name lines, greetings and
+signature lines that no fixed list identifies. It reports which non-blank
+input lines it removed.
 
 The stage-1 text is the author's full novel content, which is what an
 application stores and displays; the stage-2 text is a strict, documented
@@ -89,8 +99,8 @@ The rules of both stages are documented in
 ## Limitations
 
 The rules are heuristics over text, and their known limits are the same in
-every port: text the author repeats from the thread parent, the evidence the
-caller must supply, the languages and mail clients recognized, and the scope
+every port: the evidence the caller must supply, text the author repeats from
+the thread parent, the languages and mail clients recognized, and the scope
 of the measurements. They are listed in the
 [Limitations section of the repository README](https://github.com/JayDaley/email-reply-extractor/blob/main/README.md#limitations).
 
@@ -116,12 +126,12 @@ Lucas
 
 const result = extractNewText(body);
 result.status; // "ok"
-result.method; // "erp"
-result.text; // "Hi Dan,\n\nTwo comments below.\n\nAgreed, and the draft already says so.\n\nBest,\nLucas"
+result.method; // "custom"
+result.text; // "Hi Dan,\n\nTwo comments below.\n\n\nAgreed, and the draft already says so.\n\nBest,\nLucas"
 
 const cleaned = cleanForScoring(result.text);
 cleaned.text; // "Two comments below.\n\nAgreed, and the draft already says so."
-cleaned.ignoredLines; // [0, 6, 7] — the greeting and the two sign-off lines
+cleaned.ignoredLines; // [0, 7, 8] — the greeting and the two sign-off lines
 ```
 
 The quote and its attribution line are removed from `result.text`, and the
@@ -159,6 +169,70 @@ const cleaned = cleanForScoring(result.text, { htmlSignatureText: parts.signatur
 The package does not parse MIME. Its functions take decoded strings: the
 `text/plain` body, the `text/html` body and the parent's body.
 
+### Sender and addressee evidence
+
+Three optional properties of `cleanForScoring`'s options carry evidence about
+the message: `authorName`, the sender's display name; `addresseeNames`, the
+display names of the people the message answers or is addressed to (for
+example the thread parent's sender and the To and Cc display names); and
+`signatureLines`, the lines the sender repeats at the end of their messages,
+learned by `learnSignatureLines` from the stage-1 texts of the sender's
+earlier messages. Without them only the rules that need no evidence run.
+
+```ts
+import { cleanForScoring, extractNewText, learnSignatureLines } from "email-reply-extractor";
+
+// [subject, plain body] of the sender's earlier messages, stored by the caller.
+const earlier = Array.from({ length: 6 }, (_, i) => [
+  `Draft comments, round ${i}`,
+  `Comment ${i} on the draft.\n\nThanks,\nAna\nExample Networks\nhttps://example.net/ana`,
+]);
+const learned = learnSignatureLines(
+  earlier.map(([, text]) => extractNewText(text).text),
+  { subjects: earlier.map(([subject]) => subject) },
+);
+learned; // ["ana", "example networks", "https://example.net/ana", "thanks,"]
+
+const body = `Joe, Priya,
+
+The new section reads well. One change: keep the timer at 10 seconds.
+
+Thanks,
+Ana
+Example Networks
+https://example.net/ana
+`;
+
+const result = extractNewText(body);
+cleanForScoring(result.text).text;
+// "The new section reads well. One change: keep the timer at 10 seconds.\n\nThanks,\nAna\nExample Networks\nhttps://example.net/ana"
+
+const cleaned = cleanForScoring(result.text, {
+  authorName: "Ana Lima", // the From display name
+  addresseeNames: ["Joe Example", "Priya Sharma"], // the To and Cc display names
+  signatureLines: learned,
+});
+cleaned.text; // "The new section reads well. One change: keep the timer at 10 seconds."
+cleaned.ignoredLines; // [0, 4, 5, 6, 7]
+```
+
+Without evidence, the greeting is removed and the sign-off is kept, because
+the company line and the link below the name keep it from being the tail.
+With `authorName`, "Ana" is recognized as the sender's name, and the lines
+attached below it are removed with it; the learned lines would remove them
+too.
+
+`learnSignatureLines` compares lines in a normalized form: quote markers
+removed, whitespace runs collapsed to one space, edges stripped, lowercased
+(Python's `str.lower`, then `ß` written `ss`). A line is learned when it is
+among the last 10 non-blank lines of at least 3 of the texts and of at least
+one fifth of them, and, when `subjects` is given, when those texts have at
+least 3 distinct subjects (compared without leading "Re:"/"Fwd:"-style
+prefixes and "[list]" tags). A line that ends in ":" or is a sentence of at
+least 3 words ending in ".", "?" or "!" is learned only when, in at least half
+of its occurrences, the line above it is another candidate. Fewer than 5 texts
+learn nothing. The result is sorted by code point.
+
 ### Parts of an inline reply
 
 An inline reply interleaves the author's answers with quoted passages. Stage 1
@@ -176,30 +250,30 @@ cleaned.parts; // one string per run of the author's text
 
 A top-posted reply, or any text written as one run, has an empty `partStarts`
 and a single part. The boundaries are found by aligning the text with the body
-it was derived from; when a line cannot be aligned (the scanner joins a
-wrapped attribution onto one line, for example), the text is reported as one
-part. Indices outside `1` to the input's line count minus one are ignored;
+it was derived from; when a line cannot be aligned, the text is reported as
+one part. Indices outside `1` to the input's line count minus one are ignored;
 `partStarts` changes only `parts`, never `text` or `ignoredLines`. `parts` is
 `[text]` without `partStarts`, `[]` when `text` is empty, and omits a part
 that cleaning emptied.
 
 ## API reference
 
-| Name                                                                   | What it is                                                                                               |
-| ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `extractNewText(body, { parentBody?, htmlBody? })`                     | Stage 1; returns an `ExtractionResult`. `body` may be `null` or `undefined`.                             |
-| `ExtractionResult`                                                     | `{ text, method, status, partStarts }`.                                                                  |
-| `STATUS_OK`, `STATUS_EMPTY`, `STATUS_FAILED`                           | The three `status` values; the `ExtractionStatus` type is their union.                                   |
-| `EXTRACTION_VERSION`                                                   | Integer generation stamp of the text-deriving routine.                                                   |
-| `cleanForScoring(extractedText, { htmlSignatureText?, partStarts? })`  | Stage 2; returns a `CleanResult`.                                                                        |
-| `CleanResult`                                                          | `{ text, ignoredLines, parts }`.                                                                         |
-| `htmlToText(html)`                                                     | Visible text of an HTML part, block structure as newlines.                                               |
-| `splitHtmlParts(html)`                                                 | The same text split into `HtmlParts`.                                                                    |
-| `HtmlParts`                                                            | `{ novelText, quotedText, signatureText, hasShareContainer }`.                                           |
-| `stripParentContent(text, parentBody, { continuation?, quotedText? })` | Remove lines of `text` provably drawn from `parentBody`; `quotedText` is the message's marked quotation. |
-| `tolerantLines(text)`                                                  | The non-blank lines of `text`, edge whitespace stripped and U+00A0 unified to spaces.                    |
-| `textsEquivalent(a, b)`                                                | `true` when `a` and `b` differ at most in whitespace.                                                    |
-| `VERSION`                                                              | The package version.                                                                                     |
+| Name                                                                                                                 | What it is                                                                                                                                                                                                                          |
+| -------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `extractNewText(body, { parentBody?, htmlBody? })`                                                                   | Stage 1; returns an `ExtractionResult`. `body` may be `null` or `undefined`.                                                                                                                                                        |
+| `ExtractionResult`                                                                                                   | `{ text, method, status, partStarts }`.                                                                                                                                                                                             |
+| `STATUS_OK`, `STATUS_EMPTY`, `STATUS_FAILED`                                                                         | The three `status` values; the `ExtractionStatus` type is their union.                                                                                                                                                              |
+| `EXTRACTION_VERSION`                                                                                                 | Integer generation stamp of the text-deriving routine.                                                                                                                                                                              |
+| `cleanForScoring(extractedText, { htmlSignatureText?, partStarts?, authorName?, addresseeNames?, signatureLines? })` | Stage 2; returns a `CleanResult`. `authorName` is the sender's display name, `addresseeNames` the addressees' display names, `signatureLines` the sender's learned signature lines.                                                 |
+| `learnSignatureLines(texts, { subjects? })`                                                                          | The lines one sender repeats at the end of their messages, learned from the stage-1 `texts` of that sender's messages (and their `subjects`); an array of normalized lines, sorted by code point. Fewer than 5 texts learn nothing. |
+| `CleanResult`                                                                                                        | `{ text, ignoredLines, parts }`.                                                                                                                                                                                                    |
+| `htmlToText(html)`                                                                                                   | Visible text of an HTML part, block structure as newlines.                                                                                                                                                                          |
+| `splitHtmlParts(html)`                                                                                               | The same text split into `HtmlParts`.                                                                                                                                                                                               |
+| `HtmlParts`                                                                                                          | `{ novelText, quotedText, signatureText, hasShareContainer }`.                                                                                                                                                                      |
+| `stripParentContent(text, parentBody, { continuation?, quotedText? })`                                               | Remove lines of `text` provably drawn from `parentBody`; `quotedText` is the message's marked quotation.                                                                                                                            |
+| `tolerantLines(text)`                                                                                                | The non-blank lines of `text`, edge whitespace stripped and U+00A0 unified to spaces.                                                                                                                                               |
+| `textsEquivalent(a, b)`                                                                                              | `true` when `a` and `b` differ at most in whitespace.                                                                                                                                                                               |
+| `VERSION`                                                                                                            | The package version.                                                                                                                                                                                                                |
 
 The result types are frozen plain objects. Their fields are the Python
 package's fields in camelCase: `ignored_lines` is `ignoredLines`,
@@ -210,6 +284,7 @@ package's fields in camelCase: `ignored_lines` is `ignoredLines`,
 
 Required arguments are positional. Every optional argument of the Python API
 (`parent_body`, `html_body`, `html_signature_text`, `part_starts`,
+`author_name`, `addressee_names`, `signature_lines`, `subjects`,
 `continuation`, `quoted_text`) is a
 property of an options object passed last, named in camelCase. An omitted
 property, `undefined` and `null` all mean the Python default (`None`, `False`
@@ -220,6 +295,8 @@ or, for `partStarts`, no boundaries).
 | `extract_new_text(body, parent_body=p, html_body=h)`    | `extractNewText(body, { parentBody: p, htmlBody: h })`     |
 | `clean_for_scoring(text, html_signature_text=s)`        | `cleanForScoring(text, { htmlSignatureText: s })`          |
 | `clean_for_scoring(text, part_starts=r.part_starts)`    | `cleanForScoring(text, { partStarts: r.partStarts })`      |
+| `clean_for_scoring(text, author_name=a)`                | `cleanForScoring(text, { authorName: a })`                 |
+| `learn_signature_lines(texts, subjects=s)`              | `learnSignatureLines(texts, { subjects: s })`              |
 | `strip_parent_content(text, parent, continuation=True)` | `stripParentContent(text, parent, { continuation: true })` |
 
 ### Status values
@@ -235,10 +312,7 @@ or, for `partStarts`, no boundaries).
 is one of:
 
 - `none` — no body to work from.
-- `erp` — the vendored fragment scan needed no cleanup.
-- `erp+custom` — the fragment scan plus the custom cleanup pass.
-- `custom-fallback` — the over-strip guard fired, and the custom pass ran on
-  the whole body.
+- `custom` — the cleanup pass ran on the body.
 - `failed` — extraction raised internally.
 
 Three modifiers combine with the base value:
@@ -246,9 +320,9 @@ Three modifiers combine with the base value:
 - `html-` prefix — the text was derived from the HTML part, because there
   was no usable plain body, because a flattened plain body was replaced, or
   because the HTML holds an Apple Mail Share-sheet container (for example
-  `html-erp+custom`).
+  `html-custom`).
 - `+parent-diff` suffix — the parent-diff assist removed content (for example
-  `erp+parent-diff`).
+  `custom+parent-diff`).
 - `+html-quote` suffix — the HTML quoted-text oracle removed content from a
   plain extraction.
 
@@ -257,7 +331,7 @@ Three modifiers combine with the base value:
 `EXTRACTION_VERSION` is an integer identifying the generation of the routine
 that derives the text. It is independent of the package version, only ever
 increases, and is the same in the Python, TypeScript and Rust packages. It is
-currently **8**.
+currently **10**.
 
 An application that stores derived text stores `EXTRACTION_VERSION` alongside
 it and compares the stored stamp with the running constant using `<` to decide
@@ -293,6 +367,8 @@ pair, which gives the same substring answers as the reference's code points.
 - [python/README.md](https://github.com/JayDaley/email-reply-extractor/blob/main/python/README.md)
   — the reference implementation, including a comparison with other libraries
   and the provenance of the code.
+- [docs/generation-10.md](https://github.com/JayDaley/email-reply-extractor/blob/main/docs/generation-10.md)
+  — generation 10: new stage-1 rules and the evidence arguments of stage 2.
 - [CHANGELOG.md](https://github.com/JayDaley/email-reply-extractor/blob/main/CHANGELOG.md)
   — one section per release of all three packages.
 
@@ -300,5 +376,3 @@ pair, which gives the same substring answers as the reference's code points.
 
 MIT. See
 [LICENSE](https://github.com/JayDaley/email-reply-extractor/blob/main/LICENSE).
-The fragment scanner derives from `email-reply-parser` 0.5.12 (MIT, Copyright
-(c) 2012 Zapier LLC).

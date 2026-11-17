@@ -11,11 +11,13 @@
 //   path, unpaired surrogates included.
 // - The inline-reply author-tag test (anyAuthorTag): its answers equal the
 //   per-label substring and regular-expression tests it replaced.
+// - The marking mode (generation 10): the cases of python/tests/test_extraction.py
+//   ("parent-diff marking mode").
 
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { alignedRunMarks, anyAuthorTag, ParentStream } from "../src/extraction.js";
+import { alignedRunMarks, anyAuthorTag, extractNewText, ParentStream } from "../src/extraction.js";
 import { escapeRegex, pySplit, pyStrip, WORD_RE_CLASS } from "../src/pyCompat.js";
 
 /** A seeded PRNG (mulberry32). */
@@ -287,4 +289,120 @@ test("anyAuthorTag cases", () => {
   const astral = "\u{1d49c}".repeat(20);
   assert.ok(!anyAuthorTag([astral], "", `[${astral}]`));
   assert.ok(anyAuthorTag([astral], astral, `x [${astral}`));
+});
+
+// --- generation 10: parent-diff marking mode -------------------------------------------
+
+const MM_PARENT_LINES = [
+  "Hi all,",
+  "",
+  "Here is the proposed change for the registry section of the draft:",
+  "",
+  "OLD: The registry is maintained by the working group chairs for now.",
+  "NEW: The registry is maintained by the designated experts from now on.",
+  "",
+  "Please send comments before the end of the week to the list.",
+  "",
+  "> An earlier participant asked whether the registry needs a new policy.",
+  "> The same participant also asked about the expiry of old entries.",
+  "",
+  "Bob",
+];
+const MM_PARENT = MM_PARENT_LINES.join("\n");
+const OLD_NEW =
+  "OLD: The registry is maintained by the working group chairs for now.\n" +
+  "NEW: The registry is maintained by the designated experts from now on.\n\n";
+const ATTRIBUTION = "On Mon, 2 Mar 2026, Bob <bob@example.org> wrote:\n";
+
+const quotedParent = (lines: readonly string[]): string =>
+  lines.map((line) => `>${line && !line.startsWith(">") ? ` ${line}` : line}`).join("\n");
+
+test("marking mode keeps a pasted OLD/NEW block", () => {
+  const child = `I support the change. For the record, the text would then read:\n\n${OLD_NEW}Ana\n\n${ATTRIBUTION}${quotedParent(MM_PARENT_LINES)}`;
+  const result = extractNewText(child, { parentBody: MM_PARENT });
+  assert.ok(result.text.includes("OLD: The registry"));
+  assert.ok(result.text.includes("NEW: The registry"));
+});
+
+test("marking mode is off with fewer than three deepened lines", () => {
+  const quoted = [
+    "> Here is the proposed change for the registry section of the draft:",
+    "> Please send comments before the end of the week to the list.",
+  ];
+  const child = `I support the change. For the record, the text would then read:\n\n${OLD_NEW}Ana\n\n${ATTRIBUTION}${quoted.join("\n")}`;
+  let result = extractNewText(child, { parentBody: MM_PARENT });
+  assert.equal(result.method, "custom+parent-diff");
+  assert.ok(!result.text.includes("OLD: The registry"));
+  quoted.push("> Hi all, here is the proposed change."); // not in the parent
+  result = extractNewText(`${child}\n${quoted.at(-1)}`, { parentBody: MM_PARENT });
+  assert.ok(!result.text.includes("OLD: The registry"));
+  quoted.push(">> An earlier participant asked whether the registry needs a new policy.");
+  result = extractNewText(`${child}\n${quoted.slice(-2).join("\n")}`, { parentBody: MM_PARENT });
+  assert.ok(result.text.includes("OLD: The registry")); // the third deepened line
+});
+
+test("marking mode keeps a re-sent paragraph", () => {
+  const child =
+    "Re-sending the request, since nobody answered it:\n\n" +
+    "Please send comments before the end of the week to the list.\n\n" +
+    `${ATTRIBUTION}${quotedParent(MM_PARENT_LINES)}`;
+  const result = extractNewText(child, { parentBody: MM_PARENT });
+  assert.equal(
+    result.text,
+    "Re-sending the request, since nobody answered it:\n\n" +
+      "Please send comments before the end of the week to the list.",
+  );
+});
+
+test("marking mode still removes an unmarked line inside a quoted block", () => {
+  const child =
+    "Two answers below.\n\n" +
+    "> Here is the proposed change for the registry section of the draft:\n" +
+    "OLD: The registry is maintained by the working group chairs for now.\n" +
+    "> NEW: The registry is maintained by the designated experts from now on.\n" +
+    "Fine with me.\n\n" +
+    "> Please send comments before the end of the week to the list.\n" +
+    ">> An earlier participant asked whether the registry needs a new policy.\n";
+  const result = extractNewText(child, { parentBody: MM_PARENT });
+  assert.equal(result.text, "Two answers below.\n\nFine with me.");
+  assert.equal(result.method, "custom+parent-diff");
+});
+
+test("marking mode stops at an attribution above unmarked text", () => {
+  // The unmarked copy below "Bob wrote:" (no ">" below the attribution) is the
+  // client's reproduction of the parent, not the author's.
+  const child =
+    "> Here is the proposed change for the registry section of the draft:\n" +
+    "> Please send comments before the end of the week to the list.\n" +
+    ">> An earlier participant asked whether the registry needs a new policy.\n" +
+    "Agreed.\n\n" +
+    "Bob Jones <bob@example.org> wrote:\n\n" +
+    OLD_NEW;
+  const result = extractNewText(child, { parentBody: MM_PARENT });
+  assert.equal(result.text, "Agreed.");
+  assert.equal(result.method, "custom+parent-diff");
+});
+
+/** A parent of `paragraphs` three-line paragraphs, and a child that copies each one unmarked and answers it. */
+function pointByPoint(paragraphs: number): [string, string] {
+  const paras = Array.from({ length: paragraphs }, (_, k) =>
+    Array.from({ length: 3 }, (_, j) => `Paragraph ${k} line ${j} carries enough words to count as parent text.`),
+  );
+  const parent = paras.map((p) => p.join("\n")).join("\n\n");
+  let child = paras.map((p, k) => `${p.join("\n")}\n\nAnswer ${k}.`).join("\n\n");
+  child += `\n\n${ATTRIBUTION}${paras
+    .slice(0, 3)
+    .map((p) => `> ${p[0]}`)
+    .join("\n")}`;
+  return [child, parent];
+}
+
+test("marking mode: many runs lose their protection", () => {
+  let [child, parent] = pointByPoint(8);
+  let result = extractNewText(child, { parentBody: parent });
+  assert.equal(result.text, Array.from({ length: 8 }, (_, k) => `Answer ${k}.`).join("\n\n"));
+  [child, parent] = pointByPoint(7);
+  result = extractNewText(child, { parentBody: parent });
+  assert.ok(result.text.includes("Paragraph 6 line 2"));
+  assert.equal(result.method, "custom");
 });

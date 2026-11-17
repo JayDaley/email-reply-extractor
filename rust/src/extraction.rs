@@ -1,14 +1,14 @@
 //! New-text extraction: recover the author's novel content (stage 1 of 2).
 //!
 //! Port of the reference's `extraction.py`, whose module docstring is the
-//! design documentation (see also `docs/extraction.md`). The fragment
-//! scanner vendored from email-reply-parser (the crate's `fragments` module,
-//! "ERP" below) is the primary extractor, followed by a custom cleanup pass:
-//! pre-normalization (BOM, zero-width characters, CRLF/CR), attribution
-//! lines, indented quote blocks, the sign-off boundary, forwarded /
-//! quote-header blocks (English, German labels, Chinese, and Latin-script
-//! localized blocks), "Original message" dividers, the over-strip guard, and
-//! the optional parent-diff assist. The optional HTML part serves as a
+//! design documentation (see also `docs/extraction.md`). A line-based
+//! cleanup pass runs over the normalized body: pre-normalization (BOM,
+//! zero-width characters, U+0000, CRLF/CR), attribution lines (fixed,
+//! wrapped and generic forms), wrap remainders, indented quote blocks, the
+//! sign-off boundary, forwarded / quote-header blocks (English, German
+//! labels, Chinese, and Latin-script localized blocks), "Original message"
+//! dividers (dashed and short forms) and Outlook boundary lines; the optional
+//! parent-diff assist follows. The optional HTML part serves as a
 //! structural oracle in four ways: HTML-only bodies, a degenerate
 //! (flattened) plain body, an Apple Mail Share-sheet container (whose text
 //! the plain part marks as quoted), and removal of plain-body content present
@@ -21,18 +21,17 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::LazyLock;
 
-use crate::fragments::read_fragments;
 use crate::html_text::{html_to_text, split_html_parts};
 use crate::pyre::{Re, IGNORECASE};
 use crate::pystr;
 
 // --- generation stamp -----------------------------------------------------------
 
-/// The generation of the text-deriving routine (`extraction`, `cleaning`,
-/// `html_text` and `fragments` together). Consumers stamp stored derived
+/// The generation of the text-deriving routine (`extraction`, `cleaning` and
+/// `html_text` together). Consumers stamp stored derived
 /// text with it and compare with `<`; it only ever increases. It is
 /// independent of the package version.
-pub const EXTRACTION_VERSION: u32 = 9;
+pub const EXTRACTION_VERSION: u32 = 10;
 
 // --- result -------------------------------------------------------------------
 
@@ -77,9 +76,8 @@ impl std::fmt::Display for Status {
 ///
 /// - `text`: the author's newly written text, furniture included (may be
 ///   empty).
-/// - `method`: which path produced it: `"none"`, `"erp"`, `"erp+custom"`,
-///   `"custom-fallback"` or `"failed"`, with an `"html-"` prefix when the
-///   text came from the HTML part, and a `"+parent-diff"` or `"+html-quote"`
+/// - `method`: which path produced it: `"none"`, `"custom"` or `"failed"`,
+///   with an `"html-"` prefix when the text came from the HTML part, and a `"+parent-diff"` or `"+html-quote"`
 ///   suffix when those assists removed content.
 /// - `status`: [`Status::Ok`], [`Status::Empty`] or [`Status::Failed`].
 /// - `part_starts`: the 0-based indices into `text.split('\n')` of the lines
@@ -108,12 +106,13 @@ pub struct ExtractionResult {
 /// BOM / zero-width space / ZWNJ / ZWJ / word joiner.
 const ZERO_WIDTH: [char; 5] = ['\u{feff}', '\u{200b}', '\u{200c}', '\u{200d}', '\u{2060}'];
 
-/// Normalize line endings and strip BOM / zero-width characters.
+/// Normalize line endings and strip BOM / zero-width characters and U+0000
+/// (reserved for `GENERIC_ATTRIBUTION_MARK`).
 pub fn normalize_body(body: &str) -> String {
     body.replace("\r\n", "\n")
         .replace('\r', "\n")
         .chars()
-        .filter(|c| !ZERO_WIDTH.contains(c))
+        .filter(|&c| c != '\0' && !ZERO_WIDTH.contains(&c))
         .collect()
 }
 
@@ -152,8 +151,8 @@ pub fn is_quote_line(line: &str) -> bool {
 // accepts exactly the strings the original pattern accepts under `re.match`.
 static ATTRIBUTION_RES: LazyLock<[Re; 2]> = LazyLock::new(|| {
     [
-        // ^[ \t]*On\b.*wrote:[ \t]*$
-        Re::matcher(r"^[ \t]*On[^\w\n].*wrote:[ \t]*$", 0),
+        // ^[ \t]*(?:--)?On\b.*wrote:[ \t]*$
+        Re::matcher(r"^[ \t]*(?:--)?On[^\w\n].*wrote:[ \t]*$", 0),
         Re::matcher(r"^[ \t]*\d{4}(?:年|[/.-]).*のメール:[ \t]*$", 0),
     ]
 });
@@ -272,13 +271,22 @@ fn is_german_attribution(line: &str) -> bool {
     body.ends_with(':') && body.len() > end
 }
 
-// ^[ \t]*(?:(?:On|Am|Le|El|El día)\b|\d{4}(?:年|[/.-]))
+// For wrapped attributions: a start token, optionally after `>` markers and
+// blanks and then a "--", and a terminator that may appear on the following
+// lines.
+// ^[ \t>]*(?:--)?(?:(?:On|Am|Le|El|El día)\b|\d{4}(?:年|[/.-]))
 static ATTRIBUTION_START_RE: LazyLock<Re> = LazyLock::new(|| {
     Re::matcher(
-        r"^[ \t]*(?:(?:On|Am|Le|El|El día)(?:[^\w]|$)|\d{4}(?:年|[/.-]))",
+        r"^[ \t>]*(?:--)?(?:(?:On|Am|Le|El|El día)(?:[^\w]|$)|\d{4}(?:年|[/.-]))",
         0,
     )
 });
+/// A wrapped attribution's terminator lies on one of this many lines below
+/// its start line ...
+const WRAPPED_ATTRIBUTION_MAX_LINES: usize = 4;
+/// ... and the lines from the start line through the terminator line hold at
+/// most this many characters in total.
+const WRAPPED_ATTRIBUTION_MAX_CHARS: usize = 400;
 
 // The terminators, except `\bschrieb\b.*:`, which [`has_attribution_end`]
 // decides separately (as in the reference, where `search` retried `.*:` from
@@ -316,24 +324,37 @@ fn has_attribution_end(line: &str) -> bool {
     search_schrieb(line, line_start).is_some_and(|(_, end)| end <= colon)
 }
 
-/// True if `line` on its own is a complete attribution line.
+/// True if `line` on its own is a complete attribution line, or a line of a
+/// generic attribution unit marked by `mark_generic_attributions`.
 pub fn is_attribution_line(line: &str) -> bool {
-    ATTRIBUTION_RES.iter().any(|re| re.is_match(line))
+    line.starts_with(GENERIC_ATTRIBUTION_MARK)
+        || ATTRIBUTION_RES.iter().any(|re| re.is_match(line))
         || is_address_attribution(line)
         || is_german_attribution(line)
 }
 
+/// If `lines[i]` opens a wrapped attribution, the index of its terminator
+/// line: a start line ([`ATTRIBUTION_START_RE`]) without a terminator of its
+/// own, followed by the first line `j` within [`WRAPPED_ATTRIBUTION_MAX_LINES`]
+/// lines that holds a terminator, where no line from `i + 1` through `j` is
+/// blank or is itself a complete attribution line matching
+/// [`ATTRIBUTION_START_RE`], and the lines `i` through `j` hold at most
+/// [`WRAPPED_ATTRIBUTION_MAX_CHARS`] characters in total.
 fn wrapped_attribution_end(lines: &[&str], i: usize) -> Option<usize> {
     if !ATTRIBUTION_START_RE.is_match(lines[i]) || has_attribution_end(lines[i]) {
         return None;
     }
-    for (j, line) in lines
-        .iter()
-        .enumerate()
-        .take((i + 3).min(lines.len()))
-        .skip(i + 1)
-    {
+    let mut total = pystr::len(lines[i]);
+    let end = (i + 1 + WRAPPED_ATTRIBUTION_MAX_LINES).min(lines.len());
+    for (j, line) in lines.iter().enumerate().take(end).skip(i + 1) {
         if !pystr::has_content(line) {
+            return None;
+        }
+        total += pystr::len(line);
+        if total > WRAPPED_ATTRIBUTION_MAX_CHARS {
+            return None;
+        }
+        if ATTRIBUTION_START_RE.is_match(line) && is_attribution_line(line) {
             return None;
         }
         if has_attribution_end(line) {
@@ -343,7 +364,8 @@ fn wrapped_attribution_end(lines: &[&str], i: usize) -> Option<usize> {
     None
 }
 
-/// Drop attribution lines, including forms wrapped across up to two lines.
+/// Drop attribution lines, wrapped forms and marked generic attribution lines
+/// included.
 pub fn strip_attribution_lines<'a>(lines: &[&'a str]) -> Vec<&'a str> {
     let mut out = Vec::new();
     let n = lines.len();
@@ -363,9 +385,346 @@ pub fn strip_attribution_lines<'a>(lines: &[&'a str]) -> Vec<&'a str> {
     out
 }
 
+// --- generic attribution lines ------------------------------------------------
+//
+// A generic attribution unit is one to three lines, the last ending in a
+// colon, whose text names its source by a cue (an e-mail address, or a clock
+// time and a date) or ends in a speech verb. The rules are the comment above
+// `_generic_attribution_start` in the reference's `extraction.py`. A unit
+// directly above a quote line, with at most one blank line between, is
+// removed with the attribution lines; a unit with no quote line below can end
+// the new text at a sign-off boundary (see [`find_signoff_boundary`]).
+//
+// The unit's text is tested only when it holds at most
+// [`GENERIC_ATTRIBUTION_MAX_CHARS`] characters, so the patterns that need
+// `fancy-regex` (lookaround, `\b`) only ever run on bounded text.
+
+/// The longest generic attribution unit, and its last line, in characters.
+const GENERIC_ATTRIBUTION_MAX_CHARS: usize = 400;
+/// The most words a head with a cue may hold.
+const CUE_ATTRIBUTION_MAX_WORDS: usize = 25;
+/// The most words a head ending in a speech verb may hold.
+const VERB_ATTRIBUTION_MAX_WORDS: usize = 8;
+/// A clock time: "9:30", "19:30", "19h30".
+static CLOCK_TIME_RE: LazyLock<Re> =
+    LazyLock::new(|| Re::searcher(r"(?<!\d)\d{1,2}(?::\d{2}|h\d{2}\b)", 0));
+/// A date cue: a four-digit year from 1900 to 2099, a day and month ("3/12",
+/// "3.12", "3-12"), a CJK month ("3月"), or a day and month with dots
+/// ("3. 12.").
+static DATE_CUE_RE: LazyLock<Re> = LazyLock::new(|| {
+    Re::searcher(
+        concat!(
+            r"(?<!\d)(?:19|20)\d{2}(?!\d)|(?<![\d.])\d{1,2}[./-]\d{1,2}(?!\d)",
+            r"|\d{1,2}月|\d{1,2}\.\s?\d{1,2}\."
+        ),
+        0,
+    )
+});
+/// The opening of an attribution whose rest wraps onto the next line.
+// ^[ \t]*(?:-*On|Le|Am|El|Il|Op|Den|Ar|At|In|Em|Dne|W dniu|Pe|Às|\d)\b
+// (the trailing `\b` rewritten as `(?:[^\w]|$)`: every alternative ends in a
+// word character, and only the yes/no answer is used).
+static ATTRIBUTION_OPENER_RE: LazyLock<Re> = LazyLock::new(|| {
+    Re::matcher(
+        r"^[ \t]*(?:-*On|Le|Am|El|Il|Op|Den|Ar|At|In|Em|Dne|W dniu|Pe|Às|\d)(?:[^\w]|$)",
+        0,
+    )
+});
+/// A head that opens with a document reference, optionally after "(".
+static DOCUMENT_REFERENCE_RE: LazyLock<Re> = LazyLock::new(|| {
+    Re::matcher(
+        concat!(
+            r"^[ \t]*(?:\(?(?:sections?|sec\.|§|figures?|fig\.|tables?|appendix|rfc|old|new|current",
+            r"|proposed)\b)"
+        ),
+        IGNORECASE,
+    )
+});
+/// A head that ends in a URL or in a phrase announcing text below.
+static LEAD_IN_TAIL_RE: LazyLock<Re> = LazyLock::new(|| {
+    Re::searcher(
+        r"(?:https?://|www\.)\S*$|\b(?:as follows|following|below)$",
+        IGNORECASE,
+    )
+});
+/// A speech verb at the end of a head. Applied to the last
+/// [`SPEECH_VERB_SPAN`] characters of the head, which hold every alternative.
+static SPEECH_VERB_RE: LazyLock<Re> = LazyLock::new(|| {
+    Re::searcher(
+        concat!(
+            r"(?:\b(?:wrote|writes|said|schrieb|schreibt|[ée]crit|escribi[óo]|escribe|scritto|scrisse",
+            r"|scrive|schreef|schrijft|skrev|skriver|kirjoitti|napisa[łl]a?|escreveu|ysgrifennodd",
+            r"|написал|написала|пишет)|写道|寫道|쓴[ \t]*글)$"
+        ),
+        IGNORECASE,
+    )
+});
+const SPEECH_VERB_SPAN: usize = 24;
+/// A head that introduces quoted content rather than a person.
+static CONTENT_LEAD_IN_RE: LazyLock<Re> = LazyLock::new(|| {
+    Re::searcher(
+        concat!(
+            r"\b(?:it|this|that|what|text|draft|document|spec|section|rfc|paragraph|figure)\b",
+            r"|^[ \t]*[*•-]"
+        ),
+        IGNORECASE,
+    )
+});
+
+/// Prefixed to every line of a generic attribution unit found above a quote
+/// line (see [`mark_generic_attributions`]). The marked line keeps its place;
+/// the line rules anchored at the start of a line do not match it, and
+/// [`is_attribution_line`] accepts it. [`normalize_body`] removes U+0000 from
+/// every body, so no other line carries it.
+const GENERIC_ATTRIBUTION_MARK: char = '\0';
+
+/// `_EMAIL_LOCAL_CHAR_RE`: `[\w.+=-]`.
+fn is_email_local_char(c: char) -> bool {
+    pystr::is_word(c) || matches!(c, '.' | '+' | '=' | '-')
+}
+
+/// `_EMAIL_DOMAIN_RE.match(text, pos)` for `[\w-]+(?:\.[\w-]+)+`: neither
+/// class holds ".", so the pattern matches when a run of `[\w-]` is followed
+/// by "." and another character of `[\w-]`.
+fn email_domain_at(text: &str, pos: usize) -> bool {
+    let is_domain = |c: char| pystr::is_word(c) || c == '-';
+    let rest = &text[pos..];
+    let run = rest.find(|c: char| !is_domain(c)).unwrap_or(rest.len());
+    run > 0 && rest[run..].starts_with('.') && rest[run + 1..].chars().next().is_some_and(is_domain)
+}
+
+/// `re.search(r"[\w.+=-]+@[\w-]+(?:\.[\w-]+)+", text)`, linear: some "@" has
+/// a character of `[\w.+=-]` directly before it and the domain pattern
+/// matching directly after it.
+fn has_email_address(text: &str) -> bool {
+    text.match_indices('@').any(|(at, _)| {
+        text[..at]
+            .chars()
+            .next_back()
+            .is_some_and(is_email_local_char)
+            && email_domain_at(text, at + 1)
+    })
+}
+
+/// True when `line` reads as the wrapped continuation of `above`: the first
+/// non-blank character of `line` is lowercase (`str.islower`), is not a
+/// letter (`str.isalpha`), or lies in U+3000 to U+D7AF; or `above`, without
+/// trailing whitespace, does not end in ".", "!", "?" or ":" and opens like
+/// an attribution ([`ATTRIBUTION_OPENER_RE`]).
+fn continues(above: &str, line: &str) -> bool {
+    if let Some(first) = line.trim_start_matches(pystr::is_space).chars().next() {
+        if pystr::is_lower(first)
+            || !pystr::is_alpha(first)
+            || ('\u{3000}'..='\u{d7af}').contains(&first)
+        {
+            return true;
+        }
+    }
+    let tail = pystr::rstrip(above);
+    tail.chars()
+        .next_back()
+        .is_some_and(|c| !matches!(c, '.' | '!' | '?' | ':'))
+        && ATTRIBUTION_OPENER_RE.is_match(above)
+}
+
+/// The first line of the generic attribution unit whose last line is
+/// `lines[e]`: up to two lines above it join.
+fn unit_start(lines: &[&str], e: usize) -> usize {
+    let mut s = e;
+    while s + 2 > e && s > 0 {
+        let above = lines[s - 1];
+        if !pystr::has_content(above) || is_quote_line(above) || !continues(above, lines[s]) {
+            break;
+        }
+        s -= 1;
+    }
+    s
+}
+
+/// Step 5 of the generic attribution rules, for a unit's `text` ending in a
+/// colon.
+fn is_generic_attribution_text(text: &str) -> bool {
+    if pystr::len(text) > GENERIC_ATTRIBUTION_MAX_CHARS {
+        return false;
+    }
+    let mut chars = text.chars();
+    chars.next_back();
+    let head = chars.as_str().trim_end_matches([' ', '\t', '\u{a0}']);
+    if head.is_empty() || DOCUMENT_REFERENCE_RE.is_match(head) || LEAD_IN_TAIL_RE.is_match(head) {
+        return false;
+    }
+    let words = pystr::split_ws(head).len();
+    if words <= CUE_ATTRIBUTION_MAX_WORDS
+        && (has_email_address(head) || (CLOCK_TIME_RE.is_match(head) && DATE_CUE_RE.is_match(head)))
+    {
+        return true;
+    }
+    // head[-SPEECH_VERB_SPAN:], a new string: `\b` at its start sees no
+    // character before it.
+    let skip = pystr::len(head).saturating_sub(SPEECH_VERB_SPAN);
+    let tail = head
+        .char_indices()
+        .nth(skip)
+        .map_or("", |(b, _)| &head[b..]);
+    words <= VERB_ATTRIBUTION_MAX_WORDS
+        && SPEECH_VERB_RE.is_match(tail)
+        && !CONTENT_LEAD_IN_RE.is_match(head)
+}
+
+/// True when `line`, without trailing whitespace, ends in ":" or "：".
+fn ends_in_colon(line: &str) -> bool {
+    pystr::rstrip(line).ends_with([':', '：'])
+}
+
+/// The first line of the generic attribution unit whose last line is
+/// `lines[e]`, or `None` when no unit ends there.
+fn generic_attribution_start(lines: &[&str], e: usize) -> Option<usize> {
+    let line = lines[e];
+    if !ends_in_colon(line)
+        || is_quote_line(line)
+        || pystr::len(line) > GENERIC_ATTRIBUTION_MAX_CHARS
+    {
+        return None;
+    }
+    for k in e.saturating_sub(WRAPPED_ATTRIBUTION_MAX_LINES)..e {
+        if wrapped_attribution_end(lines, k) == Some(e) {
+            return None;
+        }
+    }
+    if ATTRIBUTION_START_RE.is_match(line) && is_attribution_line(line) {
+        return None;
+    }
+    let s = unit_start(lines, e);
+    if s == e && is_attribution_line(line) {
+        return None;
+    }
+    let text = lines[s..=e]
+        .iter()
+        .map(|l| pystr::strip(l))
+        .collect::<Vec<_>>()
+        .join(" ");
+    if !is_generic_attribution_text(&text) {
+        return None;
+    }
+    Some(s)
+}
+
+// --- wrap remainders ----------------------------------------------------------
+//
+// An unmarked line of at most two words that starts lowercase, between two
+// quote lines, below a quote line of at least 60 characters with no closing
+// punctuation, is the tail of a re-wrapped quote line (see the comment above
+// `_is_wrap_remainder` in the reference).
+
+const WRAP_REMAINDER_MIN_ABOVE: usize = 60;
+const WRAP_REMAINDER_MAX_WORDS: usize = 2;
+/// An answer word or a URL at the start of a line.
+static ANSWER_WORD_RE: LazyLock<Re> = LazyLock::new(|| {
+    Re::matcher(
+        concat!(
+            r"^(?:ok(?:ay)?|yes|yep|no|nope|agreed?|done|sure|fine|ack|right|true|correct|see|thanks?",
+            r"|https?://|www\.)\b"
+        ),
+        IGNORECASE,
+    )
+});
+
+/// True when `line`, between `above` and `below`, is a wrap remainder.
+fn is_wrap_remainder(above: &str, line: &str, below: &str) -> bool {
+    let text = pystr::strip(line);
+    if text.is_empty() || is_quote_line(line) || !is_quote_line(above) || !is_quote_line(below) {
+        return false;
+    }
+    let tail = pystr::rstrip(above);
+    if pystr::len(tail) < WRAP_REMAINDER_MIN_ABOVE
+        || pystr::split_ws(text).len() > WRAP_REMAINDER_MAX_WORDS
+    {
+        return false;
+    }
+    if !text.chars().next().is_some_and(pystr::is_lower) || ANSWER_WORD_RE.is_match(text) {
+        return false;
+    }
+    tail.chars()
+        .next_back()
+        .is_some_and(|c| !matches!(c, '.' | '?' | '!' | ':' | ';' | ')' | '"'))
+}
+
+/// Mark the generic attribution units and wrap remainders of `text`.
+///
+/// Every line of a generic attribution unit whose last line is followed by a
+/// quote line, directly or after one blank line, is prefixed with
+/// [`GENERIC_ATTRIBUTION_MARK`]; a wrap remainder is prefixed with `"> "`
+/// instead. Each unit and remainder is decided on the unmarked lines. The line
+/// count is unchanged.
+fn mark_generic_attributions(text: &str) -> String {
+    let lines: Vec<&str> = text.split('\n').collect();
+    let n = lines.len();
+    let mut prefix: Vec<&str> = vec![""; n];
+    for e in 0..n {
+        let mut j = e + 1;
+        if j < n && !pystr::has_content(lines[j]) {
+            j += 1;
+        }
+        if j >= n || !is_quote_line(lines[j]) {
+            continue;
+        }
+        if let Some(start) = generic_attribution_start(&lines, e) {
+            for p in &mut prefix[start..=e] {
+                *p = "\0";
+            }
+        }
+    }
+    for i in 1..n.saturating_sub(1) {
+        if is_wrap_remainder(lines[i - 1], lines[i], lines[i + 1]) {
+            prefix[i] = "> ";
+        }
+    }
+    let mut out = String::with_capacity(text.len() + n);
+    for (k, (p, line)) in prefix.iter().zip(&lines).enumerate() {
+        if k > 0 {
+            out.push('\n');
+        }
+        out.push_str(p);
+        out.push_str(line);
+    }
+    out
+}
+
+/// The last line of an attribution that starts at `lines[k]`, or `None`: a
+/// run of marked generic attribution lines (to the last consecutive marked
+/// line); a complete attribution line (`k` itself); a wrapped attribution; or
+/// a generic attribution unit that starts at `k`, whether or not a quote line
+/// follows it, whose last line is the first line ending in a colon among
+/// `lines[k]` and the two lines below it, with no blank or quote line before
+/// it.
+fn attribution_end_at(lines: &[&str], k: usize) -> Option<usize> {
+    if lines[k].starts_with(GENERIC_ATTRIBUTION_MARK) {
+        let mut e = k;
+        while e + 1 < lines.len() && lines[e + 1].starts_with(GENERIC_ATTRIBUTION_MARK) {
+            e += 1;
+        }
+        return Some(e);
+    }
+    if is_attribution_line(lines[k]) {
+        return Some(k);
+    }
+    if let Some(end) = wrapped_attribution_end(lines, k) {
+        return Some(end);
+    }
+    for e in k..(k + 3).min(lines.len()) {
+        if !pystr::has_content(lines[e]) || is_quote_line(lines[e]) {
+            return None;
+        }
+        if ends_in_colon(lines[e]) {
+            return (generic_attribution_start(lines, e) == Some(k)).then_some(e);
+        }
+    }
+    None
+}
+
 // --- sign-off boundary ----------------------------------------------------------
 
-const SIGNOFF_SALUTATIONS: &str = concat!(
+pub(crate) const SIGNOFF_SALUTATIONS: &str = concat!(
     // English
     r"all\s+the\s+best|best\s+(?:regards|wishes)|kind\s+regards|warm(?:est)?\s+regards|",
     r"many\s+thanks|thanks\s+again|thank\s+you|yours(?:\s+(?:sincerely|truly|faithfully))?|",
@@ -466,7 +825,12 @@ pub(crate) fn signoff_name_index(lines: &[&str], i: usize) -> Option<usize> {
 }
 
 /// The index just past a sign-off (salutation + name) that is directly
-/// followed by an attribution line, or `None`.
+/// followed by an attribution introducing unmarked text, or `None`.
+///
+/// The attribution is the next non-blank line after the name and is
+/// recognized by `attribution_end_at`. It must not be followed, after any
+/// blank lines, by a quote line: an attribution above `>`-quoted text heads
+/// an interleaved quote, and the author's inline replies may follow it.
 pub fn find_signoff_boundary(lines: &[&str]) -> Option<usize> {
     let n = lines.len();
     for i in 0..n {
@@ -480,9 +844,17 @@ pub fn find_signoff_boundary(lines: &[&str]) -> Option<usize> {
         if k >= n {
             continue;
         }
-        if is_attribution_line(lines[k]) || wrapped_attribution_end(lines, k).is_some() {
-            return Some(name_idx + 1);
+        let Some(end) = attribution_end_at(lines, k) else {
+            continue;
+        };
+        let mut q = end + 1;
+        while q < n && !pystr::has_content(lines[q]) {
+            q += 1;
         }
+        if q < n && is_quote_line(lines[q]) {
+            continue;
+        }
+        return Some(name_idx + 1);
     }
     None
 }
@@ -617,8 +989,8 @@ fn header_walk_table(lines: &[&str], is_localized: bool, tolerant: bool) -> Walk
 /// or `None`. `localized` enables the Latin-script localized blocks
 /// (`true` in the reference's default).
 ///
-/// The pasted-evidence flags ([`pasted_header_runs`]) and each walk mode's
-/// table ([`header_walk_table`]) are built once, on first use, so the search
+/// The pasted-evidence flags (`pasted_header_runs`) and each walk mode's
+/// table (`header_walk_table`) are built once, on first use, so the search
 /// is linear in the number of lines.
 pub fn find_quote_header_block(lines: &[&str], localized: bool) -> Option<usize> {
     let mut pasted: Option<Vec<bool>> = None;
@@ -649,6 +1021,10 @@ pub fn find_quote_header_block(lines: &[&str], localized: bool) -> Option<usize>
 static QUOTE_HEADER_DIVIDER_RE: LazyLock<Re> =
     LazyLock::new(|| Re::matcher(r"^[ \t]*-{6,}[ \t]*$", 0));
 
+/// Truncate everything from a forwarded/quote-header block to the end. A
+/// dashed divider line left dangling directly above the removed block, or
+/// failing that a bare "Original" line ([`BARE_ORIGINAL_RE`]), is dropped
+/// with the block.
 fn strip_after_quote_header_block<'a>(lines: &[&'a str], localized: bool) -> Vec<&'a str> {
     let Some(idx) = find_quote_header_block(lines, localized) else {
         return lines.to_vec();
@@ -659,7 +1035,7 @@ fn strip_after_quote_header_block<'a>(lines: &[&'a str], localized: bool) -> Vec
     }
     if out
         .last()
-        .is_some_and(|l| QUOTE_HEADER_DIVIDER_RE.is_match(l))
+        .is_some_and(|l| QUOTE_HEADER_DIVIDER_RE.is_match(l) || BARE_ORIGINAL_RE.is_match(l))
     {
         out.pop();
     }
@@ -691,6 +1067,41 @@ static LOCALIZED_DIVIDER_RE: LazyLock<Re> = LazyLock::new(|| {
     )
 });
 
+// The short "Original" dividers of QQ Mail, Foxmail and similar clients:
+// "------------------ Original ------------------", "--- Original Message(s)
+// ---" and the Chinese 邮件原文, with dashes on both sides; the spacing may
+// include U+00A0, U+3000 or a literal "&nbsp;". The reference's `(?<!-)`
+// prefix is applied by [`search_not_after_dash`].
+static SHORT_ORIGINAL_DIVIDER_RE: LazyLock<Re> = LazyLock::new(|| {
+    const SP: &str = r"(?:[ \t\u00a0\u3000]|&nbsp;)";
+    Re::searcher(
+        &format!(r"-{{2,}}{SP}*(?:Original(?:{SP}+Messages?)?|邮件原文){SP}*-{{2,}}"),
+        IGNORECASE,
+    )
+});
+/// A bare "Original" line, which QQ Mail and Foxmail draw above their quote
+/// header in place of a dashed divider.
+static BARE_ORIGINAL_RE: LazyLock<Re> = LazyLock::new(|| Re::matcher(r"^[ \t]*Original[ \t]*$", 0));
+/// The `From:` (or 发件人) line a bare "Original" line must stand above.
+static BARE_ORIGINAL_FROM_RE: LazyLock<Re> =
+    LazyLock::new(|| Re::matcher(r"^[ \t*]*(?:From|发件人)[ \t]*[:：]", 0));
+/// A note that the author answers inline ("replies inline", "in-line").
+static INLINE_NOTE_RE: LazyLock<Re> = LazyLock::new(|| Re::searcher(r"\bin-?line\b", IGNORECASE));
+
+/// True when `lines[i]` is a bare "Original" line and the first non-blank line
+/// among the four below it is a `From:` / 发件人 line.
+fn is_bare_original_divider(lines: &[&str], i: usize) -> bool {
+    if !BARE_ORIGINAL_RE.is_match(lines[i]) {
+        return false;
+    }
+    lines
+        .iter()
+        .skip(i + 1)
+        .take(4)
+        .find(|l| pystr::has_content(l))
+        .is_some_and(|l| BARE_ORIGINAL_FROM_RE.is_match(l))
+}
+
 /// `re.search` of `(?<!-)` followed by `re` in `line`: the start of the first
 /// match that is not preceded by a dash.
 ///
@@ -715,29 +1126,56 @@ fn search_not_after_dash(re: &Re, line: &str) -> Option<usize> {
 }
 
 /// The byte offset of the first "Original message" divider in `line`.
-fn find_divider(line: &str, localized: bool) -> Option<usize> {
-    let english = search_not_after_dash(&ORIGINAL_MESSAGE_DIVIDER_RE, line);
-    let local = if localized {
-        search_not_after_dash(&LOCALIZED_DIVIDER_RE, line)
-    } else {
-        None
+/// `short = false` leaves out the short "Original" forms
+/// ([`SHORT_ORIGINAL_DIVIDER_RE`]).
+fn find_divider(line: &str, localized: bool, short: bool) -> Option<usize> {
+    let mut found = search_not_after_dash(&ORIGINAL_MESSAGE_DIVIDER_RE, line);
+    let mut add = |start: Option<usize>| {
+        if let Some(b) = start {
+            found = Some(found.map_or(b, |a| a.min(b)));
+        }
     };
-    match (english, local) {
-        (Some(a), Some(b)) => Some(a.min(b)),
-        (a, b) => a.or(b),
+    if short {
+        add(search_not_after_dash(&SHORT_ORIGINAL_DIVIDER_RE, line));
     }
+    if localized {
+        add(search_not_after_dash(&LOCALIZED_DIVIDER_RE, line));
+    }
+    found
 }
 
 /// Truncate everything from a dashed "Original/Forwarded message" divider,
 /// keeping a non-empty author prefix glued before a mid-line divider.
+///
+/// A divider on a quote line never truncates. A bare "Original" line above a
+/// `From:` line (`is_bare_original_divider`) truncates like a divider, the
+/// line itself included. Once a line above holds an inline note
+/// (`INLINE_NOTE_RE`: a quote line, or a line without a divider), the short
+/// forms are ignored; a divider of the other forms still truncates.
 pub fn strip_after_original_message_divider<'a>(
     lines: &[&'a str],
     localized: bool,
 ) -> Vec<&'a str> {
+    let mut inline_note = false;
     for (i, line) in lines.iter().enumerate() {
-        let Some(start) = find_divider(line, localized) else {
+        if is_quote_line(line) {
+            if !inline_note && INLINE_NOTE_RE.is_match(line) {
+                inline_note = true;
+            }
+            continue;
+        }
+        if !inline_note && is_bare_original_divider(lines, i) {
+            return lines[..i].to_vec();
+        }
+        let Some(start) = find_divider(line, localized, true) else {
+            if !inline_note && INLINE_NOTE_RE.is_match(line) {
+                inline_note = true;
+            }
             continue;
         };
+        if inline_note && find_divider(line, localized, false).is_none() {
+            continue;
+        }
         let mut out = lines[..i].to_vec();
         let prefix = pystr::rstrip(&line[..start]);
         if !prefix.is_empty() {
@@ -748,9 +1186,33 @@ pub fn strip_after_original_message_divider<'a>(
     lines.to_vec()
 }
 
-/// Apply the stage-1 quote/attribution cleanup to `text`.
+// --- Outlook boundary lines -----------------------------------------------------
+
+/// A line Outlook draws above a quoted message: an optional space, then at
+/// least seven underscores or hyphens.
+static OUTLOOK_BOUNDARY_RE: LazyLock<Re> = LazyLock::new(|| Re::matcher(r" ?[_-]{7,}", 0));
+
+/// Insert a blank line between a non-empty line and an Outlook boundary line
+/// ([`OUTLOOK_BOUNDARY_RE`]) directly below it, so the boundary never reads as
+/// part of the paragraph above it.
+fn separate_outlook_boundaries<'a>(lines: impl Iterator<Item = &'a str>) -> Vec<&'a str> {
+    let mut out: Vec<&str> = Vec::new();
+    for line in lines {
+        if out.last().is_some_and(|l| !l.is_empty()) && OUTLOOK_BOUNDARY_RE.is_match(line) {
+            out.push("");
+        }
+        out.push(line);
+    }
+    out
+}
+
+/// Apply the stage-1 quote/attribution cleanup to `text`: separate Outlook
+/// boundary lines, truncate at a forwarded/quote-header block, an "Original
+/// message" divider or a sign-off boundary, drop attribution lines (wrapped
+/// forms and marked generic attribution lines included), then filter out
+/// quoted lines.
 pub fn custom_clean(text: &str, localized: bool) -> String {
-    let lines: Vec<&str> = text.split('\n').collect();
+    let lines = separate_outlook_boundaries(text.split('\n'));
     let lines = strip_after_quote_header_block(&lines, localized);
     let lines = strip_after_original_message_divider(&lines, localized);
     let lines = strip_after_signoff_boundary(lines);
@@ -769,23 +1231,6 @@ pub fn custom_clean(text: &str, localized: bool) -> String {
         lines.pop();
     }
     lines.join("\n")
-}
-
-// --- over-strip guard ---------------------------------------------------------
-
-const GUARD_MIN_RETAINED: f64 = 0.6;
-
-/// Count non-blank body lines that are plainly authored content (the
-/// denominator of the over-strip guard).
-pub fn count_unquoted_content_lines(body: &str, localized: bool) -> usize {
-    let lines: Vec<&str> = body.split('\n').collect();
-    let lines = strip_after_quote_header_block(&lines, localized);
-    let lines = strip_after_original_message_divider(&lines, localized);
-    let lines = strip_after_signoff_boundary(lines);
-    lines
-        .iter()
-        .filter(|l| pystr::has_content(l) && !is_quote_line(l) && !is_attribution_line(l))
-        .count()
 }
 
 fn nonblank_line_count(text: &str) -> usize {
@@ -1294,7 +1739,7 @@ pub fn aligned_run_marks(child_seq: &[&str], parent_seq: &[&str]) -> Vec<bool> {
 // --- rules (b) and (c): substring tests against the parent's word-stream ---------
 
 /// `[needle in " ".join(parent_seq) for needle in needles]`, answered by one
-/// [`ParentStream`] (the queries share its lazily built table and
+/// `ParentStream` (the queries share its lazily built table and
 /// automaton). Exported for differential testing.
 pub fn parent_stream_contains(parent_seq: &[&str], needles: &[&str]) -> Vec<bool> {
     let joined = parent_seq.join(" ");
@@ -1465,6 +1910,157 @@ impl<'a> ParentStream<'a> {
             }
         }
         true
+    }
+}
+
+// --- marking mode: unmarked parent text the author placed ---------------------
+//
+// The reference's comment of the same title is the specification: evidence
+// (`marking_mode`), the stop line (`unmarked_quote_start`), the protected
+// lines (`marking_protected_lines`), their use in
+// `strip_parent_content_protected`, and the many-runs guard
+// (`runs_losing_protection`). Every step is one pass over its input.
+
+const MARKING_MODE_MIN_LINES: usize = 3;
+const MARKING_MODE_MIN_WORDS: usize = 4;
+const MARKING_MODE_SHORT_RUN: usize = 2;
+const MARKING_MODE_MANY_RUNS: usize = 8;
+
+/// `(depth, content)` of `line` (the reference's `_quote_depth`). The
+/// reference's `_QUOTE_DEPTH_RE`, `^[ \t]*(?:\.{2,}[ \t]*)?((?:>[ \t]*)+)`,
+/// matched by hand: no backtracking alternative can match where the greedy
+/// reading fails, since the character after each optional part is a dot or a
+/// `>` that the shorter reading cannot accept.
+fn quote_depth(line: &str) -> (usize, String) {
+    let bytes = line.as_bytes();
+    let blank = |b: u8| b == b' ' || b == b'\t';
+    let mut p = 0;
+    while p < bytes.len() && blank(bytes[p]) {
+        p += 1;
+    }
+    let mut q = p;
+    while q < bytes.len() && bytes[q] == b'.' {
+        q += 1;
+    }
+    if q - p >= 2 {
+        p = q;
+        while p < bytes.len() && blank(bytes[p]) {
+            p += 1;
+        }
+    }
+    let mut depth = 0;
+    while p < bytes.len() && bytes[p] == b'>' {
+        depth += 1;
+        p += 1;
+        while p < bytes.len() && blank(bytes[p]) {
+            p += 1;
+        }
+    }
+    if depth == 0 {
+        return (0, pystr::collapse_ws(line));
+    }
+    (depth, pystr::collapse_ws(&line[p..]))
+}
+
+/// Step 1: whether marking mode is on (the reference's `_marking_mode`).
+fn marking_mode(body_lines: &[&str], parent_body: &str) -> bool {
+    let mut parent_depth: HashMap<String, usize> = HashMap::new();
+    for line in normalize_body(parent_body).split('\n') {
+        let (depth, content) = quote_depth(line);
+        if content.is_empty() {
+            continue;
+        }
+        let entry = parent_depth.entry(content).or_insert(depth);
+        *entry = (*entry).min(depth);
+    }
+    let mut count = 0;
+    for line in body_lines {
+        let (depth, content) = quote_depth(line);
+        if depth == 0 || content.is_empty() {
+            continue;
+        }
+        let Some(&parent) = parent_depth.get(&content) else {
+            continue;
+        };
+        if word_count(&content) < MARKING_MODE_MIN_WORDS {
+            continue;
+        }
+        if depth > parent {
+            count += 1;
+        }
+    }
+    count >= MARKING_MODE_MIN_LINES
+}
+
+/// Step 2: the stop line of the marked body `lines` (the reference's
+/// `_unmarked_quote_start`).
+fn unmarked_quote_start(lines: &[&str]) -> usize {
+    let n = lines.len();
+    for k in 0..n {
+        if !pystr::has_content(lines[k]) || is_quote_line(lines[k]) {
+            continue;
+        }
+        let Some(end) = attribution_end_at(lines, k) else {
+            continue;
+        };
+        let mut q = end + 1;
+        while q < n && !pystr::has_content(lines[q]) {
+            q += 1;
+        }
+        if q < n && !is_quote_line(lines[q]) {
+            return q;
+        }
+    }
+    n
+}
+
+/// Step 3: the protected normalized lines (the reference's
+/// `_marking_protected_lines`).
+fn marking_protected_lines(body_lines: &[&str], stop: usize) -> HashSet<String> {
+    let mut protected = HashSet::new();
+    let mut i = 0;
+    while i < stop {
+        if !pystr::has_content(body_lines[i]) {
+            i += 1;
+            continue;
+        }
+        let mut j = i;
+        while j < stop && pystr::has_content(body_lines[j]) {
+            j += 1;
+        }
+        let block = &body_lines[i..j];
+        if !block.iter().any(|line| is_quote_line(line)) {
+            protected.extend(block.iter().map(|line| normalize_line_for_diff(line)));
+        }
+        i = j;
+    }
+    protected
+}
+
+/// Step 5: the runs `start..end` that lose their protection (the reference's
+/// `_runs_losing_protection`). `own[k]` is true for a line protected by step
+/// 4 and not by rule (d).
+fn runs_losing_protection(own: &[bool], marks: &[bool]) -> Vec<(usize, usize)> {
+    let count = own.len();
+    let mut long_runs = Vec::new();
+    let mut k = 0;
+    while k < count {
+        if !(own[k] && marks[k]) {
+            k += 1;
+            continue;
+        }
+        let start = k;
+        while k < count && own[k] && marks[k] {
+            k += 1;
+        }
+        if k - start > MARKING_MODE_SHORT_RUN {
+            long_runs.push((start, k));
+        }
+    }
+    if long_runs.len() >= MARKING_MODE_MANY_RUNS {
+        long_runs
+    } else {
+        Vec::new()
     }
 }
 
@@ -1656,6 +2252,19 @@ pub fn strip_parent_content_with_quotation(
     continuation: bool,
     quoted_text: Option<&str>,
 ) -> String {
+    strip_parent_content_protected(text, parent_body, continuation, quoted_text, None)
+}
+
+/// [`strip_parent_content_with_quotation`] with marking mode (the reference's
+/// `_strip_parent_content`): `protected_lines` is the set of step 3 of the
+/// marking-mode rules (`None` or empty: marking mode is off).
+fn strip_parent_content_protected(
+    text: &str,
+    parent_body: &str,
+    continuation: bool,
+    quoted_text: Option<&str>,
+    protected_lines: Option<&HashSet<String>>,
+) -> String {
     let normalized_child = normalize_body(text);
     let child_raw: Vec<&str> = normalized_child.split('\n').collect();
     let child_norm: Vec<String> = child_raw
@@ -1720,7 +2329,22 @@ pub fn strip_parent_content_with_quotation(
         None => Vec::new(),
     };
     let quoted_seq: Vec<&str> = quoted_norm.iter().map(String::as_str).collect();
-    let protected = restored_by_own_quotation(&child_pairs, &marks, &quoted_seq);
+    let mut protected = restored_by_own_quotation(&child_pairs, &marks, &quoted_seq);
+    if let Some(protected_lines) = protected_lines.filter(|set| !set.is_empty()) {
+        let mut own = vec![false; count];
+        for k in 0..count {
+            let (i, norm) = child_pairs[k];
+            if protected_lines.contains(norm) && !is_quote_line(child_raw[i]) {
+                own[k] = !protected[k];
+                protected[k] = true;
+            }
+        }
+        for (start, end) in runs_losing_protection(&own, &marks) {
+            for flag in &mut protected[start..end] {
+                *flag = false;
+            }
+        }
+    }
     if protected.iter().any(|&flag| flag) {
         for k in 0..count {
             seeds[k] = seeds[k] && !protected[k];
@@ -1781,7 +2405,7 @@ const INLINE_REPLY_MIN_PARENT_LINES: usize = 1;
 fn first_quote_boundary(lines: &[&str], localized: bool) -> usize {
     let end = find_quote_header_block(lines, localized).unwrap_or(lines.len());
     for (i, line) in lines.iter().enumerate().take(end) {
-        if find_divider(line, localized).is_some() {
+        if !is_quote_line(line) && find_divider(line, localized, true).is_some() {
             return i;
         }
     }
@@ -1841,9 +2465,9 @@ const MAX_TAG_LABEL: usize = 20;
 ///
 /// Per label, the tests are `"[" + label in parent_body` and
 /// `re.search(r"(?<!\w)" + re.escape(name) + r"(?!\w)", head)`. Labels and
-/// names are at most [`MAX_TAG_LABEL`] characters, so both are answered for
-/// all labels together in one scan of each text (see [`found_after_bracket`]
-/// and [`name_in_head`]), in time linear in the texts' length.
+/// names are at most `MAX_TAG_LABEL` characters, so both are answered for
+/// all labels together in one scan of each text (see `found_after_bracket`
+/// and `name_in_head`), in time linear in the texts' length.
 pub fn any_author_tag(labels: &[String], head: &str, parent_body: Option<&str>) -> bool {
     if let Some(parent) = parent_body {
         let found = found_after_bracket(parent, labels);
@@ -1958,49 +2582,38 @@ fn name_in_head(head: &str, names: &[&str]) -> bool {
 
 // --- public entry point -------------------------------------------------------
 
+/// Run the cleanup pass and the parent-diff assist.
 fn core_extract(body: &str, parent_body: Option<&str>) -> (String, String) {
-    let mut normalized = normalize_body(body);
-    // The marked quotation is taken from the whole body, before any truncation.
+    let normalized = normalize_body(body);
+    // The marked quotation and the marking-mode reading are taken from the
+    // whole body, before any truncation or marking.
     let quoted_text = marked_quotation(&normalized);
+    let body_lines: Vec<&str> = normalized.split('\n').collect();
+    let marked = mark_generic_attributions(&normalized);
 
-    let lines: Vec<&str> = normalized.split('\n').collect();
+    // The Latin-script localized blocks and dividers are not applied to an
+    // inline reply written below one (see `localized_inline_reply`).
+    let lines: Vec<&str> = marked.split('\n').collect();
     let localized = !localized_inline_reply(&lines, parent_body);
-    let pretruncated = find_quote_header_block(&lines, localized).is_some();
-    if pretruncated {
-        normalized = strip_after_quote_header_block(&lines, localized).join("\n");
-    }
+    let mut text = custom_clean(&marked, localized);
+    let mut method = "custom".to_string();
 
-    let erp_out = read_fragments(&normalized)
-        .into_iter()
-        .filter(|f| !f.quoted)
-        .map(|f| f.content)
-        .collect::<Vec<_>>()
-        .join("\n");
-    let cleaned = custom_clean(&erp_out, localized);
-    let custom_changed = pretruncated || cleaned != pystr::strip(&erp_out);
-    let plain_method = if custom_changed { "erp+custom" } else { "erp" };
-
-    let unquoted = count_unquoted_content_lines(&normalized, localized);
-    let (mut text, mut method);
-    if unquoted > 0 && (nonblank_line_count(&cleaned) as f64) < GUARD_MIN_RETAINED * unquoted as f64
-    {
-        let fallback = custom_clean(&normalized, localized);
-        if pystr::has_content(&fallback) {
-            text = fallback;
-            method = "custom-fallback".to_string();
-        } else {
-            text = cleaned;
-            method = plain_method.to_string();
-        }
-    } else {
-        text = cleaned;
-        method = plain_method.to_string();
-    }
-
+    // Parent-diff assist. The assisted text (and the "+parent-diff" suffix) is
+    // adopted only when it dropped a content line: strip_parent_content also
+    // collapses internal blank runs.
     if let Some(parent) = parent_body {
         if pystr::has_content(&text) {
-            let assisted =
-                strip_parent_content_with_quotation(&text, parent, true, Some(&quoted_text));
+            let protected_lines = marking_mode(&body_lines, parent).then(|| {
+                let stop = unmarked_quote_start(&lines);
+                marking_protected_lines(&body_lines, stop)
+            });
+            let assisted = strip_parent_content_protected(
+                &text,
+                parent,
+                true,
+                Some(&quoted_text),
+                protected_lines.as_ref(),
+            );
             if nonblank_line_count(&assisted) < nonblank_line_count(&text) {
                 text = assisted;
                 method.push_str("+parent-diff");
@@ -2190,7 +2803,7 @@ fn extract(
 /// let body = "Sounds good to me.\n\nOn Tue, 1 Jul 2026, Ann wrote:\n> Shall we merge?\n";
 /// let result = extract_new_text(Some(body), None, None);
 /// assert_eq!(result.text, "Sounds good to me.");
-/// assert_eq!(result.method, "erp");
+/// assert_eq!(result.method, "custom");
 /// assert_eq!(result.status, Status::Ok);
 /// ```
 pub fn extract_new_text(
@@ -2669,7 +3282,7 @@ mod share_sheet_tests {
         );
         let r = extract_new_text(Some(&body), None, Some(&html));
         assert_eq!(r.status, Status::Ok);
-        assert_eq!(r.method, "html-erp");
+        assert_eq!(r.method, "html-custom");
         assert_eq!(
             r.text,
             format!("Carol,\n\n{}\n\nAlice", SHARE_PROSE.join("\n"))
@@ -2765,7 +3378,7 @@ mod share_sheet_tests {
         let html = share_html(&lines.join("<br>"), "", "");
         let body = cite(&lines);
         let r = extract_new_text(Some(&body), Some(&parent), Some(&html));
-        assert_eq!(r.method, "html-erp+parent-diff");
+        assert_eq!(r.method, "html-custom+parent-diff");
         assert_eq!(r.text, SHARE_PROSE[0]);
     }
 

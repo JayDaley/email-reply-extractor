@@ -53,7 +53,7 @@
   },
   {
    "args": {
-    "text": "(..)\nThis is Ok. Note that here the term \"random bit generator\" (RBG) is used.\nOf course we wouldn't expect a RBG to give any information about other\noutputs or the state, since it is a RBG (see below), but it may as well be\nmentioned.\n\n\nObviously the mentioned reveal also applies to hybrids such as\nX25519MLKEM768 as well ( the hybrid key derivation is not a black box to\nthe recipient. )\nHere the text talks of a \"raw random number generator\" which it\nabbreviates refers\nto as PRNG (\"P\" is for pseudo.). This is not a well defined term, and I\nagree with Quynh that it is better adjusted as  “The disclosure of the\noutput(s) of an insecure random number generator (RNG) when used in TLS and\nother protocols can be used in an attack to compromise the state of the\ninsecure RNG itself as described in [DUALEC-TLS].\"\nThe term \"raw RNG\" here seems ok -- it is undefined but I guess it means\n\"insecure RNG.\"\nHere, the term PRNG makes a comeback. Perhaps change it to RNG for\nconsistency. FIPS 203 does not offer PRNG guidance, but RBG guidance. An\nRBG may or may not be deterministic.\n\n\nTo recap: RNG is an incredibly vague term as it implies no clearly defined\nsecurity properties -- but this is what the IETF has been using. As noted,\nFIPS land talks of RBGs (and defines what they are), as does a part of the\nCC land. CC also uses the AIS 20/31 terminology and classification, in\nwhich RNG is essentially a catch-all, and protection profiles impose\nadditional, more detailed requirements for entropy generation and\npost-processing.\n\n\nFIPS 203 actually asks for an RBG, which implies:\n\n- seeding from a sufficient amount of entropy, and also\n\n- cryptographically secure post-processing where any number of output bits\ndo not offer an advantage in predicting or determining unrevealed output\nbits, assuming cryptographic security of SHA2 or AES, etc.\n\n\nThe more casual mathematical term PRNG implies neither cryptographic\nsecurity nor sufficient entropy seeding — simply determinism. Often PRNGs\nare distinguished from RNGs specifically because they do not have\nsufficient seeding.\n\n\nAmerican standard terminology has a class of RBGs called DRBGs\n(Deterministic Random Bit Generators). Because DRBGs are deteministic,\ntechnically they are PRNGs, but they are also RBGs -- when instantiated,\nthe standards (and testing labs) require adequate seeding and an\nappropriate level of security in post-processing components (for example, a\nDRBG based on AES-128 is not sufficient for a 256-bit security level).\n\nThere is also the \"CRA land\" in Europe, and ECCG & ENISA is searching for a\nsuitable compromise for entropy in lower-assurance products (non-CC.). But\nat this point acceptable DRBGs are listed in the ACM (they all have\ncryptographically secure post-processing). It has been of course proposed\nthat, e.g., Linux Random would be considered ok as an entropy source for\nconsumer products, for obvious practical reasons.\n\n\nBest Regards,\n-markku\n"
+    "text": "(..)\nThis is Ok. Note that here the term \"random bit generator\" (RBG) is used.\nOf course we wouldn't expect a RBG to give any information about other\noutputs or the state, since it is a RBG (see below), but it may as well be\nmentioned.\n\n\nObviously the mentioned reveal also applies to hybrids such as\nX25519MLKEM768 as well ( the hybrid key derivation is not a black box to\nthe recipient. )\nHere the text talks of a \"raw random number generator\" which it\nabbreviates refers\nto as PRNG (\"P\" is for pseudo.). This is not a well defined term, and I\nagree with Quynh that it is better adjusted as  “The disclosure of the\noutput(s) of an insecure random number generator (RNG) when used in TLS and\nother protocols can be used in an attack to compromise the state of the\ninsecure RNG itself as described in [DUALEC-TLS].\"\nThe term \"raw RNG\" here seems ok -- it is undefined but I guess it means\n\"insecure RNG.\"\nHere, the term PRNG makes a comeback. Perhaps change it to RNG for\nconsistency. FIPS 203 does not offer PRNG guidance, but RBG guidance. An\nRBG may or may not be deterministic.\n\n\nTo recap: RNG is an incredibly vague term as it implies no clearly defined\nsecurity properties -- but this is what the IETF has been using. As noted,\nFIPS land talks of RBGs (and defines what they are), as does a part of the\nCC land. CC also uses the AIS 20/31 terminology and classification, in\nwhich RNG is essentially a catch-all, and protection profiles impose\nadditional, more detailed requirements for entropy generation and\npost-processing.\n\n\nFIPS 203 actually asks for an RBG, which implies:\n\n- seeding from a sufficient amount of entropy, and also\n\n- cryptographically secure post-processing where any number of output bits\ndo not offer an advantage in predicting or determining unrevealed output\nbits, assuming cryptographic security of SHA2 or AES, etc.\n\n\nThe more casual mathematical term PRNG implies neither cryptographic\nsecurity nor sufficient entropy seeding — simply determinism. Often PRNGs\nare distinguished from RNGs specifically because they do not have\nsufficient seeding.\n\n\nAmerican standard terminology has a class of RBGs called DRBGs\n(Deterministic Random Bit Generators). Because DRBGs are deteministic,\ntechnically they are PRNGs, but they are also RBGs -- when instantiated,\nthe standards (and testing labs) require adequate seeding and an\nappropriate level of security in post-processing components (for example, a\nDRBG based on AES-128 is not sufficient for a 256-bit security level).\n\nThere is also the \"CRA land\" in Europe, and ECCG & ENISA is searching for a\nsuitable compromise for entropy in lower-assurance products (non-CC.). But\nat this point acceptable DRBGs are listed in the ACM (they all have\ncryptographically secure post-processing). It has been of course proposed\nthat, e.g., Linux Random would be considered ok as an entropy source for\nconsumer products, for obvious practical reasons.\n"
    },
    "result": [
     "(..)",
@@ -103,14 +103,12 @@
     "at this point acceptable DRBGs are listed in the ACM (they all have",
     "cryptographically secure post-processing). It has been of course proposed",
     "that, e.g., Linux Random would be considered ok as an entropy source for",
-    "consumer products, for obvious practical reasons.",
-    "Best Regards,",
-    "-markku"
+    "consumer products, for obvious practical reasons."
    ]
   },
   {
    "args": {
-    "text": "(..)\n\nThis is Ok. Note that here the term \"random bit generator\" (RBG) is used.\nOf course we wouldn't expect a RBG to give any information about other\noutputs or the state, since it is a RBG (see below), but it may as well be\nmentioned.\n\nObviously the mentioned reveal also applies to hybrids such as\nX25519MLKEM768 as well ( the hybrid key derivation is not a black box to\nthe recipient. )\n\nHere the text talks of a \"raw random number generator\" which it\nabbreviates refers\nto as PRNG (\"P\" is for pseudo.). This is not a well defined term, and I\nagree with Quynh that it is better adjusted as  “The disclosure of the\noutput(s) of an insecure random number generator (RNG) when used in TLS and\nother protocols can be used in an attack to compromise the state of the\ninsecure RNG itself as described in [DUALEC-TLS].\"\n\nThe term \"raw RNG\" here seems ok -- it is undefined but I guess it means\n\"insecure RNG.\"\n\nHere, the term PRNG makes a comeback. Perhaps change it to RNG for\nconsistency. FIPS 203 does not offer PRNG guidance, but RBG guidance. An\nRBG may or may not be deterministic.\n\nTo recap: RNG is an incredibly vague term as it implies no clearly defined\nsecurity properties -- but this is what the IETF has been using. As noted,\nFIPS land talks of RBGs (and defines what they are), as does a part of the\nCC land. CC also uses the AIS 20/31 terminology and classification, in\nwhich RNG is essentially a catch-all, and protection profiles impose\nadditional, more detailed requirements for entropy generation and\npost-processing.\n\nFIPS 203 actually asks for an RBG, which implies:\n\n- seeding from a sufficient amount of entropy, and also\n\n- cryptographically secure post-processing where any number of output bits\ndo not offer an advantage in predicting or determining unrevealed output\nbits, assuming cryptographic security of SHA2 or AES, etc.\n\nThe more casual mathematical term PRNG implies neither cryptographic\nsecurity nor sufficient entropy seeding — simply determinism. Often PRNGs\nare distinguished from RNGs specifically because they do not have\nsufficient seeding.\n\nAmerican standard terminology has a class of RBGs called DRBGs\n(Deterministic Random Bit Generators). Because DRBGs are deteministic,\ntechnically they are PRNGs, but they are also RBGs -- when instantiated,\nthe standards (and testing labs) require adequate seeding and an\nappropriate level of security in post-processing components (for example, a\nDRBG based on AES-128 is not sufficient for a 256-bit security level).\n\nThere is also the \"CRA land\" in Europe, and ECCG & ENISA is searching for a\nsuitable compromise for entropy in lower-assurance products (non-CC.). But\nat this point acceptable DRBGs are listed in the ACM (they all have\ncryptographically secure post-processing). It has been of course proposed\nthat, e.g., Linux Random would be considered ok as an entropy source for\nconsumer products, for obvious practical reasons.\n\nBest Regards,\n-markku"
+    "text": "(..)\n\nThis is Ok. Note that here the term \"random bit generator\" (RBG) is used.\nOf course we wouldn't expect a RBG to give any information about other\noutputs or the state, since it is a RBG (see below), but it may as well be\nmentioned.\n\nObviously the mentioned reveal also applies to hybrids such as\nX25519MLKEM768 as well ( the hybrid key derivation is not a black box to\nthe recipient. )\n\nHere the text talks of a \"raw random number generator\" which it\nabbreviates refers\nto as PRNG (\"P\" is for pseudo.). This is not a well defined term, and I\nagree with Quynh that it is better adjusted as  “The disclosure of the\noutput(s) of an insecure random number generator (RNG) when used in TLS and\nother protocols can be used in an attack to compromise the state of the\ninsecure RNG itself as described in [DUALEC-TLS].\"\n\nThe term \"raw RNG\" here seems ok -- it is undefined but I guess it means\n\"insecure RNG.\"\n\nHere, the term PRNG makes a comeback. Perhaps change it to RNG for\nconsistency. FIPS 203 does not offer PRNG guidance, but RBG guidance. An\nRBG may or may not be deterministic.\n\nTo recap: RNG is an incredibly vague term as it implies no clearly defined\nsecurity properties -- but this is what the IETF has been using. As noted,\nFIPS land talks of RBGs (and defines what they are), as does a part of the\nCC land. CC also uses the AIS 20/31 terminology and classification, in\nwhich RNG is essentially a catch-all, and protection profiles impose\nadditional, more detailed requirements for entropy generation and\npost-processing.\n\nFIPS 203 actually asks for an RBG, which implies:\n\n- seeding from a sufficient amount of entropy, and also\n\n- cryptographically secure post-processing where any number of output bits\ndo not offer an advantage in predicting or determining unrevealed output\nbits, assuming cryptographic security of SHA2 or AES, etc.\n\nThe more casual mathematical term PRNG implies neither cryptographic\nsecurity nor sufficient entropy seeding — simply determinism. Often PRNGs\nare distinguished from RNGs specifically because they do not have\nsufficient seeding.\n\nAmerican standard terminology has a class of RBGs called DRBGs\n(Deterministic Random Bit Generators). Because DRBGs are deteministic,\ntechnically they are PRNGs, but they are also RBGs -- when instantiated,\nthe standards (and testing labs) require adequate seeding and an\nappropriate level of security in post-processing components (for example, a\nDRBG based on AES-128 is not sufficient for a 256-bit security level).\n\nThere is also the \"CRA land\" in Europe, and ECCG & ENISA is searching for a\nsuitable compromise for entropy in lower-assurance products (non-CC.). But\nat this point acceptable DRBGs are listed in the ACM (they all have\ncryptographically secure post-processing). It has been of course proposed\nthat, e.g., Linux Random would be considered ok as an entropy source for\nconsumer products, for obvious practical reasons."
    },
    "result": [
     "(..)",
@@ -160,37 +158,7 @@
     "at this point acceptable DRBGs are listed in the ACM (they all have",
     "cryptographically secure post-processing). It has been of course proposed",
     "that, e.g., Linux Random would be considered ok as an entropy source for",
-    "consumer products, for obvious practical reasons.",
-    "Best Regards,",
-    "-markku"
-   ]
-  },
-  {
-   "args": {
-    "text": "All,\n\nThree quick questions for everyone, since the thread is working through where the artifacts sit:\n\n1) How does your work function without identity? If identity was a part of something else, how would this work?\n\n2) Can this work validate external scope, or does it define its own?\n\n3) How would this work in an open market with available web traffic and development?\n\nOne note of point, this thread feels more like an application design as opposed to a standards review.\n\nChris"
-   },
-   "result": [
-    "All,",
-    "Three quick questions for everyone, since the thread is working through where the artifacts sit:",
-    "1) How does your work function without identity? If identity was a part of something else, how would this work?",
-    "2) Can this work validate external scope, or does it define its own?",
-    "3) How would this work in an open market with available web traffic and development?",
-    "One note of point, this thread feels more like an application design as opposed to a standards review.",
-    "Chris"
-   ]
-  },
-  {
-   "args": {
-    "text": "All,\n\nThree quick questions for everyone, since the thread is working through where the artifacts sit:\n\n1) How does your work function without identity? If identity was a part of something else, how would this work?\n\n2) Can this work validate external scope, or does it define its own?\n\n3) How would this work in an open market with available web traffic and development?\n\nOne note of point, this thread feels more like an application design as opposed to a standards review.\n\nChris\n"
-   },
-   "result": [
-    "All,",
-    "Three quick questions for everyone, since the thread is working through where the artifacts sit:",
-    "1) How does your work function without identity? If identity was a part of something else, how would this work?",
-    "2) Can this work validate external scope, or does it define its own?",
-    "3) How would this work in an open market with available web traffic and development?",
-    "One note of point, this thread feels more like an application design as opposed to a standards review.",
-    "Chris"
+    "consumer products, for obvious practical reasons."
    ]
   },
   {
@@ -686,7 +654,7 @@
   },
   {
    "args": {
-    "text": "Minor nit:\n[...]\n\nWhen reading \"the Delegation Type RRsets and NSEC (or NSEC3) records can be replaced\", I was briefly confused regarding what about their RRSIGs.\n\nSuggest adding \"signed\" before \"Delegation Type RRsets\", or \"and their signatures\" after \"records\"."
+    "text": "Minor nit:\n\n[...]\n\nWhen reading \"the Delegation Type RRsets and NSEC (or NSEC3) records can be replaced\", I was briefly confused regarding what about their RRSIGs.\n\nSuggest adding \"signed\" before \"Delegation Type RRsets\", or \"and their signatures\" after \"records\"."
    },
    "result": [
     "Minor nit:",
@@ -697,30 +665,26 @@
   },
   {
    "args": {
-    "text": "Since this draft isn't tagged for any WG, not even gen-dispatch which seems appropriate, I'll post here, on one aspect only.\n\nAn IETF process document cannot define RPC duties. That would need a draft submitted to the RSWG, or rephrasing as the IETF's _expectations_ of the RPC.\n\nAlso:\nThat is already made clear at [1], points 1 and 3. It is not unknown for the RPC to discover poor grammar that conceals a technical ambiguity or technical error, so point 3 is not academic. Such late clarifications are to everyone's benefit. (I agree that they should be public knowledge, like everything that happens during AUTH48.)\n\n[1] https://www.rfc-editor.org/rfc/rfc9920.html#name-rpc-responsibilities\n\nRegards/Ngā mihi\n    Brian Carpenter\n"
+    "text": "Since this draft isn't tagged for any WG, not even gen-dispatch which seems appropriate, I'll post here, on one aspect only.\n\nAn IETF process document cannot define RPC duties. That would need a draft submitted to the RSWG, or rephrasing as the IETF's _expectations_ of the RPC.\n\nAlso:\nThat is already made clear at [1], points 1 and 3. It is not unknown for the RPC to discover poor grammar that conceals a technical ambiguity or technical error, so point 3 is not academic. Such late clarifications are to everyone's benefit. (I agree that they should be public knowledge, like everything that happens during AUTH48.)\n\n[1] https://www.rfc-editor.org/rfc/rfc9920.html#name-rpc-responsibilities\n"
    },
    "result": [
     "Since this draft isn't tagged for any WG, not even gen-dispatch which seems appropriate, I'll post here, on one aspect only.",
     "An IETF process document cannot define RPC duties. That would need a draft submitted to the RSWG, or rephrasing as the IETF's _expectations_ of the RPC.",
     "Also:",
     "That is already made clear at [1], points 1 and 3. It is not unknown for the RPC to discover poor grammar that conceals a technical ambiguity or technical error, so point 3 is not academic. Such late clarifications are to everyone's benefit. (I agree that they should be public knowledge, like everything that happens during AUTH48.)",
-    "[1] https://www.rfc-editor.org/rfc/rfc9920.html#name-rpc-responsibilities",
-    "Regards/Ngā mihi",
-    "Brian Carpenter"
+    "[1] https://www.rfc-editor.org/rfc/rfc9920.html#name-rpc-responsibilities"
    ]
   },
   {
    "args": {
-    "text": "Since this draft isn't tagged for any WG, not even gen-dispatch which seems appropriate, I'll post here, on one aspect only.\n\nAn IETF process document cannot define RPC duties. That would need a draft submitted to the RSWG, or rephrasing as the IETF's _expectations_ of the RPC.\n\nAlso:\n\nThat is already made clear at [1], points 1 and 3. It is not unknown for the RPC to discover poor grammar that conceals a technical ambiguity or technical error, so point 3 is not academic. Such late clarifications are to everyone's benefit. (I agree that they should be public knowledge, like everything that happens during AUTH48.)\n\n[1] https://www.rfc-editor.org/rfc/rfc9920.html#name-rpc-responsibilities\n\nRegards/Ngā mihi\n    Brian Carpenter"
+    "text": "Since this draft isn't tagged for any WG, not even gen-dispatch which seems appropriate, I'll post here, on one aspect only.\n\nAn IETF process document cannot define RPC duties. That would need a draft submitted to the RSWG, or rephrasing as the IETF's _expectations_ of the RPC.\n\nAlso:\n\nThat is already made clear at [1], points 1 and 3. It is not unknown for the RPC to discover poor grammar that conceals a technical ambiguity or technical error, so point 3 is not academic. Such late clarifications are to everyone's benefit. (I agree that they should be public knowledge, like everything that happens during AUTH48.)\n\n[1] https://www.rfc-editor.org/rfc/rfc9920.html#name-rpc-responsibilities"
    },
    "result": [
     "Since this draft isn't tagged for any WG, not even gen-dispatch which seems appropriate, I'll post here, on one aspect only.",
     "An IETF process document cannot define RPC duties. That would need a draft submitted to the RSWG, or rephrasing as the IETF's _expectations_ of the RPC.",
     "Also:",
     "That is already made clear at [1], points 1 and 3. It is not unknown for the RPC to discover poor grammar that conceals a technical ambiguity or technical error, so point 3 is not academic. Such late clarifications are to everyone's benefit. (I agree that they should be public knowledge, like everything that happens during AUTH48.)",
-    "[1] https://www.rfc-editor.org/rfc/rfc9920.html#name-rpc-responsibilities",
-    "Regards/Ngā mihi",
-    "Brian Carpenter"
+    "[1] https://www.rfc-editor.org/rfc/rfc9920.html#name-rpc-responsibilities"
    ]
   },
   {
@@ -749,32 +713,6 @@
     "Right, a tradeoff between plug-and-play and secure communication.",
     "I thought we had something like that. I'll leave this for Mike and Stig to comment about.",
     "Dino"
-   ]
-  },
-  {
-   "args": {
-    "text": "Stefano,\n\nThe best approach is to standardize a QUIC extension that indicates\nthat the server has several IP addresses. This would be an excellent\nuse case for\nhttps://datatracker.ietf.org/doc/html/draft-piraux-quic-additional-addresses-04\n\nOlivier"
-   },
-   "result": [
-    "Stefano,",
-    "The best approach is to standardize a QUIC extension that indicates",
-    "that the server has several IP addresses. This would be an excellent",
-    "use case for",
-    "https://datatracker.ietf.org/doc/html/draft-piraux-quic-additional-addresses-04",
-    "Olivier"
-   ]
-  },
-  {
-   "args": {
-    "text": "Stefano,\n\nThe best approach is to standardize a QUIC extension that indicates\nthat the server has several IP addresses. This would be an excellent\nuse case for\nhttps://datatracker.ietf.org/doc/html/draft-piraux-quic-additional-addresses-04\n\nOlivier\n"
-   },
-   "result": [
-    "Stefano,",
-    "The best approach is to standardize a QUIC extension that indicates",
-    "that the server has several IP addresses. This would be an excellent",
-    "use case for",
-    "https://datatracker.ietf.org/doc/html/draft-piraux-quic-additional-addresses-04",
-    "Olivier"
    ]
   },
   {
@@ -989,6 +927,30 @@
   },
   {
    "args": {
+    "text": "The best approach is to standardize a QUIC extension that indicates\nthat the server has several IP addresses. This would be an excellent\nuse case for\nhttps://datatracker.ietf.org/doc/html/draft-piraux-quic-additional-addresses-04\n\nOlivier"
+   },
+   "result": [
+    "The best approach is to standardize a QUIC extension that indicates",
+    "that the server has several IP addresses. This would be an excellent",
+    "use case for",
+    "https://datatracker.ietf.org/doc/html/draft-piraux-quic-additional-addresses-04",
+    "Olivier"
+   ]
+  },
+  {
+   "args": {
+    "text": "The best approach is to standardize a QUIC extension that indicates\nthat the server has several IP addresses. This would be an excellent\nuse case for\nhttps://datatracker.ietf.org/doc/html/draft-piraux-quic-additional-addresses-04\n\nOlivier\n"
+   },
+   "result": [
+    "The best approach is to standardize a QUIC extension that indicates",
+    "that the server has several IP addresses. This would be an excellent",
+    "use case for",
+    "https://datatracker.ietf.org/doc/html/draft-piraux-quic-additional-addresses-04",
+    "Olivier"
+   ]
+  },
+  {
+   "args": {
     "text": "The risk mitigation taken relies on the common sense (I know, in short supply now), and adherence to the standards. I.e., if it says “use NIST-blessed DRBG”, the implementation SHALL use it.\n\nOtherwise, if you assume that part of the standard will be ignored — why would other parts of that standard or your RFC be followed correctly?\n\nIt merely requires the implementation to abide by the letter of the standards it claims to implement. Not a rocket science/\n\nThank you (and others who’d hopefully follow your example) kindly!"
    },
    "result": [
@@ -1031,6 +993,32 @@
     "include the list of RFCs that have problems.",
     "Feel free to submit UI improvement suggestions there as well.",
     "Nick"
+   ]
+  },
+  {
+   "args": {
+    "text": "Three quick questions for everyone, since the thread is working through where the artifacts sit:\n\n1) How does your work function without identity? If identity was a part of something else, how would this work?\n\n2) Can this work validate external scope, or does it define its own?\n\n3) How would this work in an open market with available web traffic and development?\n\nOne note of point, this thread feels more like an application design as opposed to a standards review.\n\nChris"
+   },
+   "result": [
+    "Three quick questions for everyone, since the thread is working through where the artifacts sit:",
+    "1) How does your work function without identity? If identity was a part of something else, how would this work?",
+    "2) Can this work validate external scope, or does it define its own?",
+    "3) How would this work in an open market with available web traffic and development?",
+    "One note of point, this thread feels more like an application design as opposed to a standards review.",
+    "Chris"
+   ]
+  },
+  {
+   "args": {
+    "text": "Three quick questions for everyone, since the thread is working through where the artifacts sit:\n\n1) How does your work function without identity? If identity was a part of something else, how would this work?\n\n2) Can this work validate external scope, or does it define its own?\n\n3) How would this work in an open market with available web traffic and development?\n\nOne note of point, this thread feels more like an application design as opposed to a standards review.\n\nChris\n"
+   },
+   "result": [
+    "Three quick questions for everyone, since the thread is working through where the artifacts sit:",
+    "1) How does your work function without identity? If identity was a part of something else, how would this work?",
+    "2) Can this work validate external scope, or does it define its own?",
+    "3) How would this work in an open market with available web traffic and development?",
+    "One note of point, this thread feels more like an application design as opposed to a standards review.",
+    "Chris"
    ]
   },
   {
@@ -1148,7 +1136,7 @@
   },
   {
    "args": {
-    "text": "thanks for sharing. But this only reflects parts of the discussion.\n\nSince I too provide public mail listings for my users, I know, this is\na difficult issue.\n\nFrom my point of view, this IETF Web-based ML is dysfunctional because\nit is difficult to digest the important topics.\n\nSubscribers often express their oppinion not matching the topic\n(Subject). This is bad for readers and digesting.\n\nRegards.\n--eh."
+    "text": "thanks for sharing. But this only reflects parts of the discussion.\n\nSince I too provide public mail listings for my users, I know, this is\na difficult issue.\n\nFrom my point of view, this IETF Web-based ML is dysfunctional because\nit is difficult to digest the important topics.\n\nSubscribers often express their oppinion not matching the topic\n(Subject). This is bad for readers and digesting."
    },
    "result": [
     "thanks for sharing. But this only reflects parts of the discussion.",
@@ -1157,14 +1145,12 @@
     "From my point of view, this IETF Web-based ML is dysfunctional because",
     "it is difficult to digest the important topics.",
     "Subscribers often express their oppinion not matching the topic",
-    "(Subject). This is bad for readers and digesting.",
-    "Regards.",
-    "--eh."
+    "(Subject). This is bad for readers and digesting."
    ]
   },
   {
    "args": {
-    "text": "thanks for sharing. But this only reflects parts of the discussion.\n\nSince I too provide public mail listings for my users, I know, this is\na difficult issue.\n\nFrom my point of view, this IETF Web-based ML is dysfunctional because\nit is difficult to digest the important topics.\n\nSubscribers often express their oppinion not matching the topic\n(Subject). This is bad for readers and digesting.\n\nRegards.\n--eh.\n"
+    "text": "thanks for sharing. But this only reflects parts of the discussion.\n\nSince I too provide public mail listings for my users, I know, this is\na difficult issue.\n\nFrom my point of view, this IETF Web-based ML is dysfunctional because\nit is difficult to digest the important topics.\n\nSubscribers often express their oppinion not matching the topic\n(Subject). This is bad for readers and digesting.\n"
    },
    "result": [
     "thanks for sharing. But this only reflects parts of the discussion.",
@@ -1173,9 +1159,7 @@
     "From my point of view, this IETF Web-based ML is dysfunctional because",
     "it is difficult to digest the important topics.",
     "Subscribers often express their oppinion not matching the topic",
-    "(Subject). This is bad for readers and digesting.",
-    "Regards.",
-    "--eh."
+    "(Subject). This is bad for readers and digesting."
    ]
   }
  ]

@@ -41,6 +41,57 @@
   {
    "args": {
     "lines": [
+     "My answers are inline below, tagged [AL].",
+     "",
+     "------------------ Original ------------------",
+     "From: Bob",
+     "Question?",
+     "[AL] Answer."
+    ]
+   },
+   "result": [
+    "My answers are inline below, tagged [AL].",
+    "",
+    "------------------ Original ------------------",
+    "From: Bob",
+    "Question?",
+    "[AL] Answer."
+   ]
+  },
+  {
+   "args": {
+    "lines": [
+     "My answers are inline below, tagged [AL].",
+     "",
+     "-----Original Message-----",
+     "From: Bob",
+     "Question?",
+     "[AL] Answer."
+    ]
+   },
+   "result": [
+    "My answers are inline below, tagged [AL].",
+    ""
+   ]
+  },
+  {
+   "args": {
+    "lines": [
+     "My reply.",
+     "",
+     "--- Original Messages ---",
+     "From: Bob",
+     "Old text."
+    ]
+   },
+   "result": [
+    "My reply.",
+    ""
+   ]
+  },
+  {
+   "args": {
+    "lines": [
      "My reply.",
      "",
      "-------- Original message --------",
@@ -51,6 +102,118 @@
    "result": [
     "My reply.",
     ""
+   ]
+  },
+  {
+   "args": {
+    "lines": [
+     "My reply.",
+     "",
+     "------------------ Original ------------------",
+     "From: Bob",
+     "Old text."
+    ]
+   },
+   "result": [
+    "My reply.",
+    ""
+   ]
+  },
+  {
+   "args": {
+    "lines": [
+     "My reply.",
+     "",
+     "------------------ 邮件原文 ------------------",
+     "From: Bob",
+     "Old text."
+    ]
+   },
+   "result": [
+    "My reply.",
+    ""
+   ]
+  },
+  {
+   "args": {
+    "lines": [
+     "My reply.",
+     "",
+     "------------------&nbsp;Original&nbsp;------------------",
+     "From: Bob",
+     "Old text."
+    ]
+   },
+   "result": [
+    "My reply.",
+    ""
+   ]
+  },
+  {
+   "args": {
+    "lines": [
+     "My reply.",
+     "",
+     "--\u00a0Original Message\u00a0--",
+     "From: Bob",
+     "Old text."
+    ]
+   },
+   "result": [
+    "My reply.",
+    ""
+   ]
+  },
+  {
+   "args": {
+    "lines": [
+     "My reply.",
+     "",
+     "> -----Original Message-----",
+     "> From: Bob",
+     "My inline answer."
+    ]
+   },
+   "result": [
+    "My reply.",
+    "",
+    "> -----Original Message-----",
+    "> From: Bob",
+    "My inline answer."
+   ]
+  },
+  {
+   "args": {
+    "lines": [
+     "My reply.",
+     "",
+     "Original",
+     "",
+     "From: Bob <bob@example.org>",
+     "Old text."
+    ]
+   },
+   "result": [
+    "My reply.",
+    ""
+   ]
+  },
+  {
+   "args": {
+    "lines": [
+     "My reply.",
+     "",
+     "Original",
+     "",
+     "Old text."
+    ]
+   },
+   "result": [
+    "My reply.",
+    "",
+    "Original",
+    "",
+    "Old text."
    ]
   },
   {

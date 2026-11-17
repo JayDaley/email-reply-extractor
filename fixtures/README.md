@@ -56,6 +56,16 @@ read by hand. From that decoded body:
   "Cheers, Peter", or a bare trailing "Cheers"). These are author-typed but
   formulaic framing, and a scored ablation showed they materially mask
   AI-generated content in the Pangram check.
+- **Removed (generation 10):** stage 2 removes up to two opening greeting
+  lines, including a short line that only addresses people ("Stefano,",
+  "All,"), and recognizes more closing sign-off forms without any evidence
+  about the sender: two joined salutations ("Regards/Ngā mihi / Brian
+  Carpenter"), a salutation followed by "." ("Regards. / --eh."), and a
+  decorated or lower-case name under a salutation ("Best Regards, /
+  -markku"). Five expected files lost such lines in that generation:
+  `bottompost-clean-quic-01`, `toppost-originalmsg-divider-agent2agent-01`,
+  `interleaved-deep-thread-tls-01`, `signature-pgp-german-attribution-tls-01`
+  and `toppost-flowed-ietf-01`.
 - **Kept:** all other prose the author typed, including interleaved
   point-by-point replies, author elision markers the author inserted into a
   quote (`[...]`, `(..)`), greetings/valedictions appearing mid-text, and bare
@@ -64,7 +74,7 @@ read by hand. From that decoded body:
 - **Whitespace normalization** applied to the expected text: trailing
   whitespace stripped per line; runs of blank lines collapsed to a single blank
   line; leading/trailing blank lines removed. Non-ASCII characters the author
-  wrote (curly quotes, em dashes, `§`, `ā`, `ß`, emoji) are preserved verbatim.
+  wrote (curly quotes, em dashes, `§`, `ß`, emoji) are preserved verbatim.
   Tests should compare with a tolerant whitespace normalization rather than
   byte-exact equality, except where a quirk note says the output is pinned.
 

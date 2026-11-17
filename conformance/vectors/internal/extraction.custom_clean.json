@@ -30,6 +30,36 @@
   },
   {
    "args": {
+    "text": "Reply text\n  _______\nmore"
+   },
+   "result": "Reply text\n  _______\nmore"
+  },
+  {
+   "args": {
+    "text": "Reply text\n -------\nmore"
+   },
+   "result": "Reply text\n\n -------\nmore"
+  },
+  {
+   "args": {
+    "text": "Reply text\n\n_______\nmore"
+   },
+   "result": "Reply text\n\n_______\nmore"
+  },
+  {
+   "args": {
+    "text": "Reply text\n______\nmore"
+   },
+   "result": "Reply text\n______\nmore"
+  },
+  {
+   "args": {
+    "text": "Reply text\n__________\nmore"
+   },
+   "result": "Reply text\n\n__________\nmore"
+  },
+  {
+   "args": {
     "text": "The proposed outcome labels are vector vocabulary only.\n\nBest,\nSongbo\n\nOn Tue, 14 Jul 2026 18:45:07 +0000, Thi Nguyen-Huu thi.nh@winmagic.com\nwrote:\n\nKarthik, Songbo, all,\n\nQuoted content with no markers.\n"
    },
    "result": "The proposed outcome labels are vector vocabulary only.\n\nBest,\nSongbo"

@@ -22,8 +22,7 @@ from typing import Callable
 
 import pytest
 
-from email_reply_extractor._fragments import read_fragments
-from email_reply_extractor.cleaning import clean_for_scoring
+from email_reply_extractor.cleaning import clean_for_scoring, learn_signature_lines
 from email_reply_extractor.extraction import (
     custom_clean,
     extract_new_text,
@@ -36,6 +35,15 @@ from email_reply_extractor.html_text import split_html_parts
 
 #: Seconds each call may take.
 _BOUND = 5.0
+
+
+#: The sender display name of the stage-2 cases.
+_AUTHOR = "Jane Example"
+
+
+def _letter_word(k: int) -> str:
+    """A distinct five-letter word for each ``k`` below 26**5."""
+    return "".join(chr(97 + (k // 26**i) % 26) for i in range(5))
 
 
 def _seed_chain(n: int) -> tuple[str, str]:
@@ -87,6 +95,21 @@ def _own_quotation_automaton(n: int) -> tuple[str, str]:
     return "b b b b b b b b b b\na a a a a a a c\n\n" * n, "> " + "a " * 200000 + "c a"
 
 
+def _marking_runs(n: int) -> tuple[str, str]:
+    """A parent of ``n`` three-line paragraphs, and a child in marking mode
+    that copies each paragraph unmarked and answers it, then quotes every
+    paragraph's first line after an attribution: ``n`` protected blocks, ``n``
+    runs, and ``n`` attributions above quote lines for the stop-line search."""
+    paras = [
+        [f"p{k} l{j} " + " ".join(f"w{k}x{j}x{i}" for i in range(8)) for j in range(3)]
+        for k in range(n)
+    ]
+    parent = "\n\n".join("\n".join(p) for p in paras)
+    child = "\n\n".join("\n".join(p) + f"\n\nAnswer {k}." for k, p in enumerate(paras))
+    child += "\n\n" + "".join(f"Bob Jones said:\n> {p[0]}\n" for p in paras)
+    return child, parent
+
+
 def _localized_tags(n: int) -> tuple[str, str]:
     """A body with ``n`` tagged lines below a French quote header, and a
     parent that uses every tag: each tag is tested against the parent and
@@ -105,13 +128,12 @@ def _localized_tags(n: int) -> tuple[str, str]:
 
 # (finding id, call). Comments give the earlier implementation's cost.
 _CASES: list[tuple[str, Callable[[], object]]] = [
-    # _MULTI_QUOTE_HDR lookahead: cubic (800 repeats took 1.2 s).
-    ("A1-read_fragments", lambda: read_fragments("On " * 4000)),
+    # The former fragment scanner's _MULTI_QUOTE_HDR lookahead: cubic (800
+    # repeats took 1.2 s).
     ("A1-extract", lambda: extract_new_text("hello\n" + "On " * 4000)),
-    # Attribution collapse as a replacement template: every "\1" expanded to
-    # the whole match, so the output was quadratic in size (4,000 repeats
-    # built 32 MB in 0.34 s; 60,000 would build 7.2 GB).
-    ("A8-read_fragments", lambda: read_fragments("On " + "\\1" * 60000 + " wrote:")),
+    # The former scanner's attribution collapse as a replacement template:
+    # every "\1" expanded to the whole match, so the output was quadratic in
+    # size (4,000 repeats built 32 MB in 0.34 s; 60,000 would build 7.2 GB).
     ("A8-extract", lambda: extract_new_text("hello\nOn " + "\\1" * 60000 + " wrote:\n> q")),
     # "<who> <a@b> wrote:": cubic (800 repeats took 0.36 s).
     ("A2-is_attribution_line", lambda: is_attribution_line("x" + "<a@" * 6400)),
@@ -159,10 +181,129 @@ _CASES: list[tuple[str, Callable[[], object]]] = [
     # Part boundaries: an inline reply of many short answers between quoted
     # lines; the alignment must not rescan the source per line.
     ("parts-extract", lambda: extract_new_text("a\n> q\n" * 100000)),
+    # Generation 10 (added with the rules; no earlier cost). Wrapped
+    # attributions: every line a start line, each scanning the lines below.
+    ("G10-wrapped-starts", lambda: extract_new_text("hello\n" + "On a\n" * 100000)),
+    ("G10-wrapped-starts-quoted", lambda: extract_new_text("hello\n" + ">> On a\n" * 100000)),
+    # Generic attribution units: every colon line above a quote is tested, and
+    # each test reads the long start lines above it.
+    (
+        "G10-generic-long-starts",
+        lambda: extract_new_text("hello\n" + ("On " + "a " * 20000 + "\nb:\n> q\n") * 100),
+    ),
+    (
+        "G10-generic-units",
+        lambda: extract_new_text("hello\n" + ("from x" * 66 + "\nend:\n> q\n") * 20000),
+    ),
+    # The e-mail cue over a run of word characters with no "@": as one regex
+    # search, quadratic in the unit's 400 characters (about 3.5 s here).
+    ("G10-generic-email", lambda: extract_new_text("hello\n" + ("x" * 398 + ":\n> q\n") * 10000)),
+    ("G10-generic-at", lambda: extract_new_text("hello\n" + ("a@" * 199 + ":\n> q\n") * 6000)),
+    # An attribution opener over a long dash run, above a unit's last line.
+    (
+        "G10-generic-opener",
+        lambda: extract_new_text("hello\n" + "-" * 400000 + "x\nAna <a@b.co>:\n> q"),
+    ),
+    ("G10-quote-marker-run", lambda: extract_new_text("hello\n" + ">" * 400000 + "x\nb:\n> q")),
+    # Sign-off boundaries, each followed by a generic unit above a quote.
+    (
+        "G10-signoffs",
+        lambda: extract_new_text(
+            "hello\n" + "Best,\nAna\nBob <bob@example.org> said on Monday:\n> q\n" * 30000
+        ),
+    ),
+    # Wrap remainders between long quote lines.
+    ("G10-remainders", lambda: extract_new_text("hello\n" + ("> " + "a" * 70 + "\nbc\n") * 100000)),
+    # Candidate dividers: quoted dividers, bare "Original" lines, a long
+    # "&nbsp;" run, and the inline note.
+    (
+        "G10-dividers-quoted",
+        lambda: extract_new_text("inline\n" + "> --- Original ---\n" * 100000 + "x"),
+    ),
+    ("G10-bare-original", lambda: extract_new_text("hello\n" + "Original\n\n\n\nx\n" * 50000)),
+    (
+        "G10-divider-nbsp",
+        lambda: extract_new_text("hello\n--" + "&nbsp;" * 100000 + "Original" + " " * 100000 + "x"),
+    ),
+    ("G10-divider-dashes", lambda: extract_new_text("hello\n" + "-- Original " * 100000)),
+    # Outlook boundary lines.
+    ("G10-outlook-boundaries", lambda: custom_clean("a\n_______\n" * 100000)),
     # Part grouping in stage 2 over many boundaries.
     (
         "parts-clean",
         lambda: clean_for_scoring("a\n" * 200000, part_starts=range(1, 200000)),
+    ),
+    # Stage-2 evidence rules. A sender display name of many tokens: every
+    # name-like line was compared with every token (over 30 s).
+    (
+        "S1-author-tokens",
+        lambda: clean_for_scoring(
+            "hello\n" + "Zzzq\n" * 20000,
+            author_name=" ".join(_letter_word(k) for k in range(20000)),
+        ),
+    ),
+    # A role-tail search restarted inside a long blank run of a name line
+    # (over 30 s at half the size).
+    (
+        "S2-name-tail-blanks",
+        lambda: clean_for_scoring("hello\nJane" + " " * 200000 + "x\nmore", author_name=_AUTHOR),
+    ),
+    # The trailing-parenthesis search over a long blank run above a name line
+    # (over 30 s at half the size).
+    (
+        "S3-paren-blanks",
+        lambda: clean_for_scoring(
+            "x" + " " * 200000 + "y\nJane\nmore text here.", author_name=_AUTHOR
+        ),
+    ),
+    # A salutation followed by a long blank run (over 30 s at half the size).
+    (
+        "S4-salutation-blanks",
+        lambda: clean_for_scoring("hello\nThanks" + " " * 200000 + "x", author_name=_AUTHOR),
+    ),
+    # Subject prefixes: repeated one-prefix substitution, and two adjacent
+    # blank runs around an optional "[n]" (both quadratic; over 30 s each).
+    (
+        "S5-subject-prefixes",
+        lambda: learn_signature_lines(["a\nJane"] * 5, subjects=["Re: " * 200000 + "x"] * 5),
+    ),
+    (
+        "S5-subject-blanks",
+        lambda: learn_signature_lines(["a\nJane"] * 5, subjects=["Re" + " " * 200000 + "x"] * 5),
+    ),
+    # Many name-like, salutation, learned and greeting lines, and a long
+    # non-blocking tail below a sender name: linear passes.
+    (
+        "S6-name-lines",
+        lambda: clean_for_scoring(
+            "hello\n" + "Jane\n" * 30000 + "prose here.", author_name=_AUTHOR
+        ),
+    ),
+    (
+        "S6-salutation-lines",
+        lambda: clean_for_scoring("hello\n" + "Thanks,\n" * 20000, author_name=_AUTHOR),
+    ),
+    (
+        "S6-learned-lines",
+        lambda: clean_for_scoring(
+            "hello\n" + "Jane Example\n" * 100000, signature_lines=["Jane Example"]
+        ),
+    ),
+    (
+        "S6-greeting-lines",
+        lambda: clean_for_scoring("Hi,\n" * 100000 + "body", addressee_names=["Jane Doe"]),
+    ),
+    (
+        "S6-footnote-tail",
+        lambda: clean_for_scoring(
+            "hello\nJane\n" + "[1] https://example.org/a\n" * 50000, author_name=_AUTHOR
+        ),
+    ),
+    (
+        "S6-learn-many-texts",
+        lambda: learn_signature_lines(
+            ["body\n" + "\n".join(f"Contact {k}:" for k in range(10))] * 20000
+        ),
     ),
 ]
 
@@ -216,6 +357,9 @@ _PREPARED_CASES: list[tuple[str, Callable[[], tuple[str, str]], Callable[[str, s
     # Inline-reply author tags: per tag, a search of the parent and of the
     # text above the quote header (99 s).
     ("G7tag-extract", lambda: _localized_tags(25000), extract_new_text),
+    # Parent-diff marking mode over many blocks and runs (generation 10; no
+    # earlier cost).
+    ("G10-marking-mode", lambda: _marking_runs(10000), extract_new_text),
 ]
 
 
@@ -269,6 +413,14 @@ def test_own_quotation_automaton_input_reaches_the_quotation_query() -> None:
     assert "a a a a a a a c" not in plain
     quoted = parent[:-4]
     assert strip_parent_content(child, parent, continuation=True, quoted_text=quoted) == plain
+
+
+def test_marking_runs_input_reaches_the_many_runs_guard() -> None:
+    # Marking mode is on and the runs lose their protection: only the answers
+    # are left.
+    child, parent = _marking_runs(20)
+    result = extract_new_text(child, parent)
+    assert result.text == "\n\n".join(f"Answer {k}." for k in range(20))
 
 
 def test_localized_tags_reach_every_tag() -> None:
