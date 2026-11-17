@@ -447,6 +447,15 @@ A top-posted reply, or any text written as one run, has an empty
 text with the body it was derived from; when a line cannot be aligned, the
 text is reported as one part (10 of 154,394 messages measured).
 
+Blank lines inside the text are kept as they are in the body, so the blank
+lines on both sides of a removed quoted passage remain, and each further
+passage removed between two runs lengthens the gap: `"A\n\n> q\n\nB"` gives
+`"A\n\n\nB"`, and `"A\n\n> q1\n\n> q2\n\nB"` gives `"A\n\n\n\nB"`. `clean_for_scoring`
+collapses these runs, so the cleaned text is unaffected. The indices in
+`part_starts` refer to the text as returned; code that uses `result.text`
+directly and collapses blank lines must apply `part_starts` before collapsing, or
+use the `parts` of the cleaned result instead.
+
 ## API reference
 
 | Name | What it is |

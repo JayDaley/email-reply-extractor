@@ -256,6 +256,15 @@ one part. Indices outside `1` to the input's line count minus one are ignored;
 `[text]` without `partStarts`, `[]` when `text` is empty, and omits a part
 that cleaning emptied.
 
+Blank lines inside the text are kept as they are in the body, so the blank
+lines on both sides of a removed quoted passage remain, and each further
+passage removed between two runs lengthens the gap: `"A\n\n> q\n\nB"` gives
+`"A\n\n\nB"`, and `"A\n\n> q1\n\n> q2\n\nB"` gives `"A\n\n\n\nB"`. `cleanForScoring`
+collapses these runs, so the cleaned text is unaffected. The indices in
+`partStarts` refer to the text as returned; code that uses `result.text`
+directly and collapses blank lines must apply `partStarts` before collapsing, or
+use the `parts` of the cleaned result instead.
+
 ## API reference
 
 | Name                                                                                                                 | What it is                                                                                                                                                                                                                          |
